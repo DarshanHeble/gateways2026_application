@@ -12,15 +12,17 @@ export type LoginFieldError = "email" | "password" | null;
  * screen has to change.
  */
 async function signIn(
-  _email: string,
+  email: string,
   _password: string,
-): Promise<{ ok: true } | { ok: false; message: string }> {
+): Promise<{ ok: true; role: "participant" | "team" } | { ok: false; message: string }> {
   await new Promise((resolve) => setTimeout(resolve, 800));
-  return { ok: true };
+  const isTeam = email.toLowerCase().includes("team") || email.toLowerCase().includes("admin");
+  return { ok: true, role: isTeam ? "team" : "participant" };
 }
 
-export function useLoginForm(onAuthenticated: () => void) {
+export function useLoginForm(onAuthenticated: (role: "participant" | "team") => void) {
   const [email, setEmail] = useState("");
+
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -49,11 +51,6 @@ export function useLoginForm(onAuthenticated: () => void) {
     if (busy) return;
 
     const trimmed = email.trim();
-    if (!trimmed) return fail("email", "NO NAME, NO ENTRY");
-    if (!EMAIL_RE.test(trimmed)) return fail("email", "THAT SCROLL LOOKS WRONG");
-    if (password.length < MIN_PASSWORD) {
-      return fail("password", `PASSPHRASE NEEDS ${MIN_PASSWORD}+ RUNES`);
-    }
 
     setErrorField(null);
     setBusy(true);
@@ -64,8 +61,9 @@ export function useLoginForm(onAuthenticated: () => void) {
       fail("password", result.message.toUpperCase());
       return;
     }
-    onAuthenticated();
+    onAuthenticated(result.role);
   }, [busy, email, password, fail, onAuthenticated]);
+
 
   return {
     email,

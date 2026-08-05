@@ -14,6 +14,7 @@ import {
 
 import { colors } from "@/theme/tokens";
 import { ChunkTransitionOverlay } from "@/features/splash/ChunkTransitionOverlay";
+import { AuthProvider } from "@/features/auth/AuthContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -38,14 +39,16 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: colors.stage },
-          animation: "fade",
-        }}
-      />
-      <ChunkTransitionOverlay />
+      <AuthProvider>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.stage },
+            animation: "fade",
+          }}
+        />
+        <ChunkTransitionOverlay />
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }
