@@ -13,6 +13,7 @@ import { ParallaxScene } from "./scene/ParallaxScene";
 import { NoticeBoard } from "./NoticeBoard";
 import { GateTransition, useGateTransition } from "./GateTransition";
 import { useLoginForm } from "./useLoginForm";
+import { useAuth } from "@/features/auth/AuthContext";
 
 /**
  * The little plaque staked into the near terrace, just below the board.
@@ -39,8 +40,12 @@ export function LoginScreen() {
   const insets = useSafeAreaInsets();
   const keyboard = useAnimatedKeyboard();
 
-  const gate = useGateTransition(useCallback(() => router.replace("/home"), []));
-  const form = useLoginForm(gate.play);
+  const { login } = useAuth();
+  const gate = useGateTransition(useCallback(() => router.replace("/(tabs)"), []));
+  const form = useLoginForm((role) => {
+    login(role);
+    gate.play();
+  });
 
   const boardStyle = useAnimatedStyle(() => ({
     // Lift the board just enough to clear the keyboard, never further.
