@@ -7,11 +7,14 @@ import Constants from 'expo-constants';
 // - iOS Simulator and Web use localhost
 const getApiBaseUrl = () => {
   if (Platform.OS === 'android') {
-    const hostUri = Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoGo?.debuggerHost;
-    if (hostUri) {
-      const ip = hostUri.split(':')[0];
+    const rawHost = Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoGo?.debuggerHost || '';
+    // If running via Expo Tunnel (e.g. *.exp.direct), stripping hostUri gives an unroutable tunnel domain for port 4000.
+    // In that case, fall back to local LAN IP or 10.0.2.2 emulator loopback.
+    if (rawHost && !rawHost.includes('exp.direct')) {
+      const ip = rawHost.split(':')[0];
       return `http://${ip}:4000/api`;
     }
+    // Default local network IP fallback for dev physical device / Android emulator
     return 'http://10.0.2.2:4000/api';
   }
   return 'http://localhost:4000/api';
