@@ -90,19 +90,23 @@ const styles = StyleSheet.create({
   },
   frame: {
     padding: px(2),
-    backgroundColor: colors.input.frame,
+    backgroundColor: "#1a120b",
+    borderWidth: px(1),
+    borderColor: colors.gold.label,
+    borderRadius: px(4),
   },
   frameFocused: {
-    backgroundColor: "#4a3116",
+    borderColor: colors.gold.bright,
+    backgroundColor: "#2e1e0f",
   },
   field: {
     paddingVertical: px(10),
     paddingHorizontal: px(11),
-    backgroundColor: colors.input.field,
-    color: colors.input.text,
-    fontFamily: fonts.body,
-    fontSize: px(type.fieldValue.size),
+    backgroundColor: "#24180d",
+    color: "#ffffff",
+    fontFamily: fonts.bodyMedium,
+    fontSize: px(13),
     // Keeps the field height identical across platforms despite font metrics.
-    height: px(38),
+    height: px(40),
   },
 });

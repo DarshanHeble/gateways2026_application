@@ -133,13 +133,8 @@ export function NoticeBoard({
             <Text style={styles.theme}>PARALLAX</Text>
           </View>
 
-          <Text style={styles.tagline}>
-            See reality from two perspectives at once: the physical world and its living digital
-            mirror.
-          </Text>
-
           <View style={styles.dashedRule}>
-            <StripeFill color="rgba(255,220,170,0.22)" bar={6} gap={6} />
+            <StripeFill color="rgba(255,220,170,0.3)" bar={6} gap={6} />
           </View>
 
           <Text style={styles.welcome}>WELCOME, ADVENTURER</Text>
@@ -160,7 +155,7 @@ export function NoticeBoard({
             errorNonce={errorField === "email" ? errorNonce : 0}
           />
 
-          <View style={{ height: px(9) }} />
+          <View style={{ height: px(12) }} />
 
           <PixelInput
             ref={passwordRef}
@@ -259,7 +254,7 @@ const styles = StyleSheet.create({
     paddingTop: px(16),
     paddingHorizontal: px(BOARD_PADDING),
     paddingBottom: px(18),
-    backgroundColor: colors.board.base,
+    backgroundColor: "#52371d",
     boxShadow: `0 ${px(12)}px 0 rgba(0,0,0,0.35), 0 ${px(26)}px ${px(44)}px rgba(0,0,0,0.45)`,
   },
   content: { position: "relative" },
@@ -268,7 +263,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.pixel,
     fontSize: px(type.department.size),
     letterSpacing: px(type.department.tracking),
-    color: type.department.color,
+    color: colors.gold.muted,
     textAlign: "center",
   },
   wordmark: {
@@ -276,11 +271,11 @@ const styles = StyleSheet.create({
     fontSize: px(type.wordmark.size),
     lineHeight: px(34),
     letterSpacing: px(type.wordmark.tracking),
-    color: type.wordmark.color,
+    color: colors.gold.bright,
     textAlign: "center",
     marginTop: px(7),
-    textShadowColor: colors.gold.deepShadow,
-    textShadowOffset: { width: 0, height: px(4) },
+    textShadowColor: "#1a0d05",
+    textShadowOffset: { width: 0, height: px(3) },
     textShadowRadius: 0,
   },
   yearRow: {
@@ -324,17 +319,17 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   dashedRule: {
-    marginTop: px(13),
-    marginBottom: px(11),
+    marginTop: px(10),
+    marginBottom: px(8),
     height: px(2),
   },
   welcome: {
     fontFamily: fonts.pixel,
     fontSize: px(type.welcome.size),
     letterSpacing: px(type.welcome.tracking),
-    color: type.welcome.color,
+    color: colors.gold.title,
     textAlign: "center",
-    marginBottom: px(11),
+    marginBottom: px(12),
   },
   forgotRow: { alignSelf: "flex-end", marginTop: px(8) },
   forgot: {
