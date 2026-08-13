@@ -1,8 +1,23 @@
-import Platform from 'react-native';
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
-// In Expo development on physical devices, 'localhost' points to the device itself.
-// Adjust BASE_URL if testing on physical device on local Wi-Fi.
-const API_BASE_URL = 'http://localhost:4000/api';
+// Determine the local machine's IP address automatically for Expo Go / Emulator:
+// - Android Emulator uses 10.0.2.2 instead of localhost
+// - Physical device uses the Expo packager host IP (e.g. 10.150.159.192)
+// - iOS Simulator and Web use localhost
+const getApiBaseUrl = () => {
+  if (Platform.OS === 'android') {
+    const hostUri = Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoGo?.debuggerHost;
+    if (hostUri) {
+      const ip = hostUri.split(':')[0];
+      return `http://${ip}:4000/api`;
+    }
+    return 'http://10.0.2.2:4000/api';
+  }
+  return 'http://localhost:4000/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export interface EventHead {
   name: string;
