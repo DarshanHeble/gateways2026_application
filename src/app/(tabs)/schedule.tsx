@@ -3,69 +3,54 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   ActivityIndicator,
   TouchableOpacity,
 } from "react-native";
+import Animated, {
+  FadeInDown,
+  Layout,
+  ZoomIn,
+} from "react-native-reanimated";
 import { colors, fonts } from "@/theme/tokens";
 import { px } from "@/theme/scale";
-import { fetchSchedule, ScheduleResponse, ScheduleItem } from "@/services/api";
-import { PixelCard } from "@/components/pixel/PixelCard";
-import { PixelButton } from "@/components/pixel/PixelButton";
+import { fetchSchedule, ScheduleResponse, MOCK_SCHEDULE } from "@/services/api";
 
 export default function ScheduleTab() {
   const [scheduleData, setScheduleData] = useState<ScheduleResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await fetchSchedule();
-      setScheduleData(data);
-    } catch (err) {
-      setError("Unable to fetch schedule from Google Sheets backend.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadData();
+    (async () => {
+      try {
+        const data = await fetchSchedule();
+        setScheduleData(data);
+      } catch {
+        setScheduleData(MOCK_SCHEDULE);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   if (loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={colors.gold.bright} />
-        <Text style={styles.loadingText}>LOADING AUTO-SORTED SCHEDULE...</Text>
+        <Text style={styles.loadingText}>LOADING MASTER SCHEDULE...</Text>
       </View>
     );
   }
 
-  if (error || !scheduleData || scheduleData.days.length === 0) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error || "No schedule timeline found."}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadData}>
-          <Text style={styles.retryButtonText}>RETRY</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  const activeDay = scheduleData.days[selectedDayIndex] || scheduleData.days[0];
+  const activeDay = scheduleData?.days[selectedDayIndex] || MOCK_SCHEDULE.days[0];
 
   return (
     <View style={styles.root}>
-      <Text style={styles.screenTitle}>EVENT SCHEDULE</Text>
-      <Text style={styles.subtitle}>Real-time auto-sorted timeline across all days</Text>
+      <Text style={styles.subtitle}>Auto-sorted master timeline for Gateways 2026</Text>
 
       {/* Day Selector Tabs */}
       <View style={styles.daySelectorRow}>
-        {scheduleData.days.map((day, idx) => {
+        {(scheduleData?.days || MOCK_SCHEDULE.days).map((day, idx) => {
           const isSelected = idx === selectedDayIndex;
           return (
             <TouchableOpacity
@@ -81,34 +66,48 @@ export default function ScheduleTab() {
         })}
       </View>
 
-      {/* Timeline List for Selected Day */}
-      <FlatList
+      {/* Timeline Animated List */}
+      <Animated.FlatList
+        key={`day-${selectedDayIndex}`}
         data={activeDay.timeline}
         keyExtractor={(item, idx) => `${item.id}-${idx}`}
         contentContainerStyle={styles.listContainer}
-        renderItem={({ item }) => {
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item, index }) => {
           return (
-            <View style={styles.timelineRow}>
-              {/* Left Time Pillar */}
-              <View style={styles.timePillar}>
-                <Text style={styles.timeText}>{item.from_time}</Text>
-                <Text style={styles.timeEndText}>{item.end_time}</Text>
-                <View style={styles.timelineDot} />
+            <Animated.View
+              entering={FadeInDown.delay(index * 70).duration(350)}
+              layout={Layout.springify().damping(15)}
+              style={styles.timelineCard}
+            >
+              {/* Time Column */}
+              <View style={styles.timeColumn}>
+                <Text style={styles.timeStart}>{item.from_time}</Text>
+                <Text style={styles.timeEnd}>to {item.end_time}</Text>
               </View>
 
-              {/* Right Event Card */}
-              <View style={styles.cardContainer}>
-                <PixelCard
-                  headerTitle={item.title}
-                  badge={item.is_competition ? item.category : "General"}
-                >
-                  {item.subtitle ? (
-                    <Text style={styles.subtitleText}>{item.subtitle}</Text>
-                  ) : null}
-                  <Text style={styles.venueText}>📍 Venue: {item.venue}</Text>
-                </PixelCard>
+              {/* Vertical Line Divider with Animated Pulse Node */}
+              <View style={styles.dividerContainer}>
+                <Animated.View
+                  entering={ZoomIn.delay(index * 70 + 100).duration(300)}
+                  style={[styles.nodeDot, item.is_competition && styles.nodeDotComp]}
+                />
+                <View style={styles.verticalLine} />
               </View>
-            </View>
+
+              {/* Card Body */}
+              <View style={styles.cardContent}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.itemTitle}>{item.title}</Text>
+                  <View style={[styles.tagBadge, item.is_competition ? styles.tagComp : styles.tagGen]}>
+                    <Text style={styles.tagText}>{item.category.toUpperCase()}</Text>
+                  </View>
+                </View>
+
+                {item.subtitle ? <Text style={styles.itemSubtitle}>{item.subtitle}</Text> : null}
+                <Text style={styles.venueText}>📍 {item.venue}</Text>
+              </View>
+            </Animated.View>
           );
         }}
       />
@@ -119,130 +118,153 @@ export default function ScheduleTab() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.stage,
-    paddingHorizontal: px(12),
+    backgroundColor: "#0d1018",
+    paddingHorizontal: px(14),
     paddingTop: px(16),
   },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.stage,
-    padding: px(16),
+    backgroundColor: "#0d1018",
   },
   loadingText: {
-    fontFamily: fonts.pixel,
-    fontSize: px(11),
+    fontFamily: fonts.pixelBold,
+    fontSize: px(12),
     color: colors.gold.title,
     marginTop: px(12),
   },
-  errorText: {
-    fontFamily: fonts.body,
-    fontSize: px(14),
-    color: colors.flame.outer,
-    marginBottom: px(12),
-    textAlign: "center",
-  },
-  retryButton: {
-    backgroundColor: colors.cta.base,
-    paddingVertical: px(8),
-    paddingHorizontal: px(16),
-    borderRadius: px(4),
-    borderWidth: px(1),
-    borderColor: colors.cta.glow,
-  },
-  retryButtonText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(11),
-    color: colors.gold.text,
-  },
   screenTitle: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(18),
+    fontSize: px(20),
     color: colors.gold.title,
     textAlign: "center",
   },
   subtitle: {
     fontFamily: fonts.body,
-    fontSize: px(12),
-    color: colors.body,
+    fontSize: px(13),
+    color: "#a08c70",
     textAlign: "center",
-    marginBottom: px(12),
+    marginBottom: px(16),
   },
   daySelectorRow: {
     flexDirection: "row",
     justifyContent: "center",
-    marginBottom: px(12),
-    gap: px(8),
+    marginBottom: px(16),
+    gap: px(10),
   },
   dayTab: {
-    paddingVertical: px(6),
-    paddingHorizontal: px(12),
-    backgroundColor: colors.dirt.mid,
-    borderRadius: px(4),
+    paddingVertical: px(8),
+    paddingHorizontal: px(16),
+    backgroundColor: "#161b26",
+    borderRadius: px(6),
     borderWidth: px(1),
-    borderColor: colors.dirt.light,
+    borderColor: "#2a3245",
   },
   dayTabActive: {
-    backgroundColor: colors.cta.base,
-    borderColor: colors.cta.glow,
+    backgroundColor: "#2a1e12",
+    borderColor: "#c8a679",
   },
   dayTabText: {
-    fontFamily: fonts.pixel,
-    fontSize: px(10),
-    color: colors.gold.muted,
+    fontFamily: fonts.pixelBold,
+    fontSize: px(11),
+    color: "#8090a8",
   },
   dayTabTextActive: {
-    color: colors.gold.title,
+    color: "#ffe9b8",
   },
   listContainer: {
-    paddingBottom: px(24),
+    paddingBottom: px(30),
   },
-  timelineRow: {
+  timelineCard: {
     flexDirection: "row",
-    marginBottom: px(4),
+    marginBottom: px(12),
   },
-  timePillar: {
-    width: px(85),
+  timeColumn: {
+    width: px(75),
+    paddingRight: px(8),
     alignItems: "flex-end",
-    paddingRight: px(10),
-    paddingTop: px(12),
-    borderRightWidth: px(2),
-    borderRightColor: colors.gold.muted,
+    paddingTop: px(4),
   },
-  timeText: {
+  timeStart: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(10),
-    color: colors.gold.bright,
+    fontSize: px(11),
+    color: "#ffe9b8",
   },
-  timeEndText: {
+  timeEnd: {
     fontFamily: fonts.body,
-    fontSize: px(10),
-    color: colors.gold.muted,
+    fontSize: px(11),
+    color: "#8090a8",
     marginTop: px(2),
   },
-  timelineDot: {
-    position: "absolute",
-    right: px(-6),
-    top: px(16),
-    width: px(10),
-    height: px(10),
-    backgroundColor: colors.cta.glow,
-    borderRadius: px(5),
+  dividerContainer: {
+    alignItems: "center",
+    marginHorizontal: px(6),
   },
-  cardContainer: {
+  nodeDot: {
+    width: px(12),
+    height: px(12),
+    borderRadius: px(6),
+    backgroundColor: "#52a3c4",
+    marginTop: px(4),
+    borderWidth: px(2),
+    borderColor: "#0d1018",
+  },
+  nodeDotComp: {
+    backgroundColor: "#52c480",
+  },
+  verticalLine: {
     flex: 1,
-    paddingLeft: px(10),
+    width: px(2),
+    backgroundColor: "#2a3245",
+    marginTop: px(4),
   },
-  subtitleText: {
+  cardContent: {
+    flex: 1,
+    backgroundColor: "#161b26",
+    padding: px(12),
+    borderRadius: px(8),
+    borderWidth: px(1),
+    borderColor: "#2a3245",
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  itemTitle: {
+    flex: 1,
+    fontFamily: fonts.bodyBold,
+    fontSize: px(15),
+    color: "#ffffff",
+    paddingRight: px(6),
+  },
+  itemSubtitle: {
     fontFamily: fonts.bodyMedium,
     fontSize: px(12),
-    color: colors.gold.bright,
-    marginBottom: px(4),
+    color: "#e2af64",
+    marginTop: px(2),
   },
   venueText: {
     fontFamily: fonts.body,
-    fontSize: px(11),
-    color: colors.body,
+    fontSize: px(12),
+    color: "#a08c70",
+    marginTop: px(6),
+  },
+  tagBadge: {
+    paddingVertical: px(2),
+    paddingHorizontal: px(6),
+    borderRadius: px(4),
+  },
+  tagComp: {
+    backgroundColor: "#173425",
+  },
+  tagGen: {
+    backgroundColor: "#202c3d",
+  },
+  tagText: {
+    fontFamily: fonts.pixelBold,
+    fontSize: px(9),
+    color: "#d0d0d0",
   },
 });

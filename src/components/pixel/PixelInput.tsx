@@ -60,7 +60,7 @@ export const PixelInput = forwardRef<TextInput, PixelInputProps>(function PixelI
         <TextInput
           ref={ref}
           accessibilityLabel={label}
-          placeholderTextColor={colors.input.placeholder}
+          placeholderTextColor="#a08c70"
           selectionColor={colors.gold.bright}
           cursorColor={colors.gold.bright}
           underlineColorAndroid="transparent"
@@ -82,31 +82,28 @@ export const PixelInput = forwardRef<TextInput, PixelInputProps>(function PixelI
 
 const styles = StyleSheet.create({
   label: {
-    fontFamily: fonts.pixel,
-    fontSize: px(type.fieldLabel.size),
-    letterSpacing: px(type.fieldLabel.tracking),
-    color: type.fieldLabel.color,
-    marginBottom: px(5),
+    fontFamily: fonts.pixelBold,
+    fontSize: px(11),
+    letterSpacing: px(1.5),
+    color: colors.gold.title,
+    marginBottom: px(6),
   },
   frame: {
     padding: px(2),
-    backgroundColor: "#1a120b",
-    borderWidth: px(1),
-    borderColor: colors.gold.label,
+    backgroundColor: colors.gold.muted,
     borderRadius: px(4),
   },
   frameFocused: {
-    borderColor: colors.gold.bright,
-    backgroundColor: "#2e1e0f",
+    backgroundColor: colors.gold.bright,
   },
   field: {
     paddingVertical: px(10),
-    paddingHorizontal: px(11),
-    backgroundColor: "#24180d",
-    color: "#ffffff",
+    paddingHorizontal: px(14),
+    backgroundColor: "#1c140c", // Rich high-contrast dark wood
+    color: "#ffffff", // Pure white input text
     fontFamily: fonts.bodyMedium,
-    fontSize: px(13),
-    // Keeps the field height identical across platforms despite font metrics.
-    height: px(40),
+    fontSize: px(15), // Much larger, readable text
+    height: px(48), // Comfortable touch height
+    borderRadius: px(2),
   },
 });

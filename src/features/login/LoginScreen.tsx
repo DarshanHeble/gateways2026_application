@@ -129,33 +129,34 @@ const styles = StyleSheet.create({
   },
   cardWrapper: {
     width: "100%",
-    maxWidth: px(340),
-    marginTop: px(120), // Positioned below the main GATEWAYS logo in image
+    maxWidth: px(350),
+    marginTop: px(80), // Lifted up to show full card over the background
   },
   welcomeSubtitle: {
-    fontFamily: fonts.pixel,
-    fontSize: px(10),
-    color: colors.gold.muted,
+    fontFamily: fonts.pixelBold,
+    fontSize: px(12), // Larger subtitle
+    color: colors.gold.bright,
     textAlign: "center",
-    marginBottom: px(16),
-    letterSpacing: px(1),
+    marginBottom: px(18),
+    letterSpacing: px(1.5),
   },
   formGroup: {
-    marginTop: px(4),
+    marginTop: px(6),
   },
   forgotBtn: {
     alignSelf: "flex-end",
-    marginTop: px(8),
-    marginBottom: px(16),
+    marginTop: px(10),
+    marginBottom: px(20),
   },
   forgotText: {
-    fontFamily: fonts.pixel,
-    fontSize: px(9),
-    color: colors.link,
+    fontFamily: fonts.pixelBold,
+    fontSize: px(11), // Larger, readable link
+    color: colors.gold.title,
+    textDecorationLine: "underline",
   },
   submitBtn: {
     backgroundColor: colors.cta.lit,
-    paddingVertical: px(12),
+    paddingVertical: px(14), // Taller button
     borderRadius: px(4),
     borderWidth: px(2),
     borderColor: colors.cta.glow,
@@ -172,23 +173,23 @@ const styles = StyleSheet.create({
   },
   submitBtnText: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(14),
+    fontSize: px(16), // Large punchy text
     color: colors.cta.ink,
-    letterSpacing: px(1),
+    letterSpacing: px(1.5),
   },
   googleBtn: {
     backgroundColor: colors.google.lit,
-    paddingVertical: px(11),
+    paddingVertical: px(14), // Taller button
     borderRadius: px(4),
     borderWidth: px(1),
     borderColor: colors.google.base,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: px(10),
+    marginTop: px(12),
   },
   googleBtnText: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(11),
+    fontSize: px(13), // Larger Google button text
     color: colors.google.ink,
     letterSpacing: px(1),
   },

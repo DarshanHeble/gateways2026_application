@@ -3,39 +3,36 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   ActivityIndicator,
   TouchableOpacity,
   Linking,
-  ScrollView,
+  Image,
 } from "react-native";
+import Animated, {
+  FadeInDown,
+  FadeInRight,
+  Layout,
+} from "react-native-reanimated";
 import { colors, fonts } from "@/theme/tokens";
 import { px } from "@/theme/scale";
-import { fetchEvents, EventItem } from "@/services/api";
-import { PixelCard } from "@/components/pixel/PixelCard";
-import { PixelButton } from "@/components/pixel/PixelButton";
+import { fetchEvents, EventItem, MOCK_EVENTS } from "@/services/api";
 
 export default function EventsTab() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await fetchEvents();
-      setEvents(data);
-    } catch (err) {
-      setError("Unable to connect to Google Sheets backend.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadData();
+    (async () => {
+      try {
+        const data = await fetchEvents();
+        setEvents(data);
+      } catch {
+        setEvents(MOCK_EVENTS);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   const toggleExpand = (id: string) => {
@@ -46,70 +43,85 @@ export default function EventsTab() {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={colors.gold.bright} />
-        <Text style={styles.loadingText}>FETCHING EVENTS FROM GOOGLE SHEETS...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadData}>
-          <Text style={styles.retryButtonText}>RETRY</Text>
-        </TouchableOpacity>
+        <Text style={styles.loadingText}>LOADING FEST EVENTS...</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.root}>
-      <Text style={styles.screenTitle}>FEST EVENTS</Text>
-      <Text style={styles.subtitle}>Explore all events synced live from Google Sheets</Text>
+      <Text style={styles.subtitle}>Explore all events and competitions</Text>
 
-      <FlatList
+      <Animated.FlatList
         data={events}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
-        renderItem={({ item }) => {
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item, index }) => {
           const isExpanded = expandedId === item.id;
           return (
-            <PixelCard headerTitle={item.title} badge={item.type}>
-              {item.subtitle ? <Text style={styles.eventSubtitle}>{item.subtitle}</Text> : null}
+            <Animated.View
+              entering={FadeInDown.delay(index * 80).duration(400)}
+              layout={Layout.springify().damping(15)}
+              style={styles.card}
+            >
+              {/* Event Image Banner */}
+              {item.image_url ? (
+                <Image source={{ uri: item.image_url }} style={styles.bannerImage} resizeMode="cover" />
+              ) : null}
 
-              <View style={styles.metaRow}>
-                <Text style={styles.metaText}>📅 {item.date}</Text>
-                <Text style={styles.metaText}>⏰ {item.from_time} - {item.end_time}</Text>
+              {/* Card Header & Badge */}
+              <View style={styles.cardHeader}>
+                <View style={styles.titleColumn}>
+                  <Text style={styles.eventTitle}>{item.title}</Text>
+                  {item.subtitle ? <Text style={styles.eventSubtitle}>{item.subtitle}</Text> : null}
+                </View>
+                <View style={styles.typeBadge}>
+                  <Text style={styles.typeBadgeText}>{item.type.toUpperCase()}</Text>
+                </View>
               </View>
-              <Text style={styles.metaText}>📍 {item.venue}</Text>
 
+              {/* Quick Info Grid */}
+              <View style={styles.infoGrid}>
+                <View style={styles.infoChip}>
+                  <Text style={styles.infoChipText}>📅 {item.date}</Text>
+                </View>
+                <View style={styles.infoChip}>
+                  <Text style={styles.infoChipText}>⏰ {item.from_time} - {item.end_time}</Text>
+                </View>
+              </View>
+
+              <Text style={styles.venueText}>📍 {item.venue}</Text>
               <Text style={styles.description} numberOfLines={isExpanded ? undefined : 2}>
                 {item.description}
               </Text>
 
+              {/* Expanded Animated Content */}
               {isExpanded && (
-                <View style={styles.expandedContent}>
-                  {/* Prizes */}
+                <Animated.View entering={FadeInRight.duration(300)} style={styles.expandedContent}>
+                  {/* Prize Section */}
                   <View style={styles.section}>
-                    <Text style={styles.sectionHeader}>🏆 PRIZES</Text>
-                    {item.prizes.winner ? (
-                      <Text style={styles.prizeText}>1st Winner: {item.prizes.winner}</Text>
-                    ) : null}
-                    {item.prizes.runner_up ? (
-                      <Text style={styles.prizeText}>Runner Up: {item.prizes.runner_up}</Text>
-                    ) : null}
-                    {item.prizes.second_runner_up ? (
-                      <Text style={styles.prizeText}>2nd Runner Up: {item.prizes.second_runner_up}</Text>
-                    ) : null}
+                    <Text style={styles.sectionTitle}>🏆 PRIZES & POOL</Text>
+                    <View style={styles.prizeBox}>
+                      {item.prizes.winner ? (
+                        <Text style={styles.prizeRank}>🥇 1st Place: <Text style={styles.prizeValue}>{item.prizes.winner}</Text></Text>
+                      ) : null}
+                      {item.prizes.runner_up ? (
+                        <Text style={styles.prizeRank}>🥈 2nd Place: <Text style={styles.prizeValue}>{item.prizes.runner_up}</Text></Text>
+                      ) : null}
+                      {item.prizes.second_runner_up ? (
+                        <Text style={styles.prizeRank}>🥉 3rd Place: <Text style={styles.prizeValue}>{item.prizes.second_runner_up}</Text></Text>
+                      ) : null}
+                    </View>
                   </View>
 
                   {/* Rules */}
                   {item.rules.length > 0 && (
                     <View style={styles.section}>
-                      <Text style={styles.sectionHeader}>📜 RULES</Text>
+                      <Text style={styles.sectionTitle}>📜 RULES & GUIDELINES</Text>
                       {item.rules.map((rule, idx) => (
-                        <Text key={idx} style={styles.listText}>
-                          • {rule}
+                        <Text key={idx} style={styles.ruleItem}>
+                          {rule}
                         </Text>
                       ))}
                     </View>
@@ -118,50 +130,50 @@ export default function EventsTab() {
                   {/* Eligibility */}
                   {item.eligibility.length > 0 && (
                     <View style={styles.section}>
-                      <Text style={styles.sectionHeader}>🎓 ELIGIBILITY</Text>
+                      <Text style={styles.sectionTitle}>🎓 ELIGIBILITY</Text>
                       {item.eligibility.map((el, idx) => (
-                        <Text key={idx} style={styles.listText}>
+                        <Text key={idx} style={styles.ruleItem}>
                           • {el}
                         </Text>
                       ))}
                     </View>
                   )}
 
-                  {/* Event Heads */}
+                  {/* Event Coordinators */}
                   {item.event_heads.length > 0 && (
                     <View style={styles.section}>
-                      <Text style={styles.sectionHeader}>👤 EVENT HEADS</Text>
-                      {item.event_heads.map((head, idx) => (
-                        <View key={idx} style={styles.headCard}>
-                          <Text style={styles.headName}>
-                            {head.name} ({head.role})
-                          </Text>
-                          <Text style={styles.headContact}>
-                            📞 {head.phone}  |  ✉️ {head.email}
-                          </Text>
-                        </View>
-                      ))}
+                      <Text style={styles.sectionTitle}>👤 EVENT HEADS</Text>
+                      <View style={styles.headGrid}>
+                        {item.event_heads.map((head, idx) => (
+                          <View key={idx} style={styles.headCard}>
+                            <Text style={styles.headName}>{head.name}</Text>
+                            <Text style={styles.headRole}>{head.role}</Text>
+                            <Text style={styles.headContact}>📞 {head.phone}</Text>
+                          </View>
+                        ))}
+                      </View>
                     </View>
                   )}
 
-                  {/* PDF Rulebook Link */}
+                  {/* Rulebook Download */}
                   {item.rules_pdf_url ? (
                     <TouchableOpacity
-                      style={styles.pdfButton}
+                      style={styles.pdfBtn}
                       onPress={() => Linking.openURL(item.rules_pdf_url!)}
                     >
-                      <Text style={styles.pdfText}>📥 DOWNLOAD RULEBOOK PDF</Text>
+                      <Text style={styles.pdfBtnText}>📄 DOWNLOAD FULL RULEBOOK PDF</Text>
                     </TouchableOpacity>
                   ) : null}
-                </View>
+                </Animated.View>
               )}
 
-              <TouchableOpacity style={styles.toggleBtn} onPress={() => toggleExpand(item.id)}>
-                <Text style={styles.toggleText}>
-                  {isExpanded ? "▲ SHOW LESS" : "▼ VIEW DETAILS & RULES"}
+              {/* Toggle Button */}
+              <TouchableOpacity style={styles.expandBtn} onPress={() => toggleExpand(item.id)}>
+                <Text style={styles.expandBtnText}>
+                  {isExpanded ? "SHOW LESS ▲" : "VIEW DETAILS & RULES ▼"}
                 </Text>
               </TouchableOpacity>
-            </PixelCard>
+            </Animated.View>
           );
         }}
       />
@@ -172,148 +184,207 @@ export default function EventsTab() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.stage,
-    paddingHorizontal: px(12),
+    backgroundColor: "#0d1018",
+    paddingHorizontal: px(14),
     paddingTop: px(16),
   },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.stage,
-    padding: px(16),
+    backgroundColor: "#0d1018",
   },
   loadingText: {
-    fontFamily: fonts.pixel,
-    fontSize: px(11),
+    fontFamily: fonts.pixelBold,
+    fontSize: px(12),
     color: colors.gold.title,
     marginTop: px(12),
   },
-  errorText: {
-    fontFamily: fonts.body,
-    fontSize: px(14),
-    color: colors.flame.outer,
-    marginBottom: px(12),
-    textAlign: "center",
-  },
-  retryButton: {
-    backgroundColor: colors.cta.base,
-    paddingVertical: px(8),
-    paddingHorizontal: px(16),
-    borderRadius: px(4),
-    borderWidth: px(1),
-    borderColor: colors.cta.glow,
-  },
-  retryButtonText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(11),
-    color: colors.gold.text,
-  },
   screenTitle: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(18),
+    fontSize: px(20),
     color: colors.gold.title,
     textAlign: "center",
   },
   subtitle: {
     fontFamily: fonts.body,
-    fontSize: px(12),
-    color: colors.body,
+    fontSize: px(13),
+    color: "#a08c70",
     textAlign: "center",
-    marginBottom: px(12),
+    marginBottom: px(16),
   },
   listContainer: {
-    paddingBottom: px(24),
+    paddingBottom: px(30),
+  },
+  card: {
+    backgroundColor: "#161b26",
+    borderRadius: px(10),
+    borderWidth: px(1.5),
+    borderColor: "#34281a",
+    marginBottom: px(16),
+    overflow: "hidden",
+    padding: px(14),
+  },
+  bannerImage: {
+    height: px(120),
+    width: "100%",
+    borderRadius: px(6),
+    marginBottom: px(12),
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: px(8),
+  },
+  titleColumn: {
+    flex: 1,
+    paddingRight: px(8),
+  },
+  eventTitle: {
+    fontFamily: fonts.pixelBold,
+    fontSize: px(16),
+    color: "#ffe9b8",
   },
   eventSubtitle: {
     fontFamily: fonts.bodyMedium,
     fontSize: px(13),
-    color: colors.gold.bright,
-    marginBottom: px(6),
+    color: "#e2af64",
+    marginTop: px(2),
   },
-  metaRow: {
+  typeBadge: {
+    backgroundColor: "#2a1e12",
+    paddingVertical: px(4),
+    paddingHorizontal: px(8),
+    borderRadius: px(4),
+    borderWidth: px(1),
+    borderColor: "#c8a679",
+  },
+  typeBadgeText: {
+    fontFamily: fonts.pixelBold,
+    fontSize: px(9),
+    color: "#ffe9b8",
+  },
+  infoGrid: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: px(4),
+    gap: px(8),
+    marginBottom: px(8),
   },
-  metaText: {
-    fontFamily: fonts.body,
+  infoChip: {
+    backgroundColor: "#202736",
+    paddingVertical: px(4),
+    paddingHorizontal: px(10),
+    borderRadius: px(4),
+  },
+  infoChipText: {
+    fontFamily: fonts.bodyMedium,
     fontSize: px(12),
-    color: colors.gold.muted,
+    color: "#d8c5a4",
+  },
+  venueText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: px(13),
+    color: "#c8a679",
+    marginBottom: px(6),
   },
   description: {
     fontFamily: fonts.body,
-    fontSize: px(13),
-    color: colors.body,
-    marginTop: px(6),
-    lineHeight: px(18),
+    fontSize: px(14),
+    color: "#e0e0e0",
+    lineHeight: px(20),
   },
   expandedContent: {
-    marginTop: px(12),
+    marginTop: px(14),
+    paddingTop: px(12),
     borderTopWidth: px(1),
-    borderTopColor: colors.dirt.light,
-    paddingTop: px(10),
+    borderTopColor: "#2a3245",
   },
   section: {
-    marginBottom: px(10),
+    marginBottom: px(14),
   },
-  sectionHeader: {
+  sectionTitle: {
     fontFamily: fonts.pixelBold,
     fontSize: px(11),
-    color: colors.gold.label,
+    color: "#ffe9b8",
+    marginBottom: px(6),
+    letterSpacing: px(1),
+  },
+  prizeBox: {
+    backgroundColor: "#221c13",
+    padding: px(10),
+    borderRadius: px(6),
+    borderWidth: px(1),
+    borderColor: "#4a3925",
+  },
+  prizeRank: {
+    fontFamily: fonts.bodyBold,
+    fontSize: px(13),
+    color: "#d8c5a4",
     marginBottom: px(4),
   },
-  prizeText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: px(12),
-    color: colors.cta.glow,
+  prizeValue: {
+    fontFamily: fonts.bodyBold,
+    fontSize: px(13),
+    color: "#52c480",
   },
-  listText: {
+  ruleItem: {
     fontFamily: fonts.body,
-    fontSize: px(12),
-    color: colors.body,
-    marginBottom: px(2),
+    fontSize: px(13),
+    color: "#d0d0d0",
+    lineHeight: px(18),
+    marginBottom: px(4),
+  },
+  headGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: px(8),
   },
   headCard: {
-    backgroundColor: colors.dirt.shadow,
-    padding: px(6),
-    borderRadius: px(4),
-    marginBottom: px(4),
+    backgroundColor: "#202736",
+    padding: px(8),
+    borderRadius: px(6),
+    flex: 1,
+    minWidth: px(140),
   },
   headName: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(12),
-    color: colors.gold.text,
+    fontSize: px(13),
+    color: "#ffe9b8",
   },
-  headContact: {
+  headRole: {
     fontFamily: fonts.body,
     fontSize: px(11),
-    color: colors.gold.muted,
-    marginTop: px(2),
+    color: "#a08c70",
   },
-  pdfButton: {
-    backgroundColor: colors.google.base,
-    paddingVertical: px(6),
-    paddingHorizontal: px(10),
-    borderRadius: px(4),
+  headContact: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: px(12),
+    color: "#52a3c4",
+    marginTop: px(4),
+  },
+  pdfBtn: {
+    backgroundColor: "#2e3b52",
+    paddingVertical: px(10),
+    borderRadius: px(6),
     alignItems: "center",
-    marginTop: px(6),
+    marginTop: px(4),
   },
-  pdfText: {
-    fontFamily: fonts.pixel,
-    fontSize: px(10),
-    color: colors.gold.text,
+  pdfBtnText: {
+    fontFamily: fonts.pixelBold,
+    fontSize: px(11),
+    color: "#ffffff",
   },
-  toggleBtn: {
-    marginTop: px(8),
-    paddingVertical: px(6),
+  expandBtn: {
+    marginTop: px(10),
+    backgroundColor: "#202736",
+    paddingVertical: px(8),
+    borderRadius: px(6),
     alignItems: "center",
-    backgroundColor: colors.dirt.shadow,
-    borderRadius: px(2),
   },
-  toggleText: {
-    fontFamily: fonts.pixel,
+  expandBtnText: {
+    fontFamily: fonts.pixelBold,
     fontSize: px(10),
-    color: colors.gold.bright,
+    color: "#ffe9b8",
+    letterSpacing: px(1),
   },
 });

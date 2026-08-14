@@ -16,11 +16,12 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: true,
-        headerStyle: { backgroundColor: colors.stage },
-        headerTintColor: colors.gold.title,
-        tabBarStyle: { backgroundColor: colors.stage, borderTopColor: colors.gold.muted },
-        tabBarActiveTintColor: colors.gold.title,
-        tabBarInactiveTintColor: colors.gold.muted,
+        headerStyle: { backgroundColor: "#0d1018", borderBottomWidth: 1, borderBottomColor: "#2a3245" },
+        headerTitleStyle: { fontFamily: "Silkscreen_700Bold", fontSize: 16, color: "#ffe9b8" },
+        headerTitleAlign: "center",
+        tabBarStyle: { backgroundColor: "#0d1018", borderTopColor: "#2a3245" },
+        tabBarActiveTintColor: "#ffe9b8",
+        tabBarInactiveTintColor: "#a08c70",
       }}
     >
       <Tabs.Screen
