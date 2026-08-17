@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import {
   View,
   StyleSheet,
@@ -11,20 +12,54 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
+import * as Linking from "expo-linking";
+import axios from "axios";
 import { useAuth } from "@/features/auth/AuthContext";
 import { colors, fonts } from "@/theme/tokens";
 import { px } from "@/theme/scale";
 import { PixelInput } from "@/components/pixel/PixelInput";
 import { PixelCard } from "@/components/pixel/PixelCard";
 import { useLoginForm } from "./useLoginForm";
+import { API_BASE_URL } from "@/services/api";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export function LoginScreen() {
   const { login } = useAuth();
+  const params = useLocalSearchParams<{ handoffCode?: string }>();
   const form = useLoginForm((role) => {
     login(role);
     router.replace("/(tabs)");
   });
+
+  const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (params.handoffCode) {
+      axios.post(`${API_BASE_URL}/auth/website-handoff/exchange`, { code: params.handoffCode })
+        .then(() => {
+          login("participant");
+          router.replace("/(tabs)");
+        })
+        .catch(err => {
+          console.error("Exchange error", err);
+          form.say("GOOGLE SIGN-IN FAILED");
+        });
+    }
+  }, [params.handoffCode, login, form]);
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const redirectUrl = Linking.createURL("/login");
+      const authUrl = `${API_BASE_URL}/auth/signin/google?returnTo=${encodeURIComponent(redirectUrl)}&redirect=true`;
+      await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
+    } catch (err) {
+      console.error("OAuth error", err);
+      form.say("GOOGLE SIGN-IN FAILED");
+    }
+  };
 
   return (
     <ImageBackground
@@ -68,9 +103,14 @@ export function LoginScreen() {
                     value={form.password}
                     onChangeText={form.setPassword}
                     placeholder="••••••••••••"
-                    secureTextEntry
+                    secureTextEntry={!showPassword}
                     editable={!form.busy}
                     onSubmitEditing={form.submit}
+                    rightAccessory={
+                      <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: px(4) }}>
+                        <Ionicons name={showPassword ? "eye-off" : "eye"} size={px(20)} color={colors.gold.muted} />
+                      </TouchableOpacity>
+                    }
                   />
 
                   <TouchableOpacity style={styles.forgotBtn} onPress={() => form.say("RAVEN SENT · CHECK YOUR INBOX")}>
@@ -93,7 +133,7 @@ export function LoginScreen() {
                   {/* Google OAuth Button */}
                   <TouchableOpacity
                     style={styles.googleBtn}
-                    onPress={() => form.say("GOOGLE SIGN-IN OPENS IN NEXT BUILD")}
+                    onPress={handleGoogleSignIn}
                     disabled={form.busy}
                   >
                     <Text style={styles.googleBtnText}>CONTINUE WITH GOOGLE</Text>

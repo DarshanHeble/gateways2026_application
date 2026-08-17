@@ -6,21 +6,11 @@ import Constants from 'expo-constants';
 // - Physical device uses the Expo packager host IP (e.g. 10.150.159.192)
 // - iOS Simulator and Web use localhost
 const getApiBaseUrl = () => {
-  if (Platform.OS === 'android') {
-    const rawHost = Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoGo?.debuggerHost || '';
-    // If running via Expo Tunnel (e.g. *.exp.direct), stripping hostUri gives an unroutable tunnel domain for port 4000.
-    // In that case, fall back to local LAN IP or 10.0.2.2 emulator loopback.
-    if (rawHost && !rawHost.includes('exp.direct')) {
-      const ip = rawHost.split(':')[0];
-      return `http://${ip}:4000/api`;
-    }
-    // Default local network IP fallback for dev physical device / Android emulator
-    return 'http://10.0.2.2:4000/api';
-  }
-  return 'http://localhost:4000/api';
+  // Switched to Pinggy since Serveo might be blocked by mobile networks.
+  return 'https://lhgwu-111-93-136-226.free.pinggy.net/api/v1';
 };
 
-const API_BASE_URL = getApiBaseUrl();
+export const API_BASE_URL = getApiBaseUrl();
 
 export interface EventHead {
   name: string;
@@ -510,42 +500,34 @@ export const MOCK_SCHEDULE: ScheduleResponse = {
   ],
 };
 
+import axios from 'axios';
+
 export async function fetchEvents(): Promise<EventItem[]> {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 sec timeout
-    const response = await fetch(`${API_BASE_URL}/events`, { signal: controller.signal });
-    clearTimeout(timeoutId);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch events: ${response.statusText}`);
-    }
-    const data = await response.json();
-    if (Array.isArray(data) && data.length > 0) {
-      return data;
+    const response = await axios.get<EventItem[]>(`${API_BASE_URL}/events`, {
+      timeout: 10000,
+    });
+    if (Array.isArray(response.data) && response.data.length > 0) {
+      return response.data;
     }
     return MOCK_EVENTS;
   } catch (error) {
-    console.warn('Backend fetch failed, using fallback mock events data');
+    console.warn('Backend fetch failed via Axios, using fallback mock events data:', error);
     return MOCK_EVENTS;
   }
 }
 
 export async function fetchSchedule(): Promise<ScheduleResponse> {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 sec timeout
-    const response = await fetch(`${API_BASE_URL}/schedule`, { signal: controller.signal });
-    clearTimeout(timeoutId);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch schedule: ${response.statusText}`);
-    }
-    const data = await response.json();
-    if (data && Array.isArray(data.days) && data.days.length > 0) {
-      return data;
+    const response = await axios.get<ScheduleResponse>(`${API_BASE_URL}/schedule`, {
+      timeout: 10000,
+    });
+    if (response.data && Array.isArray(response.data.days) && response.data.days.length > 0) {
+      return response.data;
     }
     return MOCK_SCHEDULE;
   } catch (error) {
-    console.warn('Backend fetch failed, using fallback mock schedule data');
+    console.warn('Backend fetch failed via Axios, using fallback mock schedule data:', error);
     return MOCK_SCHEDULE;
   }
 }

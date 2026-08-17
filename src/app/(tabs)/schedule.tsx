@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
+  RefreshControl,
 } from "react-native";
 import Animated, {
   FadeInDown,
@@ -18,20 +19,27 @@ import { fetchSchedule, ScheduleResponse, MOCK_SCHEDULE } from "@/services/api";
 export default function ScheduleTab() {
   const [scheduleData, setScheduleData] = useState<ScheduleResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await fetchSchedule();
-        setScheduleData(data);
-      } catch {
-        setScheduleData(MOCK_SCHEDULE);
-      } finally {
-        setLoading(false);
-      }
-    })();
+  const loadSchedule = useCallback(async () => {
+    try {
+      const data = await fetchSchedule();
+      setScheduleData(data);
+    } catch {
+      setScheduleData(MOCK_SCHEDULE);
+    }
   }, []);
+
+  useEffect(() => {
+    loadSchedule().finally(() => setLoading(false));
+  }, [loadSchedule]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadSchedule();
+    setRefreshing(false);
+  }, [loadSchedule]);
 
   if (loading) {
     return (
@@ -73,6 +81,15 @@ export default function ScheduleTab() {
         keyExtractor={(item, idx) => `${item.id}-${idx}`}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.gold.bright}
+            colors={[colors.gold.bright]}
+            progressBackgroundColor="#161b26"
+          />
+        }
         renderItem={({ item, index }) => {
           return (
             <Animated.View

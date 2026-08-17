@@ -17,6 +17,7 @@ export type PixelInputProps = TextInputProps & {
   label: string;
   /** Bump to replay the error shake. */
   errorNonce?: number;
+  rightAccessory?: React.ReactNode;
 };
 
 /**
@@ -24,7 +25,7 @@ export type PixelInputProps = TextInputProps & {
  * a hard inner top shadow, matching the design's inset box-shadow exactly.
  */
 export const PixelInput = forwardRef<TextInput, PixelInputProps>(function PixelInput(
-  { label, errorNonce = 0, onFocus, onBlur, style, ...rest },
+  { label, errorNonce = 0, onFocus, onBlur, style, rightAccessory, ...rest },
   ref,
 ) {
   const [focused, setFocused] = useState(false);
@@ -72,9 +73,14 @@ export const PixelInput = forwardRef<TextInput, PixelInputProps>(function PixelI
             setFocused(false);
             onBlur?.(e);
           }}
-          style={[styles.field, style]}
+          style={[styles.field, style, rightAccessory ? { paddingRight: px(40) } : null]}
           {...rest}
         />
+        {rightAccessory && (
+          <View style={styles.rightAccessoryContainer}>
+            {rightAccessory}
+          </View>
+        )}
       </View>
     </Animated.View>
   );
@@ -105,5 +111,14 @@ const styles = StyleSheet.create({
     fontSize: px(15), // Much larger, readable text
     height: px(48), // Comfortable touch height
     borderRadius: px(2),
+  },
+  rightAccessoryContainer: {
+    position: "absolute",
+    right: px(6),
+    top: px(2),
+    bottom: px(2),
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: px(8),
   },
 });

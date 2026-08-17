@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Linking,
   Image,
+  RefreshControl,
 } from "react-native";
 import Animated, {
   FadeInDown,
@@ -20,20 +21,27 @@ import { fetchEvents, EventItem, MOCK_EVENTS } from "@/services/api";
 export default function EventsTab() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await fetchEvents();
-        setEvents(data);
-      } catch {
-        setEvents(MOCK_EVENTS);
-      } finally {
-        setLoading(false);
-      }
-    })();
+  const loadEvents = useCallback(async () => {
+    try {
+      const data = await fetchEvents();
+      setEvents(data);
+    } catch {
+      setEvents(MOCK_EVENTS);
+    }
   }, []);
+
+  useEffect(() => {
+    loadEvents().finally(() => setLoading(false));
+  }, [loadEvents]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadEvents();
+    setRefreshing(false);
+  }, [loadEvents]);
 
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -57,6 +65,15 @@ export default function EventsTab() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.gold.bright}
+            colors={[colors.gold.bright]}
+            progressBackgroundColor="#161b26"
+          />
+        }
         renderItem={({ item, index }) => {
           const isExpanded = expandedId === item.id;
           return (
