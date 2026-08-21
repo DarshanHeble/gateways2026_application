@@ -5,12 +5,10 @@ import Constants from 'expo-constants';
 // - Android Emulator uses 10.0.2.2 instead of localhost
 // - Physical device uses the Expo packager host IP (e.g. 10.150.159.192)
 // - iOS Simulator and Web use localhost
-const getApiBaseUrl = () => {
-  // Switched to Pinggy since Serveo might be blocked by mobile networks.
-  return 'https://lhgwu-111-93-136-226.free.pinggy.net/api/v1';
-};
+export const API_BASE_URL = 'https://bddaj-36-255-86-19.run.pinggy-free.link/api/v1';
 
-export const API_BASE_URL = getApiBaseUrl();
+// We also need the raw host for the health check which is at the root, not /api/v1
+export const API_ROOT_URL = API_BASE_URL.replace('/api/v1', '');
 
 export interface EventHead {
   name: string;
@@ -519,7 +517,7 @@ export async function fetchEvents(): Promise<EventItem[]> {
 
 export async function fetchSchedule(): Promise<ScheduleResponse> {
   try {
-    const response = await axios.get<ScheduleResponse>(`${API_BASE_URL}/schedule`, {
+    const response = await axios.get<ScheduleResponse>(`${API_BASE_URL}/events/schedule`, {
       timeout: 10000,
     });
     if (response.data && Array.isArray(response.data.days) && response.data.days.length > 0) {

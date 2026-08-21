@@ -23,8 +23,15 @@ import { PixelInput } from "@/components/pixel/PixelInput";
 import { PixelCard } from "@/components/pixel/PixelCard";
 import { useLoginForm } from "./useLoginForm";
 import { API_BASE_URL } from "@/services/api";
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { MinecraftButton } from "@/components/MaterialCraft/MinecraftButton";
 
 WebBrowser.maybeCompleteAuthSession();
+
+GoogleSignin.configure({
+  webClientId: "848035972456-uavvadlpdpvaje7vavs1c5h7enna8790.apps.googleusercontent.com",
+  offlineAccess: true,
+});
 
 export function LoginScreen() {
   const { login } = useAuth();
@@ -52,11 +59,28 @@ export function LoginScreen() {
 
   const handleGoogleSignIn = async () => {
     try {
-      const redirectUrl = Linking.createURL("/login");
-      const authUrl = `${API_BASE_URL}/auth/signin/google?returnTo=${encodeURIComponent(redirectUrl)}&redirect=true`;
-      await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
+      // 1. Check play services
+      await GoogleSignin.hasPlayServices();
+      // 2. Sign in and get idToken
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken;
+
+      if (!idToken) throw new Error("No idToken received");
+
+      // 3. Send idToken to our custom backend
+      const res = await axios.post(`${API_BASE_URL}/auth/signin/google/native`, { idToken });
+      
+      // 4. Handle response (usually requires OTP verification in our system)
+      if (res.data.requiresVerification) {
+        form.say("CHECK EMAIL FOR OTP");
+        // router.push({ pathname: '/verify', params: { email: res.data.user.email } });
+        // Assuming OTP screen is implemented or handled
+      } else {
+        login("participant");
+        router.replace("/(tabs)");
+      }
     } catch (err) {
-      console.error("OAuth error", err);
+      console.error("Native Google OAuth error", err);
       form.say("GOOGLE SIGN-IN FAILED");
     }
   };
@@ -118,26 +142,23 @@ export function LoginScreen() {
                   </TouchableOpacity>
 
                   {/* Primary Sign In Button */}
-                  <TouchableOpacity
-                    style={[styles.submitBtn, form.busy && styles.btnDisabled]}
+                  <MinecraftButton
+                    mode="contained"
                     onPress={form.submit}
                     disabled={form.busy}
+                    loading={form.busy}
                   >
-                    {form.busy ? (
-                      <ActivityIndicator color={colors.cta.ink} />
-                    ) : (
-                      <Text style={styles.submitBtnText}>ENTER FEST</Text>
-                    )}
-                  </TouchableOpacity>
+                    ENTER FEST
+                  </MinecraftButton>
 
                   {/* Google OAuth Button */}
-                  <TouchableOpacity
-                    style={styles.googleBtn}
+                  <MinecraftButton
+                    mode="outlined"
                     onPress={handleGoogleSignIn}
                     disabled={form.busy}
                   >
-                    <Text style={styles.googleBtnText}>CONTINUE WITH GOOGLE</Text>
-                  </TouchableOpacity>
+                    CONTINUE WITH GOOGLE
+                  </MinecraftButton>
                 </View>
               </PixelCard>
             </View>

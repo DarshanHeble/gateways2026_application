@@ -39,6 +39,7 @@ export default function EventsTab() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
     await loadEvents();
     setRefreshing(false);
   }, [loadEvents]);
@@ -69,9 +70,7 @@ export default function EventsTab() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colors.gold.bright}
-            colors={[colors.gold.bright]}
-            progressBackgroundColor="#161b26"
+            progressViewOffset={20}
           />
         }
         renderItem={({ item, index }) => {
@@ -94,7 +93,7 @@ export default function EventsTab() {
                   {item.subtitle ? <Text style={styles.eventSubtitle}>{item.subtitle}</Text> : null}
                 </View>
                 <View style={styles.typeBadge}>
-                  <Text style={styles.typeBadgeText}>{item.type.toUpperCase()}</Text>
+                  <Text style={styles.typeBadgeText}>{(item.type || 'GENERAL').toUpperCase()}</Text>
                 </View>
               </View>
 

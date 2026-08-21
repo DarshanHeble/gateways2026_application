@@ -37,6 +37,7 @@ export default function ScheduleTab() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
     await loadSchedule();
     setRefreshing(false);
   }, [loadSchedule]);
@@ -85,9 +86,7 @@ export default function ScheduleTab() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colors.gold.bright}
-            colors={[colors.gold.bright]}
-            progressBackgroundColor="#161b26"
+            progressViewOffset={20}
           />
         }
         renderItem={({ item, index }) => {
