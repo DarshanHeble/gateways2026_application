@@ -4,13 +4,15 @@ A production-ready Expo React Native application.
 
 ## Local Development Workflow (Mobile + Backend)
 
-Because the mobile app runs on a physical device (often on a different network/WiFi), it cannot access the backend directly via `localhost:4000`. Follow these steps to run the full stack locally:
+Because the mobile app runs on a physical device, and your local Wi-Fi blocks `10.x.x.x` network connections, it cannot access the backend directly via `localhost:4000`. You must use a tunnel (like Pinggy) to bridge the physical phone to your local backend.
 
-### 1. Start the Backend & Database
-In your **backend** directory (`gateways2026_backend`), run the following command. It automatically spins up the MySQL Docker container (on port `3307`) and starts the Fastify API.
+Follow these steps to run the full stack locally:
+
+### 1. Start the Backend
+In your **backend** directory (`Gateways_backend`), run the following command to start the Fastify API (runs on port `4000`):
 ```bash
-# In the gateways2026_backend folder
-npm run dev:all
+# In the Gateways_backend folder
+npm run dev
 ```
 
 ### 2. Expose the Backend API via Tunnel
@@ -18,26 +20,25 @@ To securely route traffic from your phone to your local backend, open a **new te
 ```bash
 ssh -p 443 -o StrictHostKeyChecking=no -R0:localhost:4000 a.pinggy.io
 ```
-This will generate a public URL (e.g., `https://xxxx-xxx.free.pinggy.net`). Keep this terminal open!
+This will generate a public URL (e.g., `https://xxxx-xxx.run.pinggy-free.link`). Keep this terminal open!
 
 ### 3. Link the App to the Tunnel
 In this frontend directory, open `src/services/api.ts` and update the `API_BASE_URL` to match the Pinggy URL you just generated:
 ```typescript
-const getApiBaseUrl = () => {
-  return 'https://xxxx-xxx.free.pinggy.net/api';
-};
+export const API_BASE_URL = 'https://xxxx-xxx.run.pinggy-free.link/api/v1';
 ```
 
 ### 4. Start the Expo App
-Finally, start the Expo bundler in tunnel mode to easily connect your physical device:
+Finally, compile and start the Android app on your physical device:
 ```bash
-npx expo start --tunnel
+# In the gateways2026_application folder
+npx expo run:android
 ```
-Scan the QR code with your phone. The app will open and successfully fetch data from your local backend!
+Once the app opens on your phone, it will seamlessly connect through the Pinggy tunnel directly to your local backend!
 
 ## Standard Commands
 
 - `npm install` - Install dependencies
-- `npx expo start -c --tunnel` - Start app and clear bundler cache (recommended if API URL changes aren't reflecting)
-- `npm run android` - Start on Android emulator
-- `npm run ios` - Start on iOS Simulator
+- `npx expo start -c` - Start Expo server and clear bundler cache
+- `npx expo run:android` - Build and install the native Android app
+- `npx expo run:ios` - Build and install the native iOS app
