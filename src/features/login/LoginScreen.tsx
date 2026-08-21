@@ -30,7 +30,6 @@ WebBrowser.maybeCompleteAuthSession();
 
 GoogleSignin.configure({
   webClientId: "848035972456-uavvadlpdpvaje7vavs1c5h7enna8790.apps.googleusercontent.com",
-  offlineAccess: true,
 });
 
 export function LoginScreen() {
