@@ -1,10 +1,12 @@
 import { Tabs, Redirect } from "expo-router";
 import { useAuth } from "@/features/auth/AuthContext";
+import { useNotifications } from "@/features/notifications/NotificationsContext";
 import { colors } from "@/theme/tokens";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function TabLayout() {
   const { role } = useAuth();
+  const { unreadCount } = useNotifications();
 
   if (!role) {
     return <Redirect href="/login" />;
@@ -46,6 +48,14 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="notifications"
+        options={{
+          title: "Alerts",
+          tabBarIcon: ({ color }) => <Ionicons name="notifications" size={24} color={color} />,
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
@@ -58,6 +68,14 @@ export default function TabLayout() {
           title: "Team Contact",
           tabBarIcon: ({ color }) => <Ionicons name="call" size={24} color={color} />,
           href: isTeam ? "/contact" : null, // hides the tab if not team
+        }}
+      />
+      <Tabs.Screen
+        name="broadcast"
+        options={{
+          title: "Broadcast",
+          tabBarIcon: ({ color }) => <Ionicons name="megaphone" size={24} color={color} />,
+          href: isTeam ? "/broadcast" : null, // hides the tab if not team
         }}
       />
     </Tabs>

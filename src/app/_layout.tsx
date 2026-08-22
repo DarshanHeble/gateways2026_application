@@ -15,6 +15,7 @@ import {
 import { colors } from "@/theme/tokens";
 import { ChunkTransitionOverlay } from "@/features/splash/ChunkTransitionOverlay";
 import { AuthProvider } from "@/features/auth/AuthContext";
+import { NotificationsProvider } from "@/features/notifications/NotificationsContext";
 import { PaperProvider } from 'react-native-paper';
 import { minecraftTheme } from '@/theme/minecraftTheme';
 import { ConnectionStatus } from '@/components/ConnectionStatus';
@@ -44,15 +45,17 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <StatusBar style="light" />
         <AuthProvider>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.stage },
-              animation: "fade",
-            }}
-          />
-          <ConnectionStatus />
-          <ChunkTransitionOverlay />
+          <NotificationsProvider>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.stage },
+                animation: "fade",
+              }}
+            />
+            <ConnectionStatus />
+            <ChunkTransitionOverlay />
+          </NotificationsProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </PaperProvider>
