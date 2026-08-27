@@ -15,6 +15,10 @@ import {
 import { colors } from "@/theme/tokens";
 import { ChunkTransitionOverlay } from "@/features/splash/ChunkTransitionOverlay";
 import { AuthProvider } from "@/features/auth/AuthContext";
+import { NotificationsProvider } from "@/features/notifications/NotificationsContext";
+import { PaperProvider } from 'react-native-paper';
+import { minecraftTheme } from '@/theme/minecraftTheme';
+import { ConnectionStatus } from '@/components/ConnectionStatus';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -37,18 +41,23 @@ export default function RootLayout() {
   if (!loaded && !error) return null;
 
   return (
-    <SafeAreaProvider>
-      <StatusBar style="light" />
-      <AuthProvider>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.stage },
-            animation: "fade",
-          }}
-        />
-        <ChunkTransitionOverlay />
-      </AuthProvider>
-    </SafeAreaProvider>
+    <PaperProvider theme={minecraftTheme}>
+      <SafeAreaProvider>
+        <StatusBar style="light" />
+        <AuthProvider>
+          <NotificationsProvider>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.stage },
+                animation: "fade",
+              }}
+            />
+            <ConnectionStatus />
+            <ChunkTransitionOverlay />
+          </NotificationsProvider>
+        </AuthProvider>
+      </SafeAreaProvider>
+    </PaperProvider>
   );
 }

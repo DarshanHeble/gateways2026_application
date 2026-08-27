@@ -8,7 +8,8 @@
     "scheme": "gateways2026application",
     "userInterfaceStyle": "dark",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.darshanheble.gateways2026-application"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +18,7 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "package": "com.darshanheble.gateways2026_application"
     },
     "web": {
       "output": "static",
@@ -34,7 +35,16 @@
         }
       ],
       "expo-video",
-      "expo-image"
+      "expo-image",
+      "expo-web-browser",
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#ffe9b8"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

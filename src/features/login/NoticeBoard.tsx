@@ -76,7 +76,7 @@ export type NoticeBoardProps = {
   busy: boolean;
   errorField: LoginFieldError;
   errorNonce: number;
-  passwordRef: React.RefObject<TextInput | null>;
+  passwordRef: any;
   onSubmit: () => void;
   onGoogle: () => void;
   onForgot: () => void;
