@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "gateways2026_application",
+    "name": "Gateways 2026",
     "slug": "gateways2026_application",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/logo-glow.png",
     "scheme": "gateways2026application",
     "userInterfaceStyle": "dark",
     "ios": {
@@ -30,8 +30,8 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#0d1018",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "image": "./assets/images/logo-glow.png",
+          "imageWidth": 200
         }
       ],
       "expo-video",

@@ -5,7 +5,7 @@ import Constants from 'expo-constants';
 // - Android Emulator uses 10.0.2.2 instead of localhost
 // - Physical device uses the Expo packager host IP (e.g. 10.150.159.192)
 // - iOS Simulator and Web use localhost
-export const API_BASE_URL = 'https://hugne-111-93-136-226.free.pinggy.net/api/v1';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL as string;
 
 // We also need the raw host for the health check which is at the root, not /api/v1
 export const API_ROOT_URL = API_BASE_URL.replace('/api/v1', '');
@@ -499,6 +499,9 @@ export const MOCK_SCHEDULE: ScheduleResponse = {
 };
 
 import axios from 'axios';
+
+// Ensure cookies are sent with every request for secure authentication
+axios.defaults.withCredentials = true;
 
 export async function fetchEvents(): Promise<EventItem[]> {
   try {

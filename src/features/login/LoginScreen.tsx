@@ -29,7 +29,7 @@ import { MinecraftButton } from "@/components/MaterialCraft/MinecraftButton";
 WebBrowser.maybeCompleteAuthSession();
 
 GoogleSignin.configure({
-  webClientId: "848035972456-uavvadlpdpvaje7vavs1c5h7enna8790.apps.googleusercontent.com",
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
 });
 
 export function LoginScreen() {
