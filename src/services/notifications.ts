@@ -1,9 +1,8 @@
 import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
-import axios from "axios";
-
-import { API_BASE_URL } from "./api";
+import { API_BASE_URL, apiClient } from "./api";
 import { notificationStore } from "./notificationStore";
 import { AppNotification, NotificationTarget } from "./notificationTypes";
 
@@ -50,12 +49,13 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   try {
     const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
 
-    axios
-      .post(`${API_BASE_URL}/push/register-token`, { token, platform: Platform.OS })
-      .catch(() => {
-        // No backend endpoint yet — the token still works locally for the
-        // demo (local notifications), it just isn't registered server-side.
-      });
+    apiClient(`${API_BASE_URL}/push/register-token`, {
+      method: "POST",
+      body: JSON.stringify({ token, platform: Platform.OS }),
+    }).catch(() => {
+      // No backend endpoint yet — the token still works locally for the
+      // demo (local notifications), it just isn't registered server-side.
+    });
 
     return token;
   } catch (error) {
@@ -75,7 +75,11 @@ export async function sendNotification(input: {
   route?: string;
 }): Promise<void> {
   try {
-    await axios.post(`${API_BASE_URL}/push/send`, input, { timeout: 2000 });
+    await apiClient(`${API_BASE_URL}/push/send`, {
+      method: "POST",
+      body: JSON.stringify(input),
+      timeout: 2000,
+    });
     return;
   } catch {
     // Fall through to the local mock below.
@@ -105,12 +109,42 @@ export async function sendNotification(input: {
 
 export async function fetchNotifications(): Promise<AppNotification[]> {
   try {
-    const { data } = await axios.get<AppNotification[]>(`${API_BASE_URL}/push/notifications`, {
-      timeout: 2000,
+    const { data } = await apiClient<any[]>(`${API_BASE_URL}/events/announcements`, {
+      method: "GET",
+      timeout: 6000,
     });
-    if (Array.isArray(data)) return data;
-  } catch {
-    // No backend endpoint yet — read the local mock log instead.
+    if (Array.isArray(data) && data.length > 0) {
+      // Get previously stored notifications so we retain the read/unread state
+      const existingStored = await notificationStore.getAll();
+      const readSet = new Set(existingStored.filter((n) => n.read).map((n) => n.id));
+
+      const liveAnnouncements: AppNotification[] = data.map((item) => {
+        const rawTarget = (item.target || "").toString().toLowerCase().trim();
+        let target: NotificationTarget = "all";
+        if (rawTarget.startsWith("participant")) {
+          target = "participant";
+        } else if (rawTarget.startsWith("team") || rawTarget.startsWith("admin")) {
+          target = "team";
+        }
+
+        const id = String(item.id || `announcement-${item.sr_no || Math.random()}`);
+        return {
+          id,
+          title: item.title || "ANNOUNCEMENT",
+          body: item.body || item.content || "",
+          target,
+          createdAt: item.createdAt || Date.now(),
+          read: readSet.has(id),
+        };
+      });
+
+      // Persist to local device storage for offline caching
+      AsyncStorage.setItem("gateways.notifications.v1", JSON.stringify(liveAnnouncements)).catch(() => {});
+
+      return liveAnnouncements;
+    }
+  } catch (err) {
+    console.warn("Live announcements fetch failed, falling back to local storage...", err);
   }
   return notificationStore.getAll();
 }

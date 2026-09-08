@@ -15,41 +15,57 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
-import axios from "axios";
 import { useAuth } from "@/features/auth/AuthContext";
 import { colors, fonts } from "@/theme/tokens";
 import { px } from "@/theme/scale";
 import { PixelInput } from "@/components/pixel/PixelInput";
 import { PixelCard } from "@/components/pixel/PixelCard";
 import { useLoginForm } from "./useLoginForm";
-import { API_BASE_URL } from "@/services/api";
+import { API_BASE_URL, apiClient } from "@/services/api";
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { MinecraftButton } from "@/components/MaterialCraft/MinecraftButton";
 
 WebBrowser.maybeCompleteAuthSession();
 
+import { coverScreen, revealScreen } from "@/features/splash/chunkTransition";
+
 GoogleSignin.configure({
-  webClientId: "848035972456-uavvadlpdpvaje7vavs1c5h7enna8790.apps.googleusercontent.com",
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
 });
 
 export function LoginScreen() {
-  const { login } = useAuth();
+  const { login, role, isReady } = useAuth();
   const params = useLocalSearchParams<{ handoffCode?: string }>();
-  const form = useLoginForm((role) => {
-    login(role);
-    router.replace("/(tabs)");
+  const form = useLoginForm((newRole) => {
+    coverScreen(() => {
+      login(newRole);
+      router.replace("/(tabs)");
+      setTimeout(revealScreen, 300);
+    });
   });
 
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
+    if (isReady && role) {
+      router.replace("/(tabs)");
+    }
+  }, [isReady, role]);
+
+  useEffect(() => {
     if (params.handoffCode) {
-      axios.post(`${API_BASE_URL}/auth/website-handoff/exchange`, { code: params.handoffCode })
+      apiClient(`${API_BASE_URL}/auth/website-handoff/exchange`, {
+        method: "POST",
+        body: JSON.stringify({ code: params.handoffCode }),
+      })
         .then(() => {
-          login("participant");
-          router.replace("/(tabs)");
+          coverScreen(() => {
+            login("participant");
+            router.replace("/(tabs)");
+            setTimeout(revealScreen, 300);
+          });
         })
-        .catch(err => {
+        .catch((err) => {
           console.error("Exchange error", err);
           form.say("GOOGLE SIGN-IN FAILED");
         });
@@ -67,7 +83,13 @@ export function LoginScreen() {
       if (!idToken) throw new Error("No idToken received");
 
       // 3. Send idToken to our custom backend
-      const res = await axios.post(`${API_BASE_URL}/auth/signin/google/native`, { idToken });
+      const res = await apiClient<{ requiresVerification?: boolean; user?: { email: string } }>(
+        `${API_BASE_URL}/auth/signin/google/native`,
+        {
+          method: "POST",
+          body: JSON.stringify({ idToken }),
+        }
+      );
       
       // 4. Handle response (usually requires OTP verification in our system)
       if (res.data.requiresVerification) {
@@ -75,8 +97,11 @@ export function LoginScreen() {
         // router.push({ pathname: '/verify', params: { email: res.data.user.email } });
         // Assuming OTP screen is implemented or handled
       } else {
-        login("participant");
-        router.replace("/(tabs)");
+        coverScreen(() => {
+          login("participant");
+          router.replace("/(tabs)");
+          setTimeout(revealScreen, 300);
+        });
       }
     } catch (err) {
       console.error("Native Google OAuth error", err);
@@ -86,7 +111,7 @@ export function LoginScreen() {
 
   return (
     <ImageBackground
-      source={require("../../../assets/images/minecraft_bg.png")}
+      source={require("../../../assets/images/minecraft_bg.webp")}
       style={styles.background}
       resizeMode="cover"
     >

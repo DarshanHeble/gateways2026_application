@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
-import axios from 'axios';
-import { API_BASE_URL } from '@/services/api';
+import { API_ROOT_URL } from '@/services/api';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function ConnectionStatus() {
@@ -10,9 +9,25 @@ export function ConnectionStatus() {
 
   useEffect(() => {
     const checkConnection = async () => {
+      // 1. Try configured API_ROOT_URL
       try {
-        await axios.get(`${API_BASE_URL.replace('/api/v1', '')}/health`, { timeout: 3000 });
-        setIsConnected(true);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
+        const res = await fetch(`${API_ROOT_URL}/health`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          setIsConnected(true);
+          return;
+        }
+      } catch {}
+
+      // 2. Fallback to direct USB adb reverse port
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const res = await fetch(`http://localhost:5000/health`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        setIsConnected(res.ok);
       } catch {
         setIsConnected(false);
       }

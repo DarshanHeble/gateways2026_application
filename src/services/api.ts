@@ -1,14 +1,21 @@
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
+import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
 
-// Determine the local machine's IP address automatically for Expo Go / Emulator:
-// - Android Emulator uses 10.0.2.2 instead of localhost
-// - Physical device uses the Expo packager host IP (e.g. 10.150.159.192)
-// - iOS Simulator and Web use localhost
-export const API_BASE_URL = 'https://hugne-111-93-136-226.free.pinggy.net/api/v1';
+// Determine the active API URL:
+// 1. If EXPO_PUBLIC_API_URL is set and not a broken/expired tunnel, use it
+// 2. On Android with USB debugging (adb reverse) or emulator, localhost:5000 connects directly
+const rawUrl = process.env.EXPO_PUBLIC_API_URL;
+export const API_BASE_URL: string = rawUrl && rawUrl.trim().length > 0
+  ? rawUrl
+  : Platform.select({
+      android: "http://localhost:5000/api/v1",
+      ios: "http://localhost:5000/api/v1",
+      default: "http://localhost:5000/api/v1",
+    });
 
-// We also need the raw host for the health check which is at the root, not /api/v1
-export const API_ROOT_URL = API_BASE_URL.replace('/api/v1', '');
+// Raw host for the health check which is at the root, not /api/v1
+export const API_ROOT_URL = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
 
 export interface EventHead {
   name: string;
@@ -26,15 +33,18 @@ export interface EventItem {
   end_time: string;
   venue: string;
   type: string;
+  participation_type?: string;
   image_url?: string;
   description: string;
   rules: string[];
   rules_pdf_url?: string;
   eligibility: string[];
   prizes: {
+    pool?: string;
     winner?: string;
     runner_up?: string;
     second_runner_up?: string;
+    description?: string;
   };
   event_heads: EventHead[];
 }
@@ -498,34 +508,158 @@ export const MOCK_SCHEDULE: ScheduleResponse = {
   ],
 };
 
-import axios from 'axios';
+/**
+ * Lightweight native fetch client with timeout, JSON parsing, credentials, and 401 interceptor.
+ */
+export async function apiClient<T = any>(
+  url: string,
+  options: RequestInit & { timeout?: number } = {}
+): Promise<{ data: T; status: number }> {
+  const { timeout = 10000, ...customConfig } = options;
 
-export async function fetchEvents(): Promise<EventItem[]> {
+  const doFetch = async (targetUrl: string) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+      const response = await fetch(targetUrl, {
+        ...customConfig,
+        signal: controller.signal,
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...(customConfig.headers || {}),
+        },
+      });
+      clearTimeout(id);
+      return response;
+    } catch (e) {
+      clearTimeout(id);
+      throw e;
+    }
+  };
+
   try {
-    const response = await axios.get<EventItem[]>(`${API_BASE_URL}/events`, {
-      timeout: 10000,
+    let response: Response;
+    try {
+      response = await doFetch(url);
+    } catch (primaryErr) {
+      // If primary tunnel URL failed (e.g. Wi-Fi blocks tunnel), and target has /api/v1, try local adb reverse
+      if (!url.startsWith("http://localhost:5000") && url.includes("/api/v1")) {
+        const localFallback = url.replace(/https?:\/\/[^/]+/, "http://localhost:5000");
+        response = await doFetch(localFallback);
+      } else {
+        throw primaryErr;
+      }
+    }
+
+    if (response.status === 401) {
+      await AsyncStorage.removeItem("auth_role");
+      router.replace("/login");
+      throw new Error("Unauthorized (401)");
+    }
+
+    let data: any = null;
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      data = await response.json();
+    } else {
+      data = await response.text();
+    }
+
+    if (!response.ok) {
+      const err: any = new Error(data?.message || response.statusText || "Request failed");
+      err.status = response.status;
+      err.data = data;
+      throw err;
+    }
+
+    return { data, status: response.status };
+  } catch (error: any) {
+    throw error;
+  }
+}
+
+const CACHE_KEYS = {
+  EVENTS: "@gateways_cache_events",
+  SCHEDULE: "@gateways_cache_schedule",
+};
+
+/**
+ * Fetches events with offline-first synchronization:
+ * 1. Checks backend (/api/v1/events) which pulls live from Google Sheets
+ * 2. If successful, writes to device AsyncStorage (@gateways_cache_events)
+ * 3. If offline / request fails, reads directly from device AsyncStorage
+ * 4. If no device cache exists, falls back to MOCK_EVENTS
+ */
+export async function fetchEvents(): Promise<{ data: EventItem[]; source: "network" | "cache" | "fallback" }> {
+  try {
+    const response = await apiClient<EventItem[]>(`${API_BASE_URL}/events`, {
+      method: "GET",
+      timeout: 6000,
     });
     if (Array.isArray(response.data) && response.data.length > 0) {
-      return response.data;
+      // Save freshly fetched sheet data to local device storage
+      AsyncStorage.setItem(CACHE_KEYS.EVENTS, JSON.stringify(response.data)).catch(() => {});
+      return { data: response.data, source: "network" };
     }
-    return MOCK_EVENTS;
   } catch (error) {
-    console.warn('Backend fetch failed via Axios, using fallback mock events data:', error);
-    return MOCK_EVENTS;
+    console.warn("Live events fetch failed, attempting to read from offline device storage...", error);
   }
+
+  // Offline Fallback 1: Read persistent device cache
+  try {
+    const cached = await AsyncStorage.getItem(CACHE_KEYS.EVENTS);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return { data: parsed, source: "cache" };
+      }
+    }
+  } catch (cacheErr) {
+    console.warn("Failed to read events from device cache:", cacheErr);
+  }
+
+  // Offline Fallback 2: Hardcoded static mock events
+  return { data: MOCK_EVENTS, source: "fallback" };
 }
 
-export async function fetchSchedule(): Promise<ScheduleResponse> {
+/**
+ * Fetches schedule with offline-first synchronization:
+ * 1. Checks backend (/api/v1/events/schedule)
+ * 2. If successful, writes to device AsyncStorage (@gateways_cache_schedule)
+ * 3. If offline / request fails, reads directly from device AsyncStorage
+ * 4. If no device cache exists, falls back to MOCK_SCHEDULE
+ */
+export async function fetchSchedule(): Promise<{ data: ScheduleResponse; source: "network" | "cache" | "fallback" }> {
   try {
-    const response = await axios.get<ScheduleResponse>(`${API_BASE_URL}/events/schedule`, {
-      timeout: 10000,
+    const response = await apiClient<ScheduleResponse>(`${API_BASE_URL}/events/schedule`, {
+      method: "GET",
+      timeout: 6000,
     });
     if (response.data && Array.isArray(response.data.days) && response.data.days.length > 0) {
-      return response.data;
+      // Save freshly fetched schedule to local device storage
+      AsyncStorage.setItem(CACHE_KEYS.SCHEDULE, JSON.stringify(response.data)).catch(() => {});
+      return { data: response.data, source: "network" };
     }
-    return MOCK_SCHEDULE;
   } catch (error) {
-    console.warn('Backend fetch failed via Axios, using fallback mock schedule data:', error);
-    return MOCK_SCHEDULE;
+    console.warn("Live schedule fetch failed, attempting to read from offline device storage...", error);
   }
+
+  // Offline Fallback 1: Read persistent device cache
+  try {
+    const cached = await AsyncStorage.getItem(CACHE_KEYS.SCHEDULE);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed?.days && Array.isArray(parsed.days) && parsed.days.length > 0) {
+        return { data: parsed, source: "cache" };
+      }
+    }
+  } catch (cacheErr) {
+    console.warn("Failed to read schedule from device cache:", cacheErr);
+  }
+
+  // Offline Fallback 2: Hardcoded static mock schedule
+  return { data: MOCK_SCHEDULE, source: "fallback" };
 }
+
+

@@ -4,12 +4,12 @@ A production-ready Expo React Native application.
 
 ## Local Development Workflow (Mobile + Backend)
 
-Because the mobile app runs on a physical device, and your local Wi-Fi blocks `10.x.x.x` network connections, it cannot access the backend directly via `localhost:4000`. You must use a tunnel (like Pinggy) to bridge the physical phone to your local backend.
+Because the mobile app runs on a physical device, and your local Wi-Fi blocks `10.x.x.x` network connections, it cannot access the backend directly via `localhost:5000`. You must use a tunnel (like Pinggy) to bridge the physical phone to your local backend.
 
 Follow these steps to run the full stack locally:
 
 ### 1. Start the Backend
-In your **backend** directory (`Gateways_backend`), run the following command to start the Fastify API (runs on port `4000`):
+In your **backend** directory (`Gateways_backend`), run the following command to start the Fastify API (runs on port `5000`):
 ```bash
 # In the Gateways_backend folder
 npm run dev
@@ -18,7 +18,7 @@ npm run dev
 ### 2. Expose the Backend API via Tunnel
 To securely route traffic from your phone to your local backend, open a **new terminal window** and run a Pinggy tunnel:
 ```bash
-ssh -p 443 -o StrictHostKeyChecking=no -R0:localhost:4000 a.pinggy.io
+ssh -p 443 -o StrictHostKeyChecking=no -R0:localhost:5000 a.pinggy.io
 ```
 This will generate a public URL (e.g., `https://xxxx-xxx.run.pinggy-free.link`). Keep this terminal open!
 
