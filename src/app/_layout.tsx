@@ -13,7 +13,7 @@ import {
 } from "@expo-google-fonts/rubik";
 
 import { colors } from "@/theme/tokens";
-import { ChunkTransitionOverlay } from "@/features/splash/ChunkTransitionOverlay";
+import { MobConvergenceOverlay } from "@/features/splash/MobConvergenceOverlay";
 import { AuthProvider, useAuth } from "@/features/auth/AuthContext";
 import { NotificationsProvider } from "@/features/notifications/NotificationsContext";
 import { PaperProvider } from 'react-native-paper';
@@ -43,7 +43,7 @@ function RootLayoutNav() {
         }}
       />
       <ConnectionStatus />
-      <ChunkTransitionOverlay />
+      <MobConvergenceOverlay />
     </NotificationsProvider>
   );
 }

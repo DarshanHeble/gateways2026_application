@@ -27,6 +27,8 @@ import { MinecraftButton } from "@/components/MaterialCraft/MinecraftButton";
 
 WebBrowser.maybeCompleteAuthSession();
 
+import { coverScreen, revealScreen } from "@/features/splash/chunkTransition";
+
 GoogleSignin.configure({
   webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
 });
@@ -35,8 +37,11 @@ export function LoginScreen() {
   const { login, role, isReady } = useAuth();
   const params = useLocalSearchParams<{ handoffCode?: string }>();
   const form = useLoginForm((newRole) => {
-    login(newRole);
-    router.replace("/(tabs)");
+    coverScreen(() => {
+      login(newRole);
+      router.replace("/(tabs)");
+      setTimeout(revealScreen, 300);
+    });
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -54,8 +59,11 @@ export function LoginScreen() {
         body: JSON.stringify({ code: params.handoffCode }),
       })
         .then(() => {
-          login("participant");
-          router.replace("/(tabs)");
+          coverScreen(() => {
+            login("participant");
+            router.replace("/(tabs)");
+            setTimeout(revealScreen, 300);
+          });
         })
         .catch((err) => {
           console.error("Exchange error", err);
@@ -89,8 +97,11 @@ export function LoginScreen() {
         // router.push({ pathname: '/verify', params: { email: res.data.user.email } });
         // Assuming OTP screen is implemented or handled
       } else {
-        login("participant");
-        router.replace("/(tabs)");
+        coverScreen(() => {
+          login("participant");
+          router.replace("/(tabs)");
+          setTimeout(revealScreen, 300);
+        });
       }
     } catch (err) {
       console.error("Native Google OAuth error", err);

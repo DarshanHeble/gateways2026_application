@@ -61,8 +61,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const notifications = useMemo(() => {
-    if (!role) return [];
-    return all.filter((n) => matchesTarget(n.target, role));
+    const activeRole = role || "participant";
+    return all.filter((n) => matchesTarget(n.target, activeRole));
   }, [all, role]);
 
   const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);

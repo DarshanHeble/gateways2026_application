@@ -20,16 +20,19 @@ import { fetchEvents, EventItem, MOCK_EVENTS } from "@/services/api";
 
 export default function EventsTab() {
   const [events, setEvents] = useState<EventItem[]>([]);
+  const [dataSource, setDataSource] = useState<"network" | "cache" | "fallback">("network");
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const loadEvents = useCallback(async () => {
     try {
-      const data = await fetchEvents();
-      setEvents(data);
+      const res = await fetchEvents();
+      setEvents(res.data);
+      setDataSource(res.source);
     } catch {
       setEvents(MOCK_EVENTS);
+      setDataSource("fallback");
     }
   }, []);
 
@@ -39,7 +42,6 @@ export default function EventsTab() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
     await loadEvents();
     setRefreshing(false);
   }, [loadEvents]);
@@ -59,7 +61,26 @@ export default function EventsTab() {
 
   return (
     <View style={styles.root}>
-      <Text style={styles.subtitle}>Explore all events and competitions</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: px(8), marginBottom: px(12) }}>
+        <Text style={styles.subtitle}>Explore all events and competitions</Text>
+        <View style={{
+          paddingHorizontal: px(8),
+          paddingVertical: px(2),
+          borderRadius: px(4),
+          backgroundColor: dataSource === "network" ? "rgba(62,232,154,0.15)" : "rgba(255,210,94,0.15)",
+          borderWidth: 1,
+          borderColor: dataSource === "network" ? colors.cta.lit : colors.gold.bright,
+        }}>
+          <Text style={{
+            fontFamily: fonts.pixelBold,
+            fontSize: px(8),
+            color: dataSource === "network" ? colors.cta.lit : colors.gold.bright,
+            letterSpacing: px(1),
+          }}>
+            {dataSource === "network" ? "🟢 LIVE SHEET" : dataSource === "cache" ? "💾 OFFLINE CACHE" : "⚠️ LOCAL BACKUP"}
+          </Text>
+        </View>
+      </View>
 
       <Animated.FlatList
         data={events}
@@ -92,14 +113,23 @@ export default function EventsTab() {
                 />
               ) : null}
 
-              {/* Card Header & Badge */}
+              {/* Card Header & Badges */}
               <View style={styles.cardHeader}>
                 <View style={styles.titleColumn}>
                   <Text style={styles.eventTitle}>{item.title}</Text>
                   {item.subtitle ? <Text style={styles.eventSubtitle}>{item.subtitle}</Text> : null}
                 </View>
-                <View style={styles.typeBadge}>
-                  <Text style={styles.typeBadgeText}>{(item.type || 'GENERAL').toUpperCase()}</Text>
+                <View style={{ alignItems: "flex-end", gap: px(4) }}>
+                  <View style={styles.typeBadge}>
+                    <Text style={styles.typeBadgeText}>{(item.type || 'GENERAL').toUpperCase()}</Text>
+                  </View>
+                  {item.participation_type ? (
+                    <View style={[styles.typeBadge, { backgroundColor: "#1e293b", borderColor: colors.gold.muted }]}>
+                      <Text style={[styles.typeBadgeText, { color: colors.gold.bright, fontSize: px(9) }]}>
+                        {item.participation_type.toUpperCase()}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
               </View>
 
@@ -111,6 +141,11 @@ export default function EventsTab() {
                 <View style={styles.infoChip}>
                   <Text style={styles.infoChipText}>⏰ {item.from_time} - {item.end_time}</Text>
                 </View>
+                {item.prizes.pool ? (
+                  <View style={[styles.infoChip, { borderColor: colors.cta.glow, backgroundColor: "rgba(62,232,154,0.12)" }]}>
+                    <Text style={[styles.infoChipText, { color: colors.cta.lit }]}>💰 POOL: {item.prizes.pool}</Text>
+                  </View>
+                ) : null}
               </View>
 
               <Text style={styles.venueText}>📍 {item.venue}</Text>
@@ -125,6 +160,11 @@ export default function EventsTab() {
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>🏆 PRIZES & POOL</Text>
                     <View style={styles.prizeBox}>
+                      {item.prizes.pool ? (
+                        <Text style={[styles.prizeRank, { marginBottom: px(4) }]}>
+                          💎 Total Prize Pool: <Text style={[styles.prizeValue, { color: colors.cta.lit }]}>{item.prizes.pool}</Text>
+                        </Text>
+                      ) : null}
                       {item.prizes.winner ? (
                         <Text style={styles.prizeRank}>🥇 1st Place: <Text style={styles.prizeValue}>{item.prizes.winner}</Text></Text>
                       ) : null}
@@ -133,6 +173,11 @@ export default function EventsTab() {
                       ) : null}
                       {item.prizes.second_runner_up ? (
                         <Text style={styles.prizeRank}>🥉 3rd Place: <Text style={styles.prizeValue}>{item.prizes.second_runner_up}</Text></Text>
+                      ) : null}
+                      {item.prizes.description ? (
+                        <Text style={[styles.ruleItem, { marginTop: px(4), fontStyle: "italic" }]}>
+                          Awards: {item.prizes.description}
+                        </Text>
                       ) : null}
                     </View>
                   </View>

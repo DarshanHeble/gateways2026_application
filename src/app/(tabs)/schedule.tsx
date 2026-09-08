@@ -18,16 +18,19 @@ import { fetchSchedule, ScheduleResponse, MOCK_SCHEDULE } from "@/services/api";
 
 export default function ScheduleTab() {
   const [scheduleData, setScheduleData] = useState<ScheduleResponse | null>(null);
+  const [dataSource, setDataSource] = useState<"network" | "cache" | "fallback">("network");
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
 
   const loadSchedule = useCallback(async () => {
     try {
-      const data = await fetchSchedule();
-      setScheduleData(data);
+      const res = await fetchSchedule();
+      setScheduleData(res.data);
+      setDataSource(res.source);
     } catch {
       setScheduleData(MOCK_SCHEDULE);
+      setDataSource("fallback");
     }
   }, []);
 
@@ -37,7 +40,6 @@ export default function ScheduleTab() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
     await loadSchedule();
     setRefreshing(false);
   }, [loadSchedule]);
@@ -55,7 +57,26 @@ export default function ScheduleTab() {
 
   return (
     <View style={styles.root}>
-      <Text style={styles.subtitle}>Auto-sorted master timeline for Gateways 2026</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: px(8), marginBottom: px(12) }}>
+        <Text style={styles.subtitle}>Auto-sorted master timeline for Gateways 2026</Text>
+        <View style={{
+          paddingHorizontal: px(8),
+          paddingVertical: px(2),
+          borderRadius: px(4),
+          backgroundColor: dataSource === "network" ? "rgba(62,232,154,0.15)" : "rgba(255,210,94,0.15)",
+          borderWidth: 1,
+          borderColor: dataSource === "network" ? colors.cta.lit : colors.gold.bright,
+        }}>
+          <Text style={{
+            fontFamily: fonts.pixelBold,
+            fontSize: px(8),
+            color: dataSource === "network" ? colors.cta.lit : colors.gold.bright,
+            letterSpacing: px(1),
+          }}>
+            {dataSource === "network" ? "🟢 LIVE" : dataSource === "cache" ? "💾 OFFLINE" : "⚠️ BACKUP"}
+          </Text>
+        </View>
+      </View>
 
       {/* Day Selector Tabs */}
       <View style={styles.daySelectorRow}>

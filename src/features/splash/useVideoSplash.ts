@@ -20,14 +20,8 @@ export function useVideoSplash(onDone: () => void) {
     if (done.current) return;
     done.current = true;
 
-    if (reducedMotion) {
-      onDone();
-      return;
-    }
-
-    // Cover the screen with the chunk-load wipe, swap routes while fully
-    // hidden behind it, then reveal once the new route has had a moment to
-    // mount — masks the gap between splash ending and login painting.
+    // Trigger mob convergence overlay right after the splash loader ends,
+    // covering the screen while swapping to login, then blasting out to reveal login
     coverScreen(() => {
       onDone();
       setTimeout(revealScreen, REVEAL_BUFFER_MS);

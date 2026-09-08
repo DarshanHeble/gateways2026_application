@@ -4,12 +4,17 @@ import { px } from "@/theme/scale";
 import { useAuth } from "@/features/auth/AuthContext";
 import { router } from "expo-router";
 
+import { coverScreen, revealScreen } from "@/features/splash/chunkTransition";
+
 export default function ProfileTab() {
   const { role, logout } = useAuth();
 
   const handleLogout = () => {
-    logout();
-    router.replace("/login");
+    coverScreen(() => {
+      logout();
+      router.replace("/login");
+      setTimeout(revealScreen, 300);
+    });
   };
 
   return (

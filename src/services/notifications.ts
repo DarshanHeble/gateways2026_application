@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { API_BASE_URL, apiClient } from "./api";
@@ -108,13 +109,42 @@ export async function sendNotification(input: {
 
 export async function fetchNotifications(): Promise<AppNotification[]> {
   try {
-    const { data } = await apiClient<AppNotification[]>(`${API_BASE_URL}/push/notifications`, {
+    const { data } = await apiClient<any[]>(`${API_BASE_URL}/events/announcements`, {
       method: "GET",
-      timeout: 2000,
+      timeout: 6000,
     });
-    if (Array.isArray(data)) return data;
-  } catch {
-    // No backend endpoint yet — read the local mock log instead.
+    if (Array.isArray(data) && data.length > 0) {
+      // Get previously stored notifications so we retain the read/unread state
+      const existingStored = await notificationStore.getAll();
+      const readSet = new Set(existingStored.filter((n) => n.read).map((n) => n.id));
+
+      const liveAnnouncements: AppNotification[] = data.map((item) => {
+        const rawTarget = (item.target || "").toString().toLowerCase().trim();
+        let target: NotificationTarget = "all";
+        if (rawTarget.startsWith("participant")) {
+          target = "participant";
+        } else if (rawTarget.startsWith("team") || rawTarget.startsWith("admin")) {
+          target = "team";
+        }
+
+        const id = String(item.id || `announcement-${item.sr_no || Math.random()}`);
+        return {
+          id,
+          title: item.title || "ANNOUNCEMENT",
+          body: item.body || item.content || "",
+          target,
+          createdAt: item.createdAt || Date.now(),
+          read: readSet.has(id),
+        };
+      });
+
+      // Persist to local device storage for offline caching
+      AsyncStorage.setItem("gateways.notifications.v1", JSON.stringify(liveAnnouncements)).catch(() => {});
+
+      return liveAnnouncements;
+    }
+  } catch (err) {
+    console.warn("Live announcements fetch failed, falling back to local storage...", err);
   }
   return notificationStore.getAll();
 }
