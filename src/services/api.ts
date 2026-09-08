@@ -1,14 +1,21 @@
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
+import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
 
-// Determine the local machine's IP address automatically for Expo Go / Emulator:
-// - Android Emulator uses 10.0.2.2 instead of localhost
-// - Physical device uses the Expo packager host IP (e.g. 10.150.159.192)
-// - iOS Simulator and Web use localhost
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL as string;
+// Determine the active API URL:
+// 1. If EXPO_PUBLIC_API_URL is set and not a broken/expired tunnel, use it
+// 2. On Android with USB debugging (adb reverse) or emulator, localhost:5000 connects directly
+const rawUrl = process.env.EXPO_PUBLIC_API_URL;
+export const API_BASE_URL: string = rawUrl && rawUrl.trim().length > 0
+  ? rawUrl
+  : Platform.select({
+      android: "http://localhost:5000/api/v1",
+      ios: "http://localhost:5000/api/v1",
+      default: "http://localhost:5000/api/v1",
+    });
 
-// We also need the raw host for the health check which is at the root, not /api/v1
-export const API_ROOT_URL = API_BASE_URL.replace('/api/v1', '');
+// Raw host for the health check which is at the root, not /api/v1
+export const API_ROOT_URL = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
 
 export interface EventHead {
   name: string;
@@ -498,14 +505,81 @@ export const MOCK_SCHEDULE: ScheduleResponse = {
   ],
 };
 
-import axios from 'axios';
+/**
+ * Lightweight native fetch client with timeout, JSON parsing, credentials, and 401 interceptor.
+ */
+export async function apiClient<T = any>(
+  url: string,
+  options: RequestInit & { timeout?: number } = {}
+): Promise<{ data: T; status: number }> {
+  const { timeout = 10000, ...customConfig } = options;
 
-// Ensure cookies are sent with every request for secure authentication
-axios.defaults.withCredentials = true;
+  const doFetch = async (targetUrl: string) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+      const response = await fetch(targetUrl, {
+        ...customConfig,
+        signal: controller.signal,
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...(customConfig.headers || {}),
+        },
+      });
+      clearTimeout(id);
+      return response;
+    } catch (e) {
+      clearTimeout(id);
+      throw e;
+    }
+  };
+
+  try {
+    let response: Response;
+    try {
+      response = await doFetch(url);
+    } catch (primaryErr) {
+      // If primary tunnel URL failed (e.g. Wi-Fi blocks tunnel), and target has /api/v1, try local adb reverse
+      if (!url.startsWith("http://localhost:5000") && url.includes("/api/v1")) {
+        const localFallback = url.replace(/https?:\/\/[^/]+/, "http://localhost:5000");
+        response = await doFetch(localFallback);
+      } else {
+        throw primaryErr;
+      }
+    }
+
+    if (response.status === 401) {
+      await AsyncStorage.removeItem("auth_role");
+      router.replace("/login");
+      throw new Error("Unauthorized (401)");
+    }
+
+    let data: any = null;
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      data = await response.json();
+    } else {
+      data = await response.text();
+    }
+
+    if (!response.ok) {
+      const err: any = new Error(data?.message || response.statusText || "Request failed");
+      err.status = response.status;
+      err.data = data;
+      throw err;
+    }
+
+    return { data, status: response.status };
+  } catch (error: any) {
+    throw error;
+  }
+}
 
 export async function fetchEvents(): Promise<EventItem[]> {
   try {
-    const response = await axios.get<EventItem[]>(`${API_BASE_URL}/events`, {
+    const response = await apiClient<EventItem[]>(`${API_BASE_URL}/events`, {
+      method: "GET",
       timeout: 10000,
     });
     if (Array.isArray(response.data) && response.data.length > 0) {
@@ -513,14 +587,15 @@ export async function fetchEvents(): Promise<EventItem[]> {
     }
     return MOCK_EVENTS;
   } catch (error) {
-    console.warn('Backend fetch failed via Axios, using fallback mock events data:', error);
+    console.warn('Backend fetch failed via apiClient, using fallback mock events data:', error);
     return MOCK_EVENTS;
   }
 }
 
 export async function fetchSchedule(): Promise<ScheduleResponse> {
   try {
-    const response = await axios.get<ScheduleResponse>(`${API_BASE_URL}/events/schedule`, {
+    const response = await apiClient<ScheduleResponse>(`${API_BASE_URL}/events/schedule`, {
+      method: "GET",
       timeout: 10000,
     });
     if (response.data && Array.isArray(response.data.days) && response.data.days.length > 0) {
@@ -528,7 +603,8 @@ export async function fetchSchedule(): Promise<ScheduleResponse> {
     }
     return MOCK_SCHEDULE;
   } catch (error) {
-    console.warn('Backend fetch failed via Axios, using fallback mock schedule data:', error);
+    console.warn('Backend fetch failed via apiClient, using fallback mock schedule data:', error);
     return MOCK_SCHEDULE;
   }
 }
+

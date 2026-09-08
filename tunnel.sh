@@ -21,6 +21,16 @@ fi
 
 echo "✅ Tunnel established at: $URL"
 
+# If an Android device is connected via USB, forward ports directly for zero-latency, 100% reliable connection
+if command -v adb >/dev/null 2>&1; then
+    if adb get-state >/dev/null 2>&1; then
+        echo "🔌 USB device detected. Setting up ADB reverse forwarding..."
+        adb reverse tcp:5000 tcp:5000 2>/dev/null || true
+        adb reverse tcp:8081 tcp:8081 2>/dev/null || true
+        echo "✅ ADB reverse active: phone can access backend at http://localhost:5000"
+    fi
+fi
+
 # Update .env
 ENV_FILE=".env"
 echo "💉 Injecting new URL into $ENV_FILE..."

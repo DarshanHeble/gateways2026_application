@@ -6,9 +6,9 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Linking,
-  Image,
   RefreshControl,
 } from "react-native";
+import { Image } from "expo-image";
 import Animated, {
   FadeInDown,
   FadeInRight,
@@ -83,7 +83,13 @@ export default function EventsTab() {
             >
               {/* Event Image Banner */}
               {item.image_url ? (
-                <Image source={{ uri: item.image_url }} style={styles.bannerImage} resizeMode="cover" />
+                <Image
+                  source={{ uri: item.image_url }}
+                  style={styles.bannerImage}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  transition={200}
+                />
               ) : null}
 
               {/* Card Header & Badge */}

@@ -1,9 +1,7 @@
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
-import axios from "axios";
-
-import { API_BASE_URL } from "./api";
+import { API_BASE_URL, apiClient } from "./api";
 import { notificationStore } from "./notificationStore";
 import { AppNotification, NotificationTarget } from "./notificationTypes";
 
@@ -50,12 +48,13 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   try {
     const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
 
-    axios
-      .post(`${API_BASE_URL}/push/register-token`, { token, platform: Platform.OS })
-      .catch(() => {
-        // No backend endpoint yet — the token still works locally for the
-        // demo (local notifications), it just isn't registered server-side.
-      });
+    apiClient(`${API_BASE_URL}/push/register-token`, {
+      method: "POST",
+      body: JSON.stringify({ token, platform: Platform.OS }),
+    }).catch(() => {
+      // No backend endpoint yet — the token still works locally for the
+      // demo (local notifications), it just isn't registered server-side.
+    });
 
     return token;
   } catch (error) {
@@ -75,7 +74,11 @@ export async function sendNotification(input: {
   route?: string;
 }): Promise<void> {
   try {
-    await axios.post(`${API_BASE_URL}/push/send`, input, { timeout: 2000 });
+    await apiClient(`${API_BASE_URL}/push/send`, {
+      method: "POST",
+      body: JSON.stringify(input),
+      timeout: 2000,
+    });
     return;
   } catch {
     // Fall through to the local mock below.
@@ -105,7 +108,8 @@ export async function sendNotification(input: {
 
 export async function fetchNotifications(): Promise<AppNotification[]> {
   try {
-    const { data } = await axios.get<AppNotification[]>(`${API_BASE_URL}/push/notifications`, {
+    const { data } = await apiClient<AppNotification[]>(`${API_BASE_URL}/push/notifications`, {
+      method: "GET",
       timeout: 2000,
     });
     if (Array.isArray(data)) return data;
