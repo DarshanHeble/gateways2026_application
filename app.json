@@ -1,14 +1,15 @@
 {
   "expo": {
-    "name": "gateways2026_application",
+    "name": "Gateways 2026",
     "slug": "gateways2026_application",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/logo-glow.png",
     "scheme": "gateways2026application",
     "userInterfaceStyle": "dark",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.darshanheble.gateways2026-application"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +18,7 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "package": "com.darshanheble.gateways2026_application"
     },
     "web": {
       "output": "static",
@@ -29,12 +30,21 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#0d1018",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "image": "./assets/images/logo-glow.png",
+          "imageWidth": 200
         }
       ],
       "expo-video",
-      "expo-image"
+      "expo-image",
+      "expo-web-browser",
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#ffe9b8"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

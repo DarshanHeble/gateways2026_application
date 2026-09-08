@@ -13,10 +13,40 @@ import {
 } from "@expo-google-fonts/rubik";
 
 import { colors } from "@/theme/tokens";
-import { ChunkTransitionOverlay } from "@/features/splash/ChunkTransitionOverlay";
-import { AuthProvider } from "@/features/auth/AuthContext";
+import { MobConvergenceOverlay } from "@/features/splash/MobConvergenceOverlay";
+import { AuthProvider, useAuth } from "@/features/auth/AuthContext";
+import { NotificationsProvider } from "@/features/notifications/NotificationsContext";
+import { PaperProvider } from 'react-native-paper';
+import { minecraftTheme } from '@/theme/minecraftTheme';
+import { ConnectionStatus } from '@/components/ConnectionStatus';
 
 SplashScreen.preventAutoHideAsync();
+
+function RootLayoutNav() {
+  const { isReady } = useAuth();
+
+  useEffect(() => {
+    if (isReady) {
+      SplashScreen.hideAsync();
+    }
+  }, [isReady]);
+
+  if (!isReady) return null;
+
+  return (
+    <NotificationsProvider>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.stage },
+          animation: "fade",
+        }}
+      />
+      <ConnectionStatus />
+      <MobConvergenceOverlay />
+    </NotificationsProvider>
+  );
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -28,27 +58,16 @@ export default function RootLayout() {
     Rubik_700Bold,
   });
 
-  useEffect(() => {
-    if (loaded || error) SplashScreen.hideAsync();
-  }, [loaded, error]);
-
-  // Hold the splash rather than flash an unstyled frame — the login screen
-  // leans entirely on Silkscreen, so an early paint would look broken.
   if (!loaded && !error) return null;
 
   return (
-    <SafeAreaProvider>
-      <StatusBar style="light" />
-      <AuthProvider>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.stage },
-            animation: "fade",
-          }}
-        />
-        <ChunkTransitionOverlay />
-      </AuthProvider>
-    </SafeAreaProvider>
+    <PaperProvider theme={minecraftTheme}>
+      <SafeAreaProvider>
+        <StatusBar style="light" />
+        <AuthProvider>
+          <RootLayoutNav />
+        </AuthProvider>
+      </SafeAreaProvider>
+    </PaperProvider>
   );
 }

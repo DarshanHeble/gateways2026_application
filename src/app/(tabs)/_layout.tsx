@@ -1,10 +1,12 @@
 import { Tabs, Redirect } from "expo-router";
 import { useAuth } from "@/features/auth/AuthContext";
+import { useNotifications } from "@/features/notifications/NotificationsContext";
 import { colors } from "@/theme/tokens";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function TabLayout() {
   const { role } = useAuth();
+  const { unreadCount } = useNotifications();
 
   if (!role) {
     return <Redirect href="/login" />;
@@ -16,11 +18,12 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: true,
-        headerStyle: { backgroundColor: colors.stage },
-        headerTintColor: colors.gold.title,
-        tabBarStyle: { backgroundColor: colors.stage, borderTopColor: colors.gold.muted },
-        tabBarActiveTintColor: colors.gold.title,
-        tabBarInactiveTintColor: colors.gold.muted,
+        headerStyle: { backgroundColor: "#0d1018", borderBottomWidth: 1, borderBottomColor: "#2a3245" },
+        headerTitleStyle: { fontFamily: "Silkscreen_700Bold", fontSize: 16, color: "#ffe9b8" },
+        headerTitleAlign: "center",
+        tabBarStyle: { backgroundColor: "#0d1018", borderTopColor: "#2a3245" },
+        tabBarActiveTintColor: "#ffe9b8",
+        tabBarInactiveTintColor: "#a08c70",
       }}
     >
       <Tabs.Screen
@@ -45,6 +48,14 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="notifications"
+        options={{
+          title: "Alerts",
+          tabBarIcon: ({ color }) => <Ionicons name="notifications" size={24} color={color} />,
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
@@ -57,6 +68,14 @@ export default function TabLayout() {
           title: "Team Contact",
           tabBarIcon: ({ color }) => <Ionicons name="call" size={24} color={color} />,
           href: isTeam ? "/contact" : null, // hides the tab if not team
+        }}
+      />
+      <Tabs.Screen
+        name="broadcast"
+        options={{
+          title: "Broadcast",
+          tabBarIcon: ({ color }) => <Ionicons name="megaphone" size={24} color={color} />,
+          href: isTeam ? "/broadcast" : null, // hides the tab if not team
         }}
       />
     </Tabs>

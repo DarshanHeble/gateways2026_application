@@ -1,109 +1,281 @@
-import { useCallback } from "react";
-import { Keyboard, Pressable, StyleSheet, Text, View } from "react-native";
-import { router } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { useAnimatedKeyboard, useAnimatedStyle } from "react-native-reanimated";
-
-import { colors, fonts, type } from "@/theme/tokens";
-import { px, SCREEN_HEIGHT } from "@/theme/scale";
-import { Bevel } from "@/components/pixel/Primitives";
-import { PlankFill } from "@/components/pixel/Fills";
-import { PixelToast } from "@/components/pixel/PixelToast";
-import { ParallaxScene } from "./scene/ParallaxScene";
-import { NoticeBoard } from "./NoticeBoard";
-import { GateTransition, useGateTransition } from "./GateTransition";
-import { useLoginForm } from "./useLoginForm";
+import React, { useState, useEffect } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  View,
+  StyleSheet,
+  ImageBackground,
+  Text,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { router, useLocalSearchParams } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
+import * as Linking from "expo-linking";
 import { useAuth } from "@/features/auth/AuthContext";
+import { colors, fonts } from "@/theme/tokens";
+import { px } from "@/theme/scale";
+import { PixelInput } from "@/components/pixel/PixelInput";
+import { PixelCard } from "@/components/pixel/PixelCard";
+import { useLoginForm } from "./useLoginForm";
+import { API_BASE_URL, apiClient } from "@/services/api";
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { MinecraftButton } from "@/components/MaterialCraft/MinecraftButton";
 
-/**
- * The little plaque staked into the near terrace, just below the board.
- * Flows in normal layout right after the board (rather than at a fixed
- * distance from the screen bottom) so it can never overlap the board's
- * actual content — text line-heights render slightly taller natively than
- * they did in the source CSS, so the board's real height isn't a fixed
- * constant we could safely position against independently.
- */
-function FooterPlaque() {
-  return (
-    <View style={styles.plaque} pointerEvents="none">
-      <PlankFill />
-      <Bevel
-        top={{ color: "rgba(255,225,180,0.18)", size: 3 }}
-        bottom={{ color: "rgba(0,0,0,0.45)", size: 4 }}
-      />
-      <Text style={styles.plaqueText}>CHRIST UNIVERSITY  ·  BANGALORE</Text>
-    </View>
-  );
-}
+WebBrowser.maybeCompleteAuthSession();
+
+import { coverScreen, revealScreen } from "@/features/splash/chunkTransition";
+
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+});
 
 export function LoginScreen() {
-  const insets = useSafeAreaInsets();
-  const keyboard = useAnimatedKeyboard();
-
-  const { login } = useAuth();
-  const gate = useGateTransition(useCallback(() => router.replace("/(tabs)"), []));
-  const form = useLoginForm((role) => {
-    login(role);
-    gate.play();
+  const { login, role, isReady } = useAuth();
+  const params = useLocalSearchParams<{ handoffCode?: string }>();
+  const form = useLoginForm((newRole) => {
+    coverScreen(() => {
+      login(newRole);
+      router.replace("/(tabs)");
+      setTimeout(revealScreen, 300);
+    });
   });
 
-  const boardStyle = useAnimatedStyle(() => ({
-    // Lift the board just enough to clear the keyboard, never further.
-    transform: [{ translateY: -Math.min(keyboard.height.value, SCREEN_HEIGHT * 0.34) }],
-  }));
+  const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (isReady && role) {
+      router.replace("/(tabs)");
+    }
+  }, [isReady, role]);
+
+  useEffect(() => {
+    if (params.handoffCode) {
+      apiClient(`${API_BASE_URL}/auth/website-handoff/exchange`, {
+        method: "POST",
+        body: JSON.stringify({ code: params.handoffCode }),
+      })
+        .then(() => {
+          coverScreen(() => {
+            login("participant");
+            router.replace("/(tabs)");
+            setTimeout(revealScreen, 300);
+          });
+        })
+        .catch((err) => {
+          console.error("Exchange error", err);
+          form.say("GOOGLE SIGN-IN FAILED");
+        });
+    }
+  }, [params.handoffCode, login, form]);
+
+  const handleGoogleSignIn = async () => {
+    try {
+      // 1. Check play services
+      await GoogleSignin.hasPlayServices();
+      // 2. Sign in and get idToken
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken;
+
+      if (!idToken) throw new Error("No idToken received");
+
+      // 3. Send idToken to our custom backend
+      const res = await apiClient<{ requiresVerification?: boolean; user?: { email: string } }>(
+        `${API_BASE_URL}/auth/signin/google/native`,
+        {
+          method: "POST",
+          body: JSON.stringify({ idToken }),
+        }
+      );
+      
+      // 4. Handle response (usually requires OTP verification in our system)
+      if (res.data.requiresVerification) {
+        form.say("CHECK EMAIL FOR OTP");
+        // router.push({ pathname: '/verify', params: { email: res.data.user.email } });
+        // Assuming OTP screen is implemented or handled
+      } else {
+        coverScreen(() => {
+          login("participant");
+          router.replace("/(tabs)");
+          setTimeout(revealScreen, 300);
+        });
+      }
+    } catch (err) {
+      console.error("Native Google OAuth error", err);
+      form.say("GOOGLE SIGN-IN FAILED");
+    }
+  };
 
   return (
-    <View style={styles.root}>
-      <ParallaxScene sceneStyle={gate.sceneStyle} />
-
-      <Pressable style={StyleSheet.absoluteFill} onPress={Keyboard.dismiss} accessible={false}>
-        <Animated.View
-          style={[
-            styles.boardHolder,
-            { paddingTop: px(128) + insets.top * 0.5, paddingBottom: insets.bottom + px(16) },
-            boardStyle,
-          ]}
+    <ImageBackground
+      source={require("../../../assets/images/minecraft_bg.webp")}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.keyboardAvoid}
         >
-          <NoticeBoard
-            email={form.email}
-            onEmail={form.setEmail}
-            password={form.password}
-            onPassword={form.setPassword}
-            busy={form.busy}
-            errorField={form.errorField}
-            errorNonce={form.errorNonce}
-            passwordRef={form.passwordRef}
-            onSubmit={form.submit}
-            onGoogle={() => form.say("GOOGLE PORTAL OPENS IN THE NEXT BUILD")}
-            onForgot={() => form.say("RAVEN SENT · CHECK YOUR SCROLLS")}
-          />
-          <FooterPlaque />
-        </Animated.View>
-      </Pressable>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Positioned nicely over the vertical background image */}
+            <View style={styles.cardWrapper}>
+              <PixelCard headerTitle="GATEWAYS 2026" badge="PARALLAX">
+                <Text style={styles.welcomeSubtitle}>ENTER THE DIGITAL MIRROR</Text>
 
-      <PixelToast message={form.toast} bottom={112} />
+                <View style={styles.formGroup}>
+                  <PixelInput
+                    label="EMAIL ADDRESS"
+                    value={form.email}
+                    onChangeText={form.setEmail}
+                    placeholder="adventurer@christuniversity.in"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!form.busy}
+                    onSubmitEditing={() => form.passwordRef.current?.focus()}
+                  />
 
-      <GateTransition open={gate.open} flash={gate.flash} reduced={gate.reduced} />
-    </View>
+                  <View style={{ height: px(12) }} />
+
+                  <PixelInput
+                    ref={form.passwordRef}
+                    label="PASSWORD"
+                    value={form.password}
+                    onChangeText={form.setPassword}
+                    placeholder="••••••••••••"
+                    secureTextEntry={!showPassword}
+                    editable={!form.busy}
+                    onSubmitEditing={form.submit}
+                    rightAccessory={
+                      <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: px(4) }}>
+                        <Ionicons name={showPassword ? "eye-off" : "eye"} size={px(20)} color={colors.gold.muted} />
+                      </TouchableOpacity>
+                    }
+                  />
+
+                  <TouchableOpacity style={styles.forgotBtn} onPress={() => form.say("RAVEN SENT · CHECK YOUR INBOX")}>
+                    <Text style={styles.forgotText}>FORGOT PASSWORD?</Text>
+                  </TouchableOpacity>
+
+                  {/* Primary Sign In Button */}
+                  <MinecraftButton
+                    mode="contained"
+                    onPress={form.submit}
+                    disabled={form.busy}
+                    loading={form.busy}
+                  >
+                    ENTER FEST
+                  </MinecraftButton>
+
+                  {/* Google OAuth Button */}
+                  <MinecraftButton
+                    mode="outlined"
+                    onPress={handleGoogleSignIn}
+                    disabled={form.busy}
+                  >
+                    CONTINUE WITH GOOGLE
+                  </MinecraftButton>
+                </View>
+              </PixelCard>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.stage, overflow: "hidden" },
-  boardHolder: { alignItems: "center" },
-  plaque: {
-    marginTop: px(24),
-    paddingVertical: px(5),
-    paddingHorizontal: px(9),
-    boxShadow: `0 ${px(4)}px 0 rgba(0,0,0,0.4)`,
+  background: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
   },
-  plaqueText: {
-    fontFamily: fonts.pixel,
-    fontSize: px(type.plaque.size),
-    letterSpacing: px(type.plaque.tracking),
-    color: type.plaque.color,
-    textShadowColor: "rgba(0,0,0,0.6)",
-    textShadowOffset: { width: 0, height: px(2) },
-    textShadowRadius: 0,
+  safeArea: {
+    flex: 1,
+  },
+  keyboardAvoid: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: px(16),
+    paddingVertical: px(24),
+  },
+  cardWrapper: {
+    width: "100%",
+    maxWidth: px(350),
+    marginTop: px(80), // Lifted up to show full card over the background
+  },
+  welcomeSubtitle: {
+    fontFamily: fonts.pixelBold,
+    fontSize: px(12), // Larger subtitle
+    color: colors.gold.bright,
+    textAlign: "center",
+    marginBottom: px(18),
+    letterSpacing: px(1.5),
+  },
+  formGroup: {
+    marginTop: px(6),
+  },
+  forgotBtn: {
+    alignSelf: "flex-end",
+    marginTop: px(10),
+    marginBottom: px(20),
+  },
+  forgotText: {
+    fontFamily: fonts.pixelBold,
+    fontSize: px(11), // Larger, readable link
+    color: colors.gold.title,
+    textDecorationLine: "underline",
+  },
+  submitBtn: {
+    backgroundColor: colors.cta.lit,
+    paddingVertical: px(14), // Taller button
+    borderRadius: px(4),
+    borderWidth: px(2),
+    borderColor: colors.cta.glow,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: colors.cta.deep,
+    shadowOffset: { width: 0, height: px(4) },
+    shadowOpacity: 0.8,
+    shadowRadius: 0,
+    elevation: 4,
+  },
+  btnDisabled: {
+    opacity: 0.6,
+  },
+  submitBtnText: {
+    fontFamily: fonts.pixelBold,
+    fontSize: px(16), // Large punchy text
+    color: colors.cta.ink,
+    letterSpacing: px(1.5),
+  },
+  googleBtn: {
+    backgroundColor: colors.google.lit,
+    paddingVertical: px(14), // Taller button
+    borderRadius: px(4),
+    borderWidth: px(1),
+    borderColor: colors.google.base,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: px(12),
+  },
+  googleBtnText: {
+    fontFamily: fonts.pixelBold,
+    fontSize: px(13), // Larger Google button text
+    color: colors.google.ink,
+    letterSpacing: px(1),
   },
 });

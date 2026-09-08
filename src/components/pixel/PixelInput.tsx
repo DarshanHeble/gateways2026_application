@@ -17,6 +17,7 @@ export type PixelInputProps = TextInputProps & {
   label: string;
   /** Bump to replay the error shake. */
   errorNonce?: number;
+  rightAccessory?: React.ReactNode;
 };
 
 /**
@@ -24,7 +25,7 @@ export type PixelInputProps = TextInputProps & {
  * a hard inner top shadow, matching the design's inset box-shadow exactly.
  */
 export const PixelInput = forwardRef<TextInput, PixelInputProps>(function PixelInput(
-  { label, errorNonce = 0, onFocus, onBlur, style, ...rest },
+  { label, errorNonce = 0, onFocus, onBlur, style, rightAccessory, ...rest },
   ref,
 ) {
   const [focused, setFocused] = useState(false);
@@ -60,7 +61,7 @@ export const PixelInput = forwardRef<TextInput, PixelInputProps>(function PixelI
         <TextInput
           ref={ref}
           accessibilityLabel={label}
-          placeholderTextColor={colors.input.placeholder}
+          placeholderTextColor="#a08c70"
           selectionColor={colors.gold.bright}
           cursorColor={colors.gold.bright}
           underlineColorAndroid="transparent"
@@ -72,9 +73,14 @@ export const PixelInput = forwardRef<TextInput, PixelInputProps>(function PixelI
             setFocused(false);
             onBlur?.(e);
           }}
-          style={[styles.field, style]}
+          style={[styles.field, style, rightAccessory ? { paddingRight: px(40) } : null]}
           {...rest}
         />
+        {rightAccessory && (
+          <View style={styles.rightAccessoryContainer}>
+            {rightAccessory}
+          </View>
+        )}
       </View>
     </Animated.View>
   );
@@ -82,27 +88,37 @@ export const PixelInput = forwardRef<TextInput, PixelInputProps>(function PixelI
 
 const styles = StyleSheet.create({
   label: {
-    fontFamily: fonts.pixel,
-    fontSize: px(type.fieldLabel.size),
-    letterSpacing: px(type.fieldLabel.tracking),
-    color: type.fieldLabel.color,
-    marginBottom: px(5),
+    fontFamily: fonts.pixelBold,
+    fontSize: px(11),
+    letterSpacing: px(1.5),
+    color: colors.gold.title,
+    marginBottom: px(6),
   },
   frame: {
     padding: px(2),
-    backgroundColor: colors.input.frame,
+    backgroundColor: colors.gold.muted,
+    borderRadius: px(4),
   },
   frameFocused: {
-    backgroundColor: "#4a3116",
+    backgroundColor: colors.gold.bright,
   },
   field: {
     paddingVertical: px(10),
-    paddingHorizontal: px(11),
-    backgroundColor: colors.input.field,
-    color: colors.input.text,
-    fontFamily: fonts.body,
-    fontSize: px(type.fieldValue.size),
-    // Keeps the field height identical across platforms despite font metrics.
-    height: px(38),
+    paddingHorizontal: px(14),
+    backgroundColor: "#1c140c", // Rich high-contrast dark wood
+    color: "#ffffff", // Pure white input text
+    fontFamily: fonts.bodyMedium,
+    fontSize: px(15), // Much larger, readable text
+    height: px(48), // Comfortable touch height
+    borderRadius: px(2),
+  },
+  rightAccessoryContainer: {
+    position: "absolute",
+    right: px(6),
+    top: px(2),
+    bottom: px(2),
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: px(8),
   },
 });
