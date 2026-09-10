@@ -44,6 +44,20 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   }
   if (status !== "granted") return null;
 
+  // Remote push on Android requires a Firebase (FCM) config — `android.googleServicesFile`
+  // in app.json plus a google-services.json. Without it, getExpoPushTokenAsync throws
+  // "Default FirebaseApp is not initialized" on every launch. Detect that up front and
+  // skip cleanly: the app only uses local notifications (scheduleNotificationAsync),
+  // which work fine without FCM.
+  const hasFcmConfig =
+    Platform.OS !== "android" || Boolean(Constants.expoConfig?.android?.googleServicesFile);
+  if (!hasFcmConfig) {
+    console.info(
+      "[notifications] Remote push disabled — no Firebase/FCM config (android.googleServicesFile). Local notifications remain active.",
+    );
+    return null;
+  }
+
   const projectId = Constants.expoConfig?.extra?.eas?.projectId;
 
   try {
