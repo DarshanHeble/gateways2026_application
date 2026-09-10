@@ -36,7 +36,8 @@ ENV_FILE=".env"
 echo "💉 Injecting new URL into $ENV_FILE..."
 
 # Remove any existing EXPO_PUBLIC_API_URL line so we don't get duplicates
-sed -i '/^EXPO_PUBLIC_API_URL=/d' "$ENV_FILE"
+# (portable across BSD/macOS and GNU sed, unlike `sed -i` which needs a backup-suffix arg on BSD)
+grep -v '^EXPO_PUBLIC_API_URL=' "$ENV_FILE" > "$ENV_FILE.tmp" && mv "$ENV_FILE.tmp" "$ENV_FILE"
 
 # Add the new URL to .env
 echo "EXPO_PUBLIC_API_URL=${URL}/api/v1" >> "$ENV_FILE"
