@@ -111,7 +111,7 @@ export async function fetchNotifications(): Promise<AppNotification[]> {
   try {
     const { data } = await apiClient<any[]>(`${API_BASE_URL}/events/announcements`, {
       method: "GET",
-      timeout: 6000,
+      timeout: 15000,
     });
     if (Array.isArray(data) && data.length > 0) {
       // Get previously stored notifications so we retain the read/unread state
