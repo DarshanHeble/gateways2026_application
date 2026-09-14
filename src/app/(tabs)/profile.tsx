@@ -531,21 +531,23 @@ export default function ProfileTab() {
             onPress={() => setSkinModalVisible(true)}
           >
             {/* Secondary Layer offset by 45° for Material 3 Expressive Sunny Starburst */}
-            <Animated.View
-              pointerEvents="none"
-              style={[
-                styles.floatingCapsuleShape,
-                {
-                  position: "absolute",
-                  borderColor: theme.primary,
-                  shadowColor: theme.primary,
-                  backgroundColor: theme.primaryContainer || "#0d131f",
-                },
-                burstSecondaryStyle,
-              ]}
-            >
-              <View style={[styles.capsuleBackGlow, { backgroundColor: theme.primary }]} />
-            </Animated.View>
+            {activeShape.category === "Burst" && (
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.floatingCapsuleShape,
+                  {
+                    position: "absolute",
+                    borderColor: theme.primary,
+                    shadowColor: theme.primary,
+                    backgroundColor: theme.primaryContainer || "#0d131f",
+                  },
+                  burstSecondaryStyle,
+                ]}
+              >
+                <View style={[styles.capsuleBackGlow, { backgroundColor: theme.primary }]} />
+              </Animated.View>
+            )}
 
             {/* Rotating Shape Container with Liquid Corner Transitions */}
             <Animated.View

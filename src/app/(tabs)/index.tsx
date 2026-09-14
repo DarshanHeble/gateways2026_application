@@ -486,26 +486,28 @@ export default function ModernHomeTab() {
             onPress={() => router.push("/(tabs)/profile" as never)}
           >
             {/* Secondary Layer offset by 45° to render the Material 3 Expressive Sunny 8-Pointed Starburst */}
-            <Animated.View
-              pointerEvents="none"
-              style={[
-                styles.floatingCapsuleShape,
-                {
-                  position: "absolute",
-                  borderColor: theme.primary,
-                  shadowColor: theme.primary,
-                  backgroundColor: theme.primaryContainer || "#0d131f",
-                },
-                burstSecondaryStyle,
-              ]}
-            >
-              <View
+            {activeShape.category === "Burst" && (
+              <Animated.View
+                pointerEvents="none"
                 style={[
-                  styles.capsuleBackGlow,
-                  { backgroundColor: theme.primary },
+                  styles.floatingCapsuleShape,
+                  {
+                    position: "absolute",
+                    borderColor: theme.primary,
+                    shadowColor: theme.primary,
+                    backgroundColor: theme.primaryContainer || "#0d131f",
+                  },
+                  burstSecondaryStyle,
                 ]}
-              />
-            </Animated.View>
+              >
+                <View
+                  style={[
+                    styles.capsuleBackGlow,
+                    { backgroundColor: theme.primary },
+                  ]}
+                />
+              </Animated.View>
+            )}
 
             {/* The Rotating Avatar Shape Container with Liquid Transitions */}
             <Animated.View
