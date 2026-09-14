@@ -40,7 +40,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     configureNotificationHandler();
-    registerForPushNotificationsAsync();
+    registerForPushNotificationsAsync(role);
     refresh();
 
     const receivedSub = Notifications.addNotificationReceivedListener(() => {

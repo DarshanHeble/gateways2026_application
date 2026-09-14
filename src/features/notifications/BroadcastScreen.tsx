@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 import { Redirect } from "expo-router";
 
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fonts } from "@/theme/tokens";
 import { px } from "@/theme/scale";
 import { PixelInput } from "@/components/pixel/PixelInput";
@@ -23,6 +24,7 @@ const TARGET_OPTIONS: { key: TargetOption; label: string }[] = [
 ];
 
 export function BroadcastScreen() {
+  const insets = useSafeAreaInsets();
   const { role } = useAuth();
   const { sendNotification } = useNotifications();
   const [title, setTitle] = useState("");
@@ -73,7 +75,14 @@ export function BroadcastScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <ScrollView style={styles.root} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        style={styles.root}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: Math.max(insets.top, px(16)) + px(8) },
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
         <PixelCard headerTitle="BROADCAST" badge="TEAM ONLY">
           <Text style={styles.demoNotice}>
             DEMO MODE — sends land on this device only until the backend is connected.

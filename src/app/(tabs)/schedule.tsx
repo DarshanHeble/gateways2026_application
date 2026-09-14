@@ -12,11 +12,13 @@ import Animated, {
   Layout,
   ZoomIn,
 } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fonts } from "@/theme/tokens";
 import { px } from "@/theme/scale";
 import { fetchSchedule, ScheduleResponse, MOCK_SCHEDULE } from "@/services/api";
 
 export default function ScheduleTab() {
+  const insets = useSafeAreaInsets();
   const [scheduleData, setScheduleData] = useState<ScheduleResponse | null>(null);
   const [dataSource, setDataSource] = useState<"network" | "cache" | "fallback">("network");
   const [loading, setLoading] = useState<boolean>(true);
@@ -56,26 +58,9 @@ export default function ScheduleTab() {
   const activeDay = scheduleData?.days[selectedDayIndex] || MOCK_SCHEDULE.days[0];
 
   return (
-    <View style={styles.root}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: px(8), marginBottom: px(12) }}>
+    <View style={[styles.root, { paddingTop: Math.max(insets.top, px(16)) + px(8) }]}>
+      <View style={{ alignItems: "center", justifyContent: "center", marginBottom: px(12) }}>
         <Text style={styles.subtitle}>Auto-sorted master timeline for Gateways 2026</Text>
-        <View style={{
-          paddingHorizontal: px(8),
-          paddingVertical: px(2),
-          borderRadius: px(4),
-          backgroundColor: dataSource === "network" ? "rgba(62,232,154,0.15)" : "rgba(255,210,94,0.15)",
-          borderWidth: 1,
-          borderColor: dataSource === "network" ? colors.cta.lit : colors.gold.bright,
-        }}>
-          <Text style={{
-            fontFamily: fonts.pixelBold,
-            fontSize: px(8),
-            color: dataSource === "network" ? colors.cta.lit : colors.gold.bright,
-            letterSpacing: px(1),
-          }}>
-            {dataSource === "network" ? "🟢 LIVE" : dataSource === "cache" ? "💾 OFFLINE" : "⚠️ BACKUP"}
-          </Text>
-        </View>
       </View>
 
       {/* Day Selector Tabs */}

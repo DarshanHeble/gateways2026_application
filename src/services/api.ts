@@ -513,9 +513,9 @@ export const MOCK_SCHEDULE: ScheduleResponse = {
  */
 export async function apiClient<T = any>(
   url: string,
-  options: RequestInit & { timeout?: number } = {}
+  options: RequestInit & { timeout?: number; skipAuthRedirect?: boolean } = {}
 ): Promise<{ data: T; status: number }> {
-  const { timeout = 10000, ...customConfig } = options;
+  const { timeout = 10000, skipAuthRedirect = false, ...customConfig } = options;
 
   const doFetch = async (targetUrl: string) => {
     const controller = new AbortController();
@@ -553,9 +553,13 @@ export async function apiClient<T = any>(
     }
 
     if (response.status === 401) {
-      await AsyncStorage.removeItem("auth_role");
-      router.replace("/login");
-      throw new Error("Unauthorized (401)");
+      if (!skipAuthRedirect) {
+        await AsyncStorage.removeItem("auth_role");
+        router.replace("/login");
+      }
+      const err: any = new Error("Unauthorized (401)");
+      err.status = 401;
+      throw err;
     }
 
     let data: any = null;

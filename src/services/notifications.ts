@@ -27,7 +27,7 @@ export function configureNotificationHandler() {
   });
 }
 
-export async function registerForPushNotificationsAsync(): Promise<string | null> {
+export async function registerForPushNotificationsAsync(role?: string | null): Promise<string | null> {
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("default", {
       name: "Gateways 2026",
@@ -45,8 +45,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   if (status !== "granted") return null;
 
   // Remote push on Android requires a Firebase (FCM) config — `android.googleServicesFile`
-  // in app.json plus a google-services.json. Without it, getExpoPushTokenAsync throws
-  // "Default FirebaseApp is not initialized" on every launch. Detect that up front and
+  // in app.json plus a google-services.json. Detect that up front and
   // skip cleanly: the app only uses local notifications (scheduleNotificationAsync),
   // which work fine without FCM.
   const hasFcmConfig =
@@ -65,10 +64,9 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
 
     apiClient(`${API_BASE_URL}/push/register-token`, {
       method: "POST",
-      body: JSON.stringify({ token, platform: Platform.OS }),
-    }).catch(() => {
-      // No backend endpoint yet — the token still works locally for the
-      // demo (local notifications), it just isn't registered server-side.
+      body: JSON.stringify({ token, platform: Platform.OS, role: role || "all" }),
+    }).catch((err) => {
+      console.warn("[notifications] Failed to register push token with backend:", err);
     });
 
     return token;

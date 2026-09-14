@@ -136,10 +136,14 @@ export const colors = {
 export const fonts = {
   pixel: "Silkscreen_400Regular",
   pixelBold: "Silkscreen_700Bold",
-  body: "Rubik_400Regular",
+  // DM Sans for normal text
+  body: "DMSans_400Regular",
   bodyMedium: "Rubik_500Medium",
   bodySemi: "Rubik_600SemiBold",
-  bodyBold: "Rubik_700Bold",
+  bodyBold: "DMSans_700Bold",
+  // Retain Rubik fallbacks if needed
+  rubikRegular: "Rubik_400Regular",
+  rubikBold: "Rubik_700Bold",
 } as const;
 
 /**
