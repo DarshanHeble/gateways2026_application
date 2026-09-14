@@ -239,6 +239,7 @@ export default function ProfileTab() {
   const [isEditing, setIsEditing] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Floating levitation oscillation
   const floatProgress = useSharedValue(0);
@@ -386,6 +387,8 @@ export default function ProfileTab() {
           setProfile((prev) => ({ ...prev, ...parsed }));
           const skin = MINECRAFT_SKINS.find((s) => s.id === parsed.skinId);
           if (skin) setActiveSkin(skin);
+          setToastMessage("LOADED FROM LOCAL STORAGE");
+          setTimeout(() => setToastMessage(null), 2400);
         }
 
         apiClient<{ session?: { email?: string; userId?: string } }>(`${API_BASE_URL}/auth/me`, {
@@ -399,6 +402,8 @@ export default function ProfileTab() {
                 email: res.data.session?.email || prev.email,
                 participantId: `GW26-${(res.data.session?.userId || "4091").slice(-4).toUpperCase()}`,
               }));
+              setToastMessage("SYNCED WITH SERVER");
+              setTimeout(() => setToastMessage(null), 2400);
             }
           })
           .catch(() => {});
@@ -965,6 +970,9 @@ export default function ProfileTab() {
           </Animated.View>
         </View>
       </Modal>
+
+      {/* Local & Server Sync Toast Notification */}
+      <PixelToast message={toastMessage} bottom={100} />
     </KeyboardAvoidingView>
   );
 }
