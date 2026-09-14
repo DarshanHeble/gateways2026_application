@@ -513,9 +513,9 @@ export const MOCK_SCHEDULE: ScheduleResponse = {
  */
 export async function apiClient<T = any>(
   url: string,
-  options: RequestInit & { timeout?: number } = {}
+  options: RequestInit & { timeout?: number; skipAuthRedirect?: boolean } = {}
 ): Promise<{ data: T; status: number }> {
-  const { timeout = 10000, ...customConfig } = options;
+  const { timeout = 10000, skipAuthRedirect = false, ...customConfig } = options;
 
   const doFetch = async (targetUrl: string) => {
     const controller = new AbortController();
@@ -553,9 +553,13 @@ export async function apiClient<T = any>(
     }
 
     if (response.status === 401) {
-      await AsyncStorage.removeItem("auth_role");
-      router.replace("/login");
-      throw new Error("Unauthorized (401)");
+      if (!skipAuthRedirect) {
+        await AsyncStorage.removeItem("auth_role");
+        router.replace("/login");
+      }
+      const err: any = new Error("Unauthorized (401)");
+      err.status = 401;
+      throw err;
     }
 
     let data: any = null;
@@ -595,7 +599,10 @@ export async function fetchEvents(): Promise<{ data: EventItem[]; source: "netwo
   try {
     const response = await apiClient<EventItem[]>(`${API_BASE_URL}/events`, {
       method: "GET",
-      timeout: 6000,
+      // The /events endpoint pulls two live Google Sheets; a cold fetch through
+      // the dev tunnel can take 8-12s. A tight timeout here was silently kicking
+      // real data out for bundled MOCK_EVENTS.
+      timeout: 15000,
     });
     if (Array.isArray(response.data) && response.data.length > 0) {
       // Save freshly fetched sheet data to local device storage
@@ -634,7 +641,7 @@ export async function fetchSchedule(): Promise<{ data: ScheduleResponse; source:
   try {
     const response = await apiClient<ScheduleResponse>(`${API_BASE_URL}/events/schedule`, {
       method: "GET",
-      timeout: 6000,
+      timeout: 15000,
     });
     if (response.data && Array.isArray(response.data.days) && response.data.days.length > 0) {
       // Save freshly fetched schedule to local device storage

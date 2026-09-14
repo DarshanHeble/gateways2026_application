@@ -11,11 +11,12 @@ import {
   Rubik_600SemiBold,
   Rubik_700Bold,
 } from "@expo-google-fonts/rubik";
-
+import { DMSans_400Regular, DMSans_700Bold } from "@expo-google-fonts/dm-sans";
 import { colors } from "@/theme/tokens";
 import { MobConvergenceOverlay } from "@/features/splash/MobConvergenceOverlay";
 import { AuthProvider, useAuth } from "@/features/auth/AuthContext";
 import { NotificationsProvider } from "@/features/notifications/NotificationsContext";
+import { M3ThemeProvider } from "@/theme/M3ThemeContext";
 import { PaperProvider } from 'react-native-paper';
 import { minecraftTheme } from '@/theme/minecraftTheme';
 import { ConnectionStatus } from '@/components/ConnectionStatus';
@@ -34,7 +35,7 @@ function RootLayoutNav() {
   if (!isReady) return null;
 
   return (
-    <NotificationsProvider>
+    <>
       <Stack
         screenOptions={{
           headerShown: false,
@@ -44,7 +45,7 @@ function RootLayoutNav() {
       />
       <ConnectionStatus />
       <MobConvergenceOverlay />
-    </NotificationsProvider>
+    </>
   );
 }
 
@@ -56,6 +57,8 @@ export default function RootLayout() {
     Rubik_500Medium,
     Rubik_600SemiBold,
     Rubik_700Bold,
+    DMSans_400Regular,
+    DMSans_700Bold,
   });
 
   if (!loaded && !error) return null;
@@ -64,9 +67,13 @@ export default function RootLayout() {
     <PaperProvider theme={minecraftTheme}>
       <SafeAreaProvider>
         <StatusBar style="light" />
-        <AuthProvider>
-          <RootLayoutNav />
-        </AuthProvider>
+        <M3ThemeProvider>
+          <AuthProvider>
+            <NotificationsProvider>
+              <RootLayoutNav />
+            </NotificationsProvider>
+          </AuthProvider>
+        </M3ThemeProvider>
       </SafeAreaProvider>
     </PaperProvider>
   );

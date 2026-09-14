@@ -12,25 +12,44 @@ import Animated, {
   Layout,
   ZoomIn,
 } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+
 import { colors, fonts } from "@/theme/tokens";
 import { px } from "@/theme/scale";
+import { useM3Theme } from "@/theme/M3ThemeContext";
 import { fetchSchedule, ScheduleResponse, MOCK_SCHEDULE } from "@/services/api";
+import { PixelToast } from "@/components/pixel/PixelToast";
 
 export default function ScheduleTab() {
+  const insets = useSafeAreaInsets();
+  const { theme } = useM3Theme();
+
   const [scheduleData, setScheduleData] = useState<ScheduleResponse | null>(null);
   const [dataSource, setDataSource] = useState<"network" | "cache" | "fallback">("network");
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const loadSchedule = useCallback(async () => {
     try {
       const res = await fetchSchedule();
       setScheduleData(res.data);
       setDataSource(res.source);
+
+      if (res.source === "cache") {
+        setToastMessage("LOADED OFFLINE SCHEDULE CACHE");
+      } else if (res.source === "network") {
+        setToastMessage("LIVE SCHEDULE SYNCED");
+      }
+      setTimeout(() => setToastMessage(null), 2500);
     } catch {
       setScheduleData(MOCK_SCHEDULE);
       setDataSource("fallback");
+      setToastMessage("OFFLINE DEMO BACKUP LOADED");
+      setTimeout(() => setToastMessage(null), 2500);
     }
   }, []);
 
@@ -47,8 +66,8 @@ export default function ScheduleTab() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.gold.bright} />
-        <Text style={styles.loadingText}>LOADING MASTER SCHEDULE...</Text>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={[styles.loadingText, { color: theme.primary }]}>LOADING MASTER SCHEDULE...</Text>
       </View>
     );
   }
@@ -56,26 +75,11 @@ export default function ScheduleTab() {
   const activeDay = scheduleData?.days[selectedDayIndex] || MOCK_SCHEDULE.days[0];
 
   return (
-    <View style={styles.root}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: px(8), marginBottom: px(12) }}>
+    <View style={[styles.root, { paddingTop: Math.max(insets.top, px(16)) + px(8) }]}>
+      {/* Top Header */}
+      <View style={styles.topHeader}>
+        <Text style={styles.headerTitle}>EVENT TIMELINE</Text>
         <Text style={styles.subtitle}>Auto-sorted master timeline for Gateways 2026</Text>
-        <View style={{
-          paddingHorizontal: px(8),
-          paddingVertical: px(2),
-          borderRadius: px(4),
-          backgroundColor: dataSource === "network" ? "rgba(62,232,154,0.15)" : "rgba(255,210,94,0.15)",
-          borderWidth: 1,
-          borderColor: dataSource === "network" ? colors.cta.lit : colors.gold.bright,
-        }}>
-          <Text style={{
-            fontFamily: fonts.pixelBold,
-            fontSize: px(8),
-            color: dataSource === "network" ? colors.cta.lit : colors.gold.bright,
-            letterSpacing: px(1),
-          }}>
-            {dataSource === "network" ? "🟢 LIVE" : dataSource === "cache" ? "💾 OFFLINE" : "⚠️ BACKUP"}
-          </Text>
-        </View>
       </View>
 
       {/* Day Selector Tabs */}
@@ -85,16 +89,63 @@ export default function ScheduleTab() {
           return (
             <TouchableOpacity
               key={idx}
-              style={[styles.dayTab, isSelected && styles.dayTabActive]}
-              onPress={() => setSelectedDayIndex(idx)}
+              activeOpacity={0.7}
+              style={[
+                styles.dayTab,
+                isSelected && [
+                  styles.dayTabActive,
+                  {
+                    backgroundColor: theme.primaryContainer,
+                    borderColor: theme.primary,
+                  },
+                ],
+              ]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setSelectedDayIndex(idx);
+              }}
             >
-              <Text style={[styles.dayTabText, isSelected && styles.dayTabTextActive]}>
-                {day.display_date}
+              <Ionicons
+                name="calendar"
+                size={12}
+                color={isSelected ? theme.primary : "#8090a8"}
+              />
+              <Text
+                style={[
+                  styles.dayTabText,
+                  isSelected && [styles.dayTabTextActive, { color: theme.primary }],
+                ]}
+              >
+                {day.display_date.toUpperCase()}
               </Text>
             </TouchableOpacity>
           );
         })}
       </View>
+
+      {/* Offline Backup Notice Banner */}
+      {dataSource === "fallback" && (
+        <View style={styles.fallbackNotice}>
+          <View style={styles.fallbackNoticeHeader}>
+            <Text style={styles.fallbackNoticeIcon}>⚠️</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.fallbackNoticeTitle}>OFFLINE DEMO BACKUP</Text>
+              <Text style={styles.fallbackNoticeText}>
+                Could not connect to live schedule servers. Showing placeholder timeline.
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.fallbackRetryBtn}
+            onPress={() => {
+              setLoading(true);
+              loadSchedule().finally(() => setLoading(false));
+            }}
+          >
+            <Text style={styles.fallbackRetryText}>TAP TO RETRY SYNC</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Timeline Animated List */}
       <Animated.FlatList
@@ -107,47 +158,93 @@ export default function ScheduleTab() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
+            tintColor={theme.primary}
+            colors={[theme.primary]}
             progressViewOffset={20}
           />
         }
         renderItem={({ item, index }) => {
+          const isCompetition = Boolean(item.is_competition);
+
           return (
             <Animated.View
-              entering={FadeInDown.delay(index * 70).duration(350)}
-              layout={Layout.springify().damping(15)}
+              entering={FadeInDown.delay(index * 60).duration(320)}
+              layout={Layout.springify().damping(16)}
               style={styles.timelineCard}
             >
               {/* Time Column */}
               <View style={styles.timeColumn}>
-                <Text style={styles.timeStart}>{item.from_time}</Text>
+                <Text style={[styles.timeStart, { color: theme.primary }]}>{item.from_time}</Text>
                 <Text style={styles.timeEnd}>to {item.end_time}</Text>
               </View>
 
-              {/* Vertical Line Divider with Animated Pulse Node */}
+              {/* Vertical Line Divider with Animated Node */}
               <View style={styles.dividerContainer}>
                 <Animated.View
-                  entering={ZoomIn.delay(index * 70 + 100).duration(300)}
-                  style={[styles.nodeDot, item.is_competition && styles.nodeDotComp]}
+                  entering={ZoomIn.delay(index * 60 + 80).duration(260)}
+                  style={[
+                    styles.nodeDot,
+                    {
+                      backgroundColor: isCompetition ? theme.primary : "#52a3c4",
+                      borderColor: "#0a0e17",
+                    },
+                  ]}
                 />
                 <View style={styles.verticalLine} />
               </View>
 
               {/* Card Body */}
-              <View style={styles.cardContent}>
+              <View
+                style={[
+                  styles.cardContent,
+                  {
+                    borderColor: isCompetition
+                      ? "rgba(255, 255, 255, 0.12)"
+                      : "rgba(255, 255, 255, 0.06)",
+                  },
+                ]}
+              >
                 <View style={styles.cardHeader}>
                   <Text style={styles.itemTitle}>{item.title}</Text>
-                  <View style={[styles.tagBadge, item.is_competition ? styles.tagComp : styles.tagGen]}>
-                    <Text style={styles.tagText}>{item.category.toUpperCase()}</Text>
+                  <View
+                    style={[
+                      styles.tagBadge,
+                      isCompetition
+                        ? { backgroundColor: theme.primaryContainer, borderColor: theme.primary }
+                        : styles.tagGen,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.tagText,
+                        isCompetition ? { color: theme.primary } : { color: "#94a3b8" },
+                      ]}
+                    >
+                      {item.category.toUpperCase()}
+                    </Text>
                   </View>
                 </View>
 
-                {item.subtitle ? <Text style={styles.itemSubtitle}>{item.subtitle}</Text> : null}
-                <Text style={styles.venueText}>📍 {item.venue}</Text>
+                {item.subtitle ? (
+                  <Text style={[styles.itemSubtitle, { color: theme.primary }]}>
+                    {item.subtitle}
+                  </Text>
+                ) : null}
+
+                {item.venue ? (
+                  <View style={styles.venueRow}>
+                    <Ionicons name="location-outline" size={13} color="#94a3b8" />
+                    <Text style={styles.venueText}>{item.venue}</Text>
+                  </View>
+                ) : null}
               </View>
             </Animated.View>
           );
         }}
       />
+
+      {/* Sync Status PixelToast */}
+      <PixelToast message={toastMessage} bottom={100} />
     </View>
   );
 }
@@ -155,83 +252,131 @@ export default function ScheduleTab() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#0d1018",
+    backgroundColor: "#0a0e17",
     paddingHorizontal: px(14),
-    paddingTop: px(16),
   },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#0d1018",
+    backgroundColor: "#0a0e17",
   },
   loadingText: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(12),
-    color: colors.gold.title,
+    fontSize: px(11),
     marginTop: px(12),
+    letterSpacing: px(0.8),
   },
-  screenTitle: {
+  topHeader: {
+    marginBottom: px(12),
+  },
+  headerTitle: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(20),
-    color: colors.gold.title,
-    textAlign: "center",
+    fontSize: px(18),
+    color: "#ffffff",
+    letterSpacing: px(0.5),
   },
   subtitle: {
     fontFamily: fonts.body,
-    fontSize: px(13),
-    color: "#a08c70",
-    textAlign: "center",
-    marginBottom: px(16),
+    fontSize: px(12),
+    color: "#8e99a8",
+    marginTop: px(2),
   },
   daySelectorRow: {
     flexDirection: "row",
-    justifyContent: "center",
-    marginBottom: px(16),
-    gap: px(10),
+    marginBottom: px(14),
+    gap: px(8),
   },
   dayTab: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: px(6),
     paddingVertical: px(8),
-    paddingHorizontal: px(16),
-    backgroundColor: "#161b26",
-    borderRadius: px(6),
-    borderWidth: px(1),
-    borderColor: "#2a3245",
+    paddingHorizontal: px(14),
+    backgroundColor: "rgba(22, 28, 40, 0.75)",
+    borderRadius: px(20),
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
   },
   dayTabActive: {
-    backgroundColor: "#2a1e12",
-    borderColor: "#c8a679",
+    borderWidth: 1.2,
   },
   dayTabText: {
     fontFamily: fonts.pixelBold,
+    fontSize: px(10),
+    color: "#8e99a8",
+    letterSpacing: px(0.5),
+  },
+  dayTabTextActive: {},
+
+  // Fallback notice
+  fallbackNotice: {
+    backgroundColor: "rgba(239, 68, 68, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(239, 68, 68, 0.35)",
+    borderRadius: px(10),
+    padding: px(12),
+    marginBottom: px(14),
+    gap: px(8),
+  },
+  fallbackNoticeHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: px(10),
+  },
+  fallbackNoticeIcon: {
+    fontSize: px(18),
+  },
+  fallbackNoticeTitle: {
+    fontFamily: fonts.pixelBold,
     fontSize: px(11),
-    color: "#8090a8",
+    color: "#f87171",
+    letterSpacing: px(0.8),
   },
-  dayTabTextActive: {
-    color: "#ffe9b8",
+  fallbackNoticeText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: px(11),
+    color: "#cbd5e1",
+    marginTop: px(2),
   },
+  fallbackRetryBtn: {
+    backgroundColor: "rgba(239, 68, 68, 0.2)",
+    borderColor: "rgba(239, 68, 68, 0.5)",
+    borderWidth: 1,
+    paddingVertical: px(6),
+    paddingHorizontal: px(12),
+    borderRadius: px(6),
+    alignSelf: "flex-start",
+    marginTop: px(2),
+  },
+  fallbackRetryText: {
+    fontFamily: fonts.pixelBold,
+    fontSize: px(9),
+    color: "#fca5a5",
+    letterSpacing: px(0.5),
+  },
+
   listContainer: {
-    paddingBottom: px(30),
+    paddingBottom: px(110),
   },
   timelineCard: {
     flexDirection: "row",
     marginBottom: px(12),
   },
   timeColumn: {
-    width: px(75),
+    width: px(76),
     paddingRight: px(8),
     alignItems: "flex-end",
-    paddingTop: px(4),
+    paddingTop: px(2),
   },
   timeStart: {
     fontFamily: fonts.pixelBold,
     fontSize: px(11),
-    color: "#ffe9b8",
   },
   timeEnd: {
     fontFamily: fonts.body,
     fontSize: px(11),
-    color: "#8090a8",
+    color: "#64748b",
     marginTop: px(2),
   },
   dividerContainer: {
@@ -242,27 +387,26 @@ const styles = StyleSheet.create({
     width: px(12),
     height: px(12),
     borderRadius: px(6),
-    backgroundColor: "#52a3c4",
     marginTop: px(4),
     borderWidth: px(2),
-    borderColor: "#0d1018",
-  },
-  nodeDotComp: {
-    backgroundColor: "#52c480",
   },
   verticalLine: {
     flex: 1,
     width: px(2),
-    backgroundColor: "#2a3245",
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
     marginTop: px(4),
   },
   cardContent: {
     flex: 1,
-    backgroundColor: "#161b26",
+    backgroundColor: "#131824",
     padding: px(12),
-    borderRadius: px(8),
-    borderWidth: px(1),
-    borderColor: "#2a3245",
+    borderRadius: px(12),
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   cardHeader: {
     flexDirection: "row",
@@ -272,36 +416,39 @@ const styles = StyleSheet.create({
   itemTitle: {
     flex: 1,
     fontFamily: fonts.bodyBold,
-    fontSize: px(15),
+    fontSize: px(14.5),
     color: "#ffffff",
-    paddingRight: px(6),
+    paddingRight: px(8),
   },
   itemSubtitle: {
     fontFamily: fonts.bodyMedium,
     fontSize: px(12),
-    color: "#e2af64",
-    marginTop: px(2),
+    marginTop: px(3),
+  },
+  venueRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: px(4),
+    marginTop: px(6),
   },
   venueText: {
     fontFamily: fonts.body,
     fontSize: px(12),
-    color: "#a08c70",
-    marginTop: px(6),
+    color: "#94a3b8",
   },
   tagBadge: {
     paddingVertical: px(2),
-    paddingHorizontal: px(6),
-    borderRadius: px(4),
-  },
-  tagComp: {
-    backgroundColor: "#173425",
+    paddingHorizontal: px(7),
+    borderRadius: px(6),
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
   },
   tagGen: {
-    backgroundColor: "#202c3d",
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
   },
   tagText: {
     fontFamily: fonts.pixelBold,
     fontSize: px(9),
-    color: "#d0d0d0",
+    letterSpacing: px(0.4),
   },
 });

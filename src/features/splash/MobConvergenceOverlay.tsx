@@ -20,7 +20,7 @@ const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 // Each mob has an assigned target position, angle, scale, and spawn direction
 // When converging, they rush in towards the center/focal zones, overlapping with slight rotation
 // to create a dynamic action-packed horde swarm covering the screen.
-const MOB_SIZE = Math.max(SCREEN_W * 0.72, SCREEN_H * 0.38);
+const MOB_SIZE = Math.min(SCREEN_W * 0.65, px(260));
 
 interface DynamicMob {
   id: string;
@@ -34,69 +34,69 @@ interface DynamicMob {
 }
 
 const MOBS: DynamicMob[] = [
-  // 1. Creeper - Top Left, coming from top-left far corner
+  // 1. Archer Gold - Upper Left
   {
-    id: "creeper",
-    source: require("../../../assets/images/characters/creeper.png"),
-    targetX: -MOB_SIZE * 0.12,
-    targetY: -MOB_SIZE * 0.08,
-    startOffsetX: -SCREEN_W * 0.9,
-    startOffsetY: -SCREEN_H * 0.7,
-    rotation: -8,
+    id: "archer_gold",
+    source: require("../../../assets/images/characters/archer_gold.png"),
+    targetX: px(10),
+    targetY: SCREEN_H * 0.08,
+    startOffsetX: -SCREEN_W * 0.85,
+    startOffsetY: -SCREEN_H * 0.6,
+    rotation: -6,
     zIndex: 1,
   },
-  // 2. Skeleton - Top Right, coming from top-right
+  // 2. Archer Blue - Upper Right
   {
-    id: "skeleton",
-    source: require("../../../assets/images/characters/skeleton.png"),
-    targetX: SCREEN_W - MOB_SIZE * 0.88,
-    targetY: -MOB_SIZE * 0.05,
-    startOffsetX: SCREEN_W * 0.9,
-    startOffsetY: -SCREEN_H * 0.7,
+    id: "archer_blue",
+    source: require("../../../assets/images/characters/archer_blue.png"),
+    targetX: SCREEN_W - MOB_SIZE - px(10),
+    targetY: SCREEN_H * 0.10,
+    startOffsetX: SCREEN_W * 0.85,
+    startOffsetY: -SCREEN_H * 0.6,
     rotation: 6,
     zIndex: 2,
   },
-  // 3. Steve - Mid Left, sweeping across center
+  // 3. Runner Pickaxe - Mid Left
   {
-    id: "steve",
-    source: require("../../../assets/images/characters/steve.png"),
-    targetX: -MOB_SIZE * 0.1,
+    id: "runner_pickaxe",
+    source: require("../../../assets/images/characters/runner_pickaxe.png"),
+    targetX: px(15),
     targetY: (SCREEN_H - MOB_SIZE) * 0.44,
-    startOffsetX: -SCREEN_W * 1.1,
-    startOffsetY: 40,
-    rotation: 5,
+    startOffsetX: -SCREEN_W * 0.95,
+    startOffsetY: 30,
+    rotation: 4,
     zIndex: 3,
   },
-  // 4. Alex - Mid Right, overlapping Steve in center
+  // 4. Adventurer - Mid Right
   {
-    id: "alex",
-    source: require("../../../assets/images/characters/alex.png"),
-    targetX: SCREEN_W - MOB_SIZE * 0.9,
-    targetY: (SCREEN_H - MOB_SIZE) * 0.52,
-    startOffsetX: SCREEN_W * 1.1,
-    startOffsetY: -30,
-    rotation: -7,
+    id: "adventurer",
+    source: require("../../../assets/images/characters/adventurer.png"),
+    targetX: SCREEN_W - MOB_SIZE - px(15),
+    targetY: (SCREEN_H - MOB_SIZE) * 0.48,
+    startOffsetX: SCREEN_W * 0.95,
+    startOffsetY: -25,
+    rotation: -5,
     zIndex: 4,
   },
-  // 5. Zombie - Bottom Left
+  // 5. Archer Gold (Lower Flank) - Bottom Left
   {
-    id: "zombie",
-    source: require("../../../assets/images/characters/zombie.png"),
-    targetX: -MOB_SIZE * 0.08,
-    targetY: SCREEN_H - MOB_SIZE * 0.92,
-    startOffsetX: -SCREEN_W * 0.9,
-    startOffsetY: SCREEN_H * 0.7,
-    rotation: 9,
+    id: "archer_gold_lower",
+    source: require("../../../assets/images/characters/archer_gold.png"),
+    targetX: px(20),
+    targetY: SCREEN_H - MOB_SIZE - SCREEN_H * 0.10,
+    startOffsetX: -SCREEN_W * 0.85,
+    startOffsetY: SCREEN_H * 0.6,
+    rotation: 7,
     zIndex: 5,
   },
-  // 6. Enderman - Bottom Right, huge presence
+  // 6. Runner Pickaxe (Lower Flank) - Bottom Right
   {
-    id: "enderman",
-    source: require("../../../assets/images/characters/enderman.png"),
-    targetX: SCREEN_W - MOB_SIZE * 0.92,
-    targetY: SCREEN_H - MOB_SIZE * 0.94,
-    startOffsetX: SCREEN_W * 0.9,
-    startOffsetY: SCREEN_H * 0.7,
+    id: "runner_pickaxe_lower",
+    source: require("../../../assets/images/characters/runner_pickaxe.png"),
+    targetX: SCREEN_W - MOB_SIZE - px(20),
+    targetY: SCREEN_H - MOB_SIZE - SCREEN_H * 0.08,
+    startOffsetX: SCREEN_W * 0.85,
+    startOffsetY: SCREEN_H * 0.6,
     rotation: -4,
     zIndex: 6,
   },
@@ -114,8 +114,8 @@ function SwarmMobItem({
     const p = progress.value;
     const curX = mob.targetX + mob.startOffsetX * (1 - p);
     const curY = mob.targetY + mob.startOffsetY * (1 - p);
-    // Slight zoom effect on entry
-    const scale = 0.8 + 0.28 * p;
+    // Well-balanced scale: zoomed out a bit (max 0.88 instead of 1.08) so characters stay centered, clean and visible
+    const scale = 0.68 + 0.20 * p;
     const rot = mob.rotation * p;
 
     return {
@@ -144,18 +144,16 @@ function SwarmMobItem({
       <Image
         source={mob.source}
         style={styles.mobImage}
-        contentFit="cover"
+        contentFit="contain"
         cachePolicy="memory-disk"
         allowDownscaling={false}
       />
-      {/* Minecraft shadow/border rim */}
-      <View style={styles.mobBorder} />
     </Animated.View>
   );
 }
 
-const CONVERGE_MS = 380;
-const REVEAL_MS = 340;
+const CONVERGE_MS = 850;
+const REVEAL_MS = 700;
 
 export function MobConvergenceOverlay() {
   const progress = useSharedValue(0);
@@ -168,18 +166,18 @@ export function MobConvergenceOverlay() {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
         } catch (_) {}
 
-        // Center badge pops in
+        // Center badge pops in smoothly
         badgeScale.value = withTiming(1, {
-          duration: CONVERGE_MS,
-          easing: Easing.out(Easing.back(1.4)),
+          duration: 550,
+          easing: Easing.out(Easing.back(1.2)),
         });
 
-        // 6 Large mobs swarm in and overlap to cover the screen
+        // 6 Large mobs glide in smoothly and overlap to cover the screen
         progress.value = withTiming(
           1,
           {
             duration: CONVERGE_MS,
-            easing: Easing.out(Easing.quad),
+            easing: Easing.out(Easing.cubic),
           },
           (done) => {
             "worklet";
@@ -194,12 +192,12 @@ export function MobConvergenceOverlay() {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
         } catch (_) {}
 
-        badgeScale.value = withTiming(0, { duration: 180 });
+        badgeScale.value = withTiming(0, { duration: 300 });
 
-        // 6 Large mobs blast back out off-screen
+        // 6 Large mobs smoothly glide back off-screen
         progress.value = withTiming(0, {
           duration: REVEAL_MS,
-          easing: Easing.in(Easing.quad),
+          easing: Easing.inOut(Easing.cubic),
         });
       },
     });

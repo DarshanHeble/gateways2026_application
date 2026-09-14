@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, Pressable, Linking, Alert } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fonts } from "@/theme/tokens";
 import { px } from "@/theme/scale";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,6 +11,7 @@ const TEAM_CONTACTS = [
 ];
 
 export default function ContactTab() {
+  const insets = useSafeAreaInsets();
   const handleCall = async (phone: string) => {
     const url = `tel:${phone}`;
     const supported = await Linking.canOpenURL(url);
@@ -21,7 +23,7 @@ export default function ContactTab() {
   };
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { paddingTop: Math.max(insets.top, px(16)) + px(8) }]}>
       <Text style={styles.title}>Team Contacts</Text>
       <Text style={styles.body}>Tap on a contact to initiate a call immediately.</Text>
 
