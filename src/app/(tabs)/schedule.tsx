@@ -33,6 +33,14 @@ export default function ScheduleTab() {
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const toastTimerRef = React.useRef<any>(null);
+
+  const showToast = useCallback((msg: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToastMessage(msg);
+    toastTimerRef.current = setTimeout(() => setToastMessage(null), 2500);
+  }, []);
+
   const loadSchedule = useCallback(async () => {
     try {
       const res = await fetchSchedule();
@@ -40,21 +48,22 @@ export default function ScheduleTab() {
       setDataSource(res.source);
 
       if (res.source === "cache") {
-        setToastMessage("LOADED OFFLINE SCHEDULE CACHE");
+        showToast("LOADED OFFLINE SCHEDULE CACHE");
       } else if (res.source === "network") {
-        setToastMessage("LIVE SCHEDULE SYNCED");
+        showToast("LIVE SCHEDULE SYNCED");
       }
-      setTimeout(() => setToastMessage(null), 2500);
     } catch {
       setScheduleData(MOCK_SCHEDULE);
       setDataSource("fallback");
-      setToastMessage("OFFLINE DEMO BACKUP LOADED");
-      setTimeout(() => setToastMessage(null), 2500);
+      showToast("OFFLINE DEMO BACKUP LOADED");
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     loadSchedule().finally(() => setLoading(false));
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
   }, [loadSchedule]);
 
   const onRefresh = useCallback(async () => {
@@ -72,7 +81,9 @@ export default function ScheduleTab() {
     );
   }
 
-  const activeDay = scheduleData?.days[selectedDayIndex] || MOCK_SCHEDULE.days[0];
+  const daysList = scheduleData?.days && scheduleData.days.length > 0 ? scheduleData.days : MOCK_SCHEDULE.days;
+  const safeDayIndex = Math.min(selectedDayIndex, daysList.length - 1);
+  const activeDay = daysList[safeDayIndex] || MOCK_SCHEDULE.days[0];
 
   return (
     <View style={[styles.root, { paddingTop: Math.max(insets.top, px(16)) + px(8) }]}>

@@ -44,9 +44,18 @@ export function BroadcastScreen() {
     loadHistory();
   }, [loadHistory]);
 
+  const toastTimerRef = React.useRef<any>(null);
+
   const say = useCallback((message: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToast(message);
-    setTimeout(() => setToast(null), 2200);
+    toastTimerRef.current = setTimeout(() => setToast(null), 2200);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
   }, []);
 
   const canSend = title.trim().length > 0 && body.trim().length > 0 && (targetOption !== "email" || email.trim().length > 0) && !busy;

@@ -379,16 +379,21 @@ export default function ProfileTab() {
 
   // Load saved profile & avatar on startup
   useEffect(() => {
+    let isMounted = true;
+    let toastTimer: any = null;
+
     async function loadData() {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_PROFILE_KEY);
-        if (stored) {
+        if (stored && isMounted) {
           const parsed = JSON.parse(stored);
           setProfile((prev) => ({ ...prev, ...parsed }));
           const skin = MINECRAFT_SKINS.find((s) => s.id === parsed.skinId);
           if (skin) setActiveSkin(skin);
           setToastMessage("LOADED FROM LOCAL STORAGE");
-          setTimeout(() => setToastMessage(null), 2400);
+          toastTimer = setTimeout(() => {
+            if (isMounted) setToastMessage(null);
+          }, 2400);
         }
 
         apiClient<{ session?: { email?: string; userId?: string } }>(`${API_BASE_URL}/auth/me`, {
@@ -396,14 +401,17 @@ export default function ProfileTab() {
           skipAuthRedirect: true,
         })
           .then((res) => {
-            if (res.data?.session?.email) {
+            if (isMounted && res.data?.session?.email) {
               setProfile((prev) => ({
                 ...prev,
                 email: res.data.session?.email || prev.email,
                 participantId: `GW26-${(res.data.session?.userId || "4091").slice(-4).toUpperCase()}`,
               }));
+              if (toastTimer) clearTimeout(toastTimer);
               setToastMessage("SYNCED WITH SERVER");
-              setTimeout(() => setToastMessage(null), 2400);
+              toastTimer = setTimeout(() => {
+                if (isMounted) setToastMessage(null);
+              }, 2400);
             }
           })
           .catch(() => {});
@@ -412,6 +420,11 @@ export default function ProfileTab() {
       }
     }
     loadData();
+
+    return () => {
+      isMounted = false;
+      if (toastTimer) clearTimeout(toastTimer);
+    };
   }, []);
 
   const handleSelectSkin = async (skin: MinecraftSkin) => {
