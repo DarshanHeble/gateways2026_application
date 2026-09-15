@@ -190,31 +190,45 @@ export const M3_EXPRESSIVE_SHAPES: M3ShapeDefinition[] = [
 ];
 
 const STORAGE_SHAPE_KEY = "@gateways_m3_shape_id_v2";
+const STORAGE_COLOR_MODE_KEY = "@gateways_color_mode_v1";
+
+export type ColorMode = "dark" | "light";
 
 interface M3ThemeContextType {
   activeShape: M3ShapeDefinition;
   shapes: M3ShapeDefinition[];
   setShapeById: (shapeId: string) => Promise<void>;
   theme: M3ShapeDefinition["palette"];
+  colorMode: ColorMode;
+  isDark: boolean;
+  toggleColorMode: () => Promise<void>;
+  setColorMode: (mode: ColorMode) => Promise<void>;
 }
 
 const M3ThemeContext = createContext<M3ThemeContextType | undefined>(undefined);
 
 export function M3ThemeProvider({ children }: { children: React.ReactNode }) {
   const [activeShapeId, setActiveShapeId] = useState<string>("stadium_pill");
+  const [colorMode, setColorModeState] = useState<ColorMode>("dark");
 
   useEffect(() => {
-    async function loadSavedShape() {
+    async function loadSavedState() {
       try {
-        const saved = await AsyncStorage.getItem(STORAGE_SHAPE_KEY);
-        if (saved && M3_EXPRESSIVE_SHAPES.some((s) => s.id === saved)) {
-          setActiveShapeId(saved);
+        const [savedShape, savedMode] = await Promise.all([
+          AsyncStorage.getItem(STORAGE_SHAPE_KEY),
+          AsyncStorage.getItem(STORAGE_COLOR_MODE_KEY),
+        ]);
+        if (savedShape && M3_EXPRESSIVE_SHAPES.some((s) => s.id === savedShape)) {
+          setActiveShapeId(savedShape);
+        }
+        if (savedMode === "light" || savedMode === "dark") {
+          setColorModeState(savedMode);
         }
       } catch (err) {
-        console.warn("Failed to load saved M3 shape:", err);
+        console.warn("Failed to load saved M3 theme settings:", err);
       }
     }
-    loadSavedShape();
+    loadSavedState();
   }, []);
 
   const activeShape = useMemo(() => {
@@ -236,13 +250,52 @@ export function M3ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const setColorMode = async (mode: ColorMode) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setColorModeState(mode);
+    try {
+      await AsyncStorage.setItem(STORAGE_COLOR_MODE_KEY, mode);
+    } catch (err) {
+      console.warn("Failed to save color mode:", err);
+    }
+  };
+
+  const toggleColorMode = async () => {
+    const next = colorMode === "dark" ? "light" : "dark";
+    await setColorMode(next);
+  };
+
+  const isDark = colorMode === "dark";
+
+  // Compute theme palette adapted for light or dark mode
+  const theme = useMemo(() => {
+    const base = activeShape.palette;
+    if (isDark) {
+      return base;
+    }
+    // High-readability light mode overrides
+    return {
+      ...base,
+      onPrimary: "#ffffff",
+      primaryContainer: base.primaryContainer.replace(/0\.\d+/, "0.12"),
+      surfaceTint: base.surfaceTint.replace(/0\.\d+/, "0.06"),
+      auraGlow: base.auraGlow.replace(/0\.\d+/, "0.12"),
+      rimBorder: base.rimBorder.replace(/0\.\d+/, "0.28"),
+      subtleText: "#475569",
+    };
+  }, [activeShape.palette, isDark]);
+
   return (
     <M3ThemeContext.Provider
       value={{
         activeShape,
         shapes: M3_EXPRESSIVE_SHAPES,
         setShapeById,
-        theme: activeShape.palette,
+        theme,
+        colorMode,
+        isDark,
+        toggleColorMode,
+        setColorMode,
       }}
     >
       {children}
@@ -257,3 +310,4 @@ export function useM3Theme() {
   }
   return context;
 }
+

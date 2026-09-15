@@ -8,6 +8,10 @@ import {
   Linking,
   RefreshControl,
   ScrollView,
+  Dimensions,
+  Modal,
+  PanResponder,
+  Pressable,
 } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,8 +19,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import Animated, {
   FadeInDown,
-  FadeInRight,
   Layout,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  runOnJS,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fonts } from "@/theme/tokens";
@@ -24,19 +32,71 @@ import { px } from "@/theme/scale";
 import { useM3Theme } from "@/theme/M3ThemeContext";
 import { fetchEvents, EventItem, MOCK_EVENTS } from "@/services/api";
 
+const { height: SCREEN_H } = Dimensions.get("window");
 type EventFilterType = "all" | "technical" | "non-technical";
 
 export default function EventsTab() {
   const insets = useSafeAreaInsets();
-  const { theme } = useM3Theme();
+  const { theme, isDark, toggleColorMode } = useM3Theme();
+
   const [events, setEvents] = useState<EventItem[]>([]);
   const [filterType, setFilterType] = useState<EventFilterType>("all");
   const [dataSource, setDataSource] = useState<"network" | "cache" | "fallback">("network");
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [myEvents, setMyEvents] = useState<string[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
 
+  // Bottom Sheet Gesture & Animation Shared Values
+  const sheetY = useSharedValue(0);
+
+  const closeBottomSheet = useCallback(() => {
+    setSelectedEvent(null);
+    sheetY.value = 0;
+  }, [sheetY]);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          gestureState.dy > 6 && Math.abs(gestureState.dx) < Math.abs(gestureState.dy),
+        onPanResponderMove: (_, gestureState) => {
+          if (gestureState.dy > 0) {
+            sheetY.value = gestureState.dy;
+          }
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          if (gestureState.dy > 110 || gestureState.vy > 0.7) {
+            try {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            } catch (_) {}
+            sheetY.value = withTiming(SCREEN_H * 0.85, { duration: 220 }, (done) => {
+              if (done) {
+                runOnJS(closeBottomSheet)();
+              }
+            });
+          } else {
+            sheetY.value = withSpring(0, { damping: 18, stiffness: 220 });
+          }
+        },
+      }),
+    [closeBottomSheet, sheetY]
+  );
+
+  const animatedSheetStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: sheetY.value }],
+    };
+  });
+
+  useEffect(() => {
+    if (selectedEvent) {
+      sheetY.value = 0;
+    }
+  }, [selectedEvent, sheetY]);
+
+  // Load user bookmarks / registered events
   useEffect(() => {
     AsyncStorage.getItem("@gateways_my_events").then((stored) => {
       if (stored) {
@@ -60,19 +120,27 @@ export default function EventsTab() {
     await AsyncStorage.setItem("@gateways_my_events", JSON.stringify(updated));
   };
 
-  const loadEvents = useCallback(async () => {
+  const loadEvents = useCallback(async (isMounted?: () => boolean) => {
     try {
       const res = await fetchEvents();
+      if (isMounted && !isMounted()) return;
       setEvents(res.data);
       setDataSource(res.source);
     } catch {
+      if (isMounted && !isMounted()) return;
       setEvents(MOCK_EVENTS);
       setDataSource("fallback");
     }
   }, []);
 
   useEffect(() => {
-    loadEvents().finally(() => setLoading(false));
+    let mounted = true;
+    loadEvents(() => mounted).finally(() => {
+      if (mounted) setLoading(false);
+    });
+    return () => {
+      mounted = false;
+    };
   }, [loadEvents]);
 
   const onRefresh = useCallback(async () => {
@@ -81,9 +149,9 @@ export default function EventsTab() {
     setRefreshing(false);
   }, [loadEvents]);
 
-  const toggleExpand = (id: string) => {
-    Haptics.selectionAsync();
-    setExpandedId((prev) => (prev === id ? null : id));
+  const openEventDetails = (item: EventItem) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedEvent(item);
   };
 
   const filteredEvents = useMemo(() => {
@@ -94,7 +162,12 @@ export default function EventsTab() {
         return typeStr.includes("tech") && !typeStr.includes("non");
       }
       if (filterType === "non-technical") {
-        return typeStr.includes("non") || typeStr.includes("cultur") || typeStr.includes("gaming") || !typeStr.includes("tech");
+        return (
+          typeStr.includes("non") ||
+          typeStr.includes("cultur") ||
+          typeStr.includes("gaming") ||
+          !typeStr.includes("tech")
+        );
       }
       return true;
     });
@@ -114,9 +187,22 @@ export default function EventsTab() {
     return { all: events.length, tech, nonTech };
   }, [events]);
 
+  // Color tokens depending on Dark/Light mode
+  const bgRoot = isDark ? "#0a0e17" : "#f4f6fa";
+  const bgCard = isDark ? "#121824" : "#ffffff";
+  const textPrimary = isDark ? "#ffffff" : "#0f172a";
+  const textSecondary = isDark ? "#8e99a8" : "#64748b";
+  const textMuted = isDark ? "#637084" : "#94a3b8";
+  const borderSubtle = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)";
+  const sheetBg = isDark ? "#0e1420" : "#ffffff";
+  const sheetBorder = isDark ? theme.rimBorder : "rgba(0, 0, 0, 0.12)";
+  const chipBg = isDark ? "rgba(22, 28, 40, 0.75)" : "#e9eef5";
+  const chipBorder = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)";
+  const shadowColor = isDark ? "#000000" : "#0f172a";
+
   if (loading) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, { backgroundColor: bgRoot }]}>
         <ActivityIndicator size="large" color={theme.primary} />
         <Text style={[styles.loadingText, { color: theme.primary }]}>LOADING FEST EVENTS...</Text>
       </View>
@@ -124,11 +210,34 @@ export default function EventsTab() {
   }
 
   return (
-    <View style={[styles.root, { paddingTop: Math.max(insets.top, px(16)) + px(8) }]}>
-      {/* Header */}
+    <View style={[styles.root, { backgroundColor: bgRoot, paddingTop: Math.max(insets.top, px(16)) + px(8) }]}>
+      {/* Top Header Row with Title & Dark/Light Mode Toggle */}
       <View style={styles.topHeader}>
-        <Text style={styles.headerTitle}>GATEWAYS EVENTS</Text>
-        <Text style={styles.subtitle}>Explore all competitions, rules, and schedules</Text>
+        <View style={styles.headerTitleRow}>
+          <View>
+            <Text style={[styles.headerTitle, { color: textPrimary }]}>GATEWAYS EVENTS</Text>
+            <Text style={[styles.subtitle, { color: textSecondary }]}>Explore competitions, rules & schedules</Text>
+          </View>
+
+          {/* Dark / Light Mode Switcher */}
+          <TouchableOpacity
+            style={[
+              styles.themeToggleBtn,
+              {
+                backgroundColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)",
+                borderColor: borderSubtle,
+              },
+            ]}
+            activeOpacity={0.7}
+            onPress={toggleColorMode}
+          >
+            <Ionicons
+              name={isDark ? "sunny-outline" : "moon-outline"}
+              size={18}
+              color={theme.primary}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Top Filter Bar */}
@@ -141,6 +250,7 @@ export default function EventsTab() {
           <TouchableOpacity
             style={[
               styles.filterChip,
+              { backgroundColor: chipBg, borderColor: chipBorder },
               filterType === "all" && [
                 styles.filterChipActive,
                 { backgroundColor: theme.primaryContainer, borderColor: theme.primary },
@@ -155,11 +265,12 @@ export default function EventsTab() {
             <Ionicons
               name="sparkles"
               size={12}
-              color={filterType === "all" ? theme.primary : "#8e99a8"}
+              color={filterType === "all" ? theme.primary : textSecondary}
             />
             <Text
               style={[
                 styles.filterChipText,
+                { color: textSecondary },
                 filterType === "all" && [styles.filterChipTextActive, { color: theme.primary }],
               ]}
             >
@@ -170,6 +281,7 @@ export default function EventsTab() {
           <TouchableOpacity
             style={[
               styles.filterChip,
+              { backgroundColor: chipBg, borderColor: chipBorder },
               filterType === "technical" && [
                 styles.filterChipActive,
                 { backgroundColor: theme.primaryContainer, borderColor: theme.primary },
@@ -184,11 +296,12 @@ export default function EventsTab() {
             <Ionicons
               name="code-slash"
               size={12}
-              color={filterType === "technical" ? theme.primary : "#8e99a8"}
+              color={filterType === "technical" ? theme.primary : textSecondary}
             />
             <Text
               style={[
                 styles.filterChipText,
+                { color: textSecondary },
                 filterType === "technical" && [styles.filterChipTextActive, { color: theme.primary }],
               ]}
             >
@@ -199,6 +312,7 @@ export default function EventsTab() {
           <TouchableOpacity
             style={[
               styles.filterChip,
+              { backgroundColor: chipBg, borderColor: chipBorder },
               filterType === "non-technical" && [
                 styles.filterChipActive,
                 { backgroundColor: theme.primaryContainer, borderColor: theme.primary },
@@ -213,11 +327,12 @@ export default function EventsTab() {
             <Ionicons
               name="game-controller"
               size={12}
-              color={filterType === "non-technical" ? theme.primary : "#8e99a8"}
+              color={filterType === "non-technical" ? theme.primary : textSecondary}
             />
             <Text
               style={[
                 styles.filterChipText,
+                { color: textSecondary },
                 filterType === "non-technical" && [styles.filterChipTextActive, { color: theme.primary }],
               ]}
             >
@@ -227,6 +342,7 @@ export default function EventsTab() {
         </ScrollView>
       </View>
 
+      {/* Offline Backup Banner if Live Server fails */}
       {dataSource === "fallback" && (
         <View style={styles.fallbackNotice}>
           <View style={styles.fallbackNoticeHeader}>
@@ -250,7 +366,7 @@ export default function EventsTab() {
         </View>
       )}
 
-      {/* Events FlatList */}
+      {/* Minimal, Decluttered Events List */}
       <Animated.FlatList
         data={filteredEvents}
         keyExtractor={(item) => item.id}
@@ -266,267 +382,345 @@ export default function EventsTab() {
           />
         }
         renderItem={({ item, index }) => {
-          const isExpanded = expandedId === item.id;
           const isRegistered = myEvents.includes(item.id);
 
           return (
             <Animated.View
-              entering={FadeInDown.delay(index * 60).duration(380)}
+              entering={FadeInDown.delay(index * 45).duration(300)}
               layout={Layout.springify().damping(16)}
-              style={[
-                styles.card,
-                {
-                  borderColor: isRegistered ? theme.primary : "rgba(255, 255, 255, 0.08)",
-                },
-              ]}
             >
-              {/* Event Image Card Banner with Floating Info Bubbles */}
-              <View style={styles.imageCardContainer}>
-                {item.image_url ? (
-                  <Image
-                    source={{ uri: item.image_url }}
-                    style={styles.bannerImage}
-                    contentFit="cover"
-                    cachePolicy="memory-disk"
-                    transition={250}
-                  />
-                ) : (
-                  <View style={[styles.placeholderBanner, { backgroundColor: theme.surfaceTint || "#1a2233" }]}>
-                    <Ionicons name="trophy-outline" size={48} color={theme.primary} />
+              <TouchableOpacity
+                activeOpacity={0.78}
+                onPress={() => openEventDetails(item)}
+                style={[
+                  styles.cleanCard,
+                  {
+                    backgroundColor: bgCard,
+                    borderColor: isRegistered ? theme.primary : borderSubtle,
+                    shadowColor,
+                  },
+                ]}
+              >
+                {/* Event Thumbnail */}
+                <View style={styles.thumbWrapper}>
+                  {item.image_url ? (
+                    <Image
+                      source={{ uri: item.image_url }}
+                      style={styles.thumbImage}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                      transition={200}
+                    />
+                  ) : (
+                    <View style={[styles.thumbPlaceholder, { backgroundColor: isDark ? "#1e293b" : "#e2e8f0" }]}>
+                      <Ionicons name="trophy-outline" size={22} color={theme.primary} />
+                    </View>
+                  )}
+                </View>
+
+                {/* Event Center Info */}
+                <View style={styles.cardCenter}>
+                  <View style={styles.cardBadgeRow}>
+                    <View
+                      style={[
+                        styles.typeBadge,
+                        {
+                          backgroundColor: isDark ? "rgba(255, 255, 255, 0.06)" : "#f1f5f9",
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.typeBadgeText, { color: theme.primary }]}>
+                        {(item.type || "GENERAL").toUpperCase()}
+                      </Text>
+                    </View>
+                    {item.date ? (
+                      <Text style={[styles.metaTextInline, { color: textMuted }]}>
+                        {item.date}
+                      </Text>
+                    ) : null}
                   </View>
-                )}
 
-                {/* Dark Vignette Overlay so bubbles stand out */}
-                <View style={styles.imageOverlayGradient} />
+                  <Text style={[styles.cardTitle, { color: textPrimary }]} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  <Text style={[styles.cardSubtitle, { color: textSecondary }]} numberOfLines={1}>
+                    {item.subtitle || item.description}
+                  </Text>
 
-                {/* Floating Bubbles Row (Top of Card Image) */}
-                <View style={styles.floatingTopBubblesRow}>
-                  <View
+                  {/* Clean Bottom Meta Row */}
+                  <View style={styles.cardMetaRow}>
+                    {item.venue ? (
+                      <View style={styles.metaChip}>
+                        <Ionicons name="location-outline" size={11} color={textSecondary} />
+                        <Text style={[styles.metaChipText, { color: textSecondary }]} numberOfLines={1}>
+                          {item.venue}
+                        </Text>
+                      </View>
+                    ) : null}
+                    {item.prizes?.pool ? (
+                      <View style={styles.metaChip}>
+                        <Ionicons name="ribbon-outline" size={11} color="#10b981" />
+                        <Text style={[styles.metaChipText, { color: "#10b981" }]} numberOfLines={1}>
+                          {item.prizes.pool}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+
+                {/* Right Action: Bookmark & Arrow */}
+                <View style={styles.cardRight}>
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      toggleParticipate(item.id);
+                    }}
                     style={[
-                      styles.floatingBubble,
+                      styles.bookmarkBtn,
                       {
-                        backgroundColor: "rgba(10, 15, 26, 0.82)",
-                        borderColor: theme.rimBorder,
+                        backgroundColor: isRegistered ? theme.primaryContainer : "transparent",
+                        borderColor: isRegistered ? theme.primary : borderSubtle,
                       },
                     ]}
+                    activeOpacity={0.7}
                   >
-                    <Ionicons name="flash" size={11} color={theme.primary} />
-                    <Text style={[styles.floatingBubbleText, { color: theme.primary }]}>
-                      {(item.type || "GENERAL").toUpperCase()}
-                    </Text>
-                  </View>
-
-                  {item.participation_type ? (
-                    <View
-                      style={[
-                        styles.floatingBubble,
-                        {
-                          backgroundColor: "rgba(10, 15, 26, 0.82)",
-                          borderColor: "rgba(255, 255, 255, 0.16)",
-                        },
-                      ]}
-                    >
-                      <Ionicons
-                        name={item.participation_type.toLowerCase().includes("team") ? "people" : "person"}
-                        size={11}
-                        color="#cbd5e1"
-                      />
-                      <Text style={styles.floatingBubbleText}>
-                        {item.participation_type.toUpperCase()}
-                      </Text>
-                    </View>
-                  ) : null}
+                    <Ionicons
+                      name={isRegistered ? "bookmark" : "bookmark-outline"}
+                      size={16}
+                      color={isRegistered ? theme.primary : textMuted}
+                    />
+                  </TouchableOpacity>
+                  <Ionicons name="chevron-forward" size={16} color={textMuted} />
                 </View>
-
-                {/* Floating Bubbles Row (Bottom of Card Image: Timeline, Date, Venue, Prize) */}
-                <View style={styles.floatingBottomBubblesRow}>
-                  {item.date ? (
-                    <View style={styles.floatingBubble}>
-                      <Ionicons name="calendar-outline" size={11} color={colors.gold.bright} />
-                      <Text style={styles.floatingBubbleText}>{item.date}</Text>
-                    </View>
-                  ) : null}
-
-                  {item.from_time ? (
-                    <View style={styles.floatingBubble}>
-                      <Ionicons name="time-outline" size={11} color="#67e8f9" />
-                      <Text style={styles.floatingBubbleText}>
-                        {item.from_time}{item.end_time ? ` - ${item.end_time}` : ""}
-                      </Text>
-                    </View>
-                  ) : null}
-
-                  {item.venue ? (
-                    <View style={styles.floatingBubble}>
-                      <Ionicons name="location-outline" size={11} color="#f472b6" />
-                      <Text style={styles.floatingBubbleText} numberOfLines={1}>
-                        {item.venue}
-                      </Text>
-                    </View>
-                  ) : null}
-
-                  {item.prizes.pool ? (
-                    <View
-                      style={[
-                        styles.floatingBubble,
-                        {
-                          borderColor: "rgba(62, 232, 154, 0.4)",
-                          backgroundColor: "rgba(10, 28, 20, 0.85)",
-                        },
-                      ]}
-                    >
-                      <Ionicons name="ribbon-outline" size={11} color="#3ee89a" />
-                      <Text style={[styles.floatingBubbleText, { color: "#3ee89a" }]}>
-                        {item.prizes.pool}
-                      </Text>
-                    </View>
-                  ) : null}
-                </View>
-              </View>
-
-              {/* Card Body */}
-              <View style={styles.cardBody}>
-                {/* Title & Subtitle */}
-                <Text style={styles.eventTitle}>{item.title}</Text>
-                {item.subtitle ? <Text style={styles.eventSubtitle}>{item.subtitle}</Text> : null}
-
-                {/* Participate / Bookmark Action Button */}
-                <TouchableOpacity
-                  style={[
-                    styles.participateBtn,
-                    isRegistered
-                      ? [
-                          styles.participateBtnActive,
-                          { backgroundColor: theme.primaryContainer, borderColor: theme.primary },
-                        ]
-                      : { borderColor: theme.rimBorder },
-                  ]}
-                  activeOpacity={0.8}
-                  onPress={() => toggleParticipate(item.id)}
-                >
-                  <Ionicons
-                    name={isRegistered ? "checkmark-circle" : "bookmark-outline"}
-                    size={15}
-                    color={isRegistered ? theme.primary : "#c8a679"}
-                  />
-                  <Text
-                    style={[
-                      styles.participateBtnText,
-                      isRegistered
-                        ? [styles.participateBtnTextActive, { color: theme.primary }]
-                        : { color: "#ffe9b8" },
-                    ]}
-                  >
-                    {isRegistered ? "ADDED TO MY FEST STAGE" : "+ PARTICIPATE IN THIS EVENT"}
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Description Preview */}
-                <Text style={styles.description} numberOfLines={isExpanded ? undefined : 2}>
-                  {item.description}
-                </Text>
-
-                {/* Expanded Details Section */}
-                {isExpanded && (
-                  <Animated.View entering={FadeInRight.duration(280)} style={styles.expandedContent}>
-                    {/* Prize Section */}
-                    <View style={styles.section}>
-                      <Text style={[styles.sectionTitle, { color: theme.primary }]}>🏆 PRIZES & AWARDS</Text>
-                      <View style={styles.prizeBox}>
-                        {item.prizes.pool ? (
-                          <Text style={[styles.prizeRank, { marginBottom: px(4) }]}>
-                            💎 Total Prize Pool: <Text style={[styles.prizeValue, { color: colors.cta.lit }]}>{item.prizes.pool}</Text>
-                          </Text>
-                        ) : null}
-                        {item.prizes.winner ? (
-                          <Text style={styles.prizeRank}>🥇 1st Place: <Text style={styles.prizeValue}>{item.prizes.winner}</Text></Text>
-                        ) : null}
-                        {item.prizes.runner_up ? (
-                          <Text style={styles.prizeRank}>🥈 2nd Place: <Text style={styles.prizeValue}>{item.prizes.runner_up}</Text></Text>
-                        ) : null}
-                        {item.prizes.second_runner_up ? (
-                          <Text style={styles.prizeRank}>🥉 3rd Place: <Text style={styles.prizeValue}>{item.prizes.second_runner_up}</Text></Text>
-                        ) : null}
-                        {item.prizes.description ? (
-                          <Text style={[styles.ruleItem, { marginTop: px(4), fontStyle: "italic" }]}>
-                            Awards: {item.prizes.description}
-                          </Text>
-                        ) : null}
-                      </View>
-                    </View>
-
-                    {/* Rules */}
-                    {item.rules.length > 0 && (
-                      <View style={styles.section}>
-                        <Text style={[styles.sectionTitle, { color: theme.primary }]}>📜 RULES & GUIDELINES</Text>
-                        {item.rules.map((rule, idx) => (
-                          <Text key={idx} style={styles.ruleItem}>
-                            • {rule}
-                          </Text>
-                        ))}
-                      </View>
-                    )}
-
-                    {/* Eligibility */}
-                    {item.eligibility.length > 0 && (
-                      <View style={styles.section}>
-                        <Text style={[styles.sectionTitle, { color: theme.primary }]}>🎓 ELIGIBILITY</Text>
-                        {item.eligibility.map((el, idx) => (
-                          <Text key={idx} style={styles.ruleItem}>
-                            • {el}
-                          </Text>
-                        ))}
-                      </View>
-                    )}
-
-                    {/* Event Coordinators */}
-                    {item.event_heads.length > 0 && (
-                      <View style={styles.section}>
-                        <Text style={[styles.sectionTitle, { color: theme.primary }]}>👤 EVENT HEADS</Text>
-                        <View style={styles.headGrid}>
-                          {item.event_heads.map((head, idx) => (
-                            <View key={idx} style={styles.headCard}>
-                              <Text style={styles.headName}>{head.name}</Text>
-                              <Text style={styles.headRole}>{head.role}</Text>
-                              {head.phone ? (
-                                <Text style={styles.headContact}>📞 {head.phone}</Text>
-                              ) : null}
-                            </View>
-                          ))}
-                        </View>
-                      </View>
-                    )}
-
-                    {/* Rulebook Download */}
-                    {item.rules_pdf_url ? (
-                      <TouchableOpacity
-                        style={[styles.pdfBtn, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}
-                        onPress={() => Linking.openURL(item.rules_pdf_url!)}
-                      >
-                        <Ionicons name="document-text-outline" size={14} color={theme.primary} />
-                        <Text style={[styles.pdfBtnText, { color: theme.primary }]}>
-                          DOWNLOAD FULL RULEBOOK PDF
-                        </Text>
-                      </TouchableOpacity>
-                    ) : null}
-                  </Animated.View>
-                )}
-
-                {/* Toggle Button */}
-                <TouchableOpacity
-                  style={[styles.expandBtn, { borderColor: "rgba(255, 255, 255, 0.08)" }]}
-                  onPress={() => toggleExpand(item.id)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.expandBtnText, { color: theme.primary }]}>
-                    {isExpanded ? "SHOW LESS ▲" : "VIEW DETAILS & RULES ▼"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
             </Animated.View>
           );
         }}
       />
+
+      {/* Full Event Details Bottom Sheet Modal */}
+      <Modal
+        visible={!!selectedEvent}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={closeBottomSheet}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeBottomSheet} />
+
+          <Animated.View
+            style={[
+              styles.modalSheet,
+              { backgroundColor: sheetBg, borderColor: sheetBorder },
+              animatedSheetStyle,
+            ]}
+          >
+            {/* Draggable Header Drag Bar */}
+            <View {...panResponder.panHandlers} style={styles.modalDragHandleZone}>
+              <View style={[styles.modalDragBar, { backgroundColor: isDark ? "#374151" : "#cbd5e1" }]} />
+              <View style={styles.modalHeaderRow}>
+                <View style={[styles.modalBadgePill, { backgroundColor: theme.primaryContainer }]}>
+                  <Text style={[styles.modalBadgeText, { color: theme.primary }]}>
+                    {(selectedEvent?.type || "COMPETITION").toUpperCase()}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={closeBottomSheet} style={[styles.modalCloseBtn, { backgroundColor: isDark ? "rgba(255, 255, 255, 0.08)" : "#f1f5f9" }]} activeOpacity={0.7}>
+                  <Ionicons name="close" size={18} color={textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.sheetScrollContent}>
+              {/* Event Main Banner inside Bottom Sheet if available */}
+              {selectedEvent?.image_url ? (
+                <View style={styles.sheetBannerWrap}>
+                  <Image
+                    source={{ uri: selectedEvent.image_url }}
+                    style={styles.sheetBannerImage}
+                    contentFit="cover"
+                  />
+                </View>
+              ) : null}
+
+              <Text style={[styles.modalMainTitle, { color: textPrimary }]}>{selectedEvent?.title}</Text>
+              {selectedEvent?.subtitle ? (
+                <Text style={[styles.modalSubTitle, { color: textSecondary }]}>{selectedEvent.subtitle}</Text>
+              ) : null}
+
+              {/* Meta Chips */}
+              <View style={styles.modalMetaRow}>
+                {selectedEvent?.date ? (
+                  <View style={[styles.modalMetaChip, { backgroundColor: isDark ? "rgba(255, 255, 255, 0.06)" : "#f1f5f9" }]}>
+                    <Text style={[styles.modalMetaChipText, { color: textPrimary }]}>📅 {selectedEvent.date}</Text>
+                  </View>
+                ) : null}
+                {selectedEvent?.from_time ? (
+                  <View style={[styles.modalMetaChip, { backgroundColor: isDark ? "rgba(255, 255, 255, 0.06)" : "#f1f5f9" }]}>
+                    <Text style={[styles.modalMetaChipText, { color: textPrimary }]}>
+                      ⏰ {selectedEvent.from_time}{selectedEvent.end_time ? ` - ${selectedEvent.end_time}` : ""}
+                    </Text>
+                  </View>
+                ) : null}
+                {selectedEvent?.venue ? (
+                  <View style={[styles.modalMetaChip, { backgroundColor: isDark ? "rgba(255, 255, 255, 0.06)" : "#f1f5f9" }]}>
+                    <Text style={[styles.modalMetaChipText, { color: textPrimary }]}>📍 {selectedEvent.venue}</Text>
+                  </View>
+                ) : null}
+                {selectedEvent?.participation_type ? (
+                  <View style={[styles.modalMetaChip, { backgroundColor: isDark ? "rgba(255, 255, 255, 0.06)" : "#f1f5f9" }]}>
+                    <Text style={[styles.modalMetaChipText, { color: textPrimary }]}>
+                      👥 {selectedEvent.participation_type.toUpperCase()}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+
+              {/* Bookmark / Add to Stage Action Button */}
+              {selectedEvent && (
+                <TouchableOpacity
+                  style={[
+                    styles.participateActionBtn,
+                    myEvents.includes(selectedEvent.id)
+                      ? [styles.participateActionBtnActive, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]
+                      : { backgroundColor: theme.primary, borderColor: theme.primary },
+                  ]}
+                  activeOpacity={0.85}
+                  onPress={() => toggleParticipate(selectedEvent.id)}
+                >
+                  <Ionicons
+                    name={myEvents.includes(selectedEvent.id) ? "checkmark-circle" : "bookmark"}
+                    size={17}
+                    color={myEvents.includes(selectedEvent.id) ? theme.primary : "#ffffff"}
+                  />
+                  <Text
+                    style={[
+                      styles.participateActionBtnText,
+                      { color: myEvents.includes(selectedEvent.id) ? theme.primary : "#ffffff" },
+                    ]}
+                  >
+                    {myEvents.includes(selectedEvent.id) ? "ADDED TO FEST STAGE" : "+ ADD TO MY SCHEDULE"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Overview */}
+              <Text style={[styles.modalHeading, { color: theme.primary }]}>OVERVIEW</Text>
+              <Text style={[styles.modalParagraph, { color: textSecondary }]}>
+                {selectedEvent?.description || "Compete against top participants across colleges."}
+              </Text>
+
+              {/* Prizes */}
+              {selectedEvent?.prizes && (
+                <View style={styles.sheetSection}>
+                  <Text style={[styles.modalHeading, { color: theme.primary }]}>🏆 PRIZES & AWARDS</Text>
+                  <View style={[styles.prizeBox, { backgroundColor: isDark ? "rgba(255, 255, 255, 0.04)" : "#f8fafc", borderColor: borderSubtle }]}>
+                    {selectedEvent.prizes.pool ? (
+                      <Text style={[styles.prizeRank, { color: textPrimary }]}>
+                        💎 Total Pool: <Text style={styles.prizeLit}>{selectedEvent.prizes.pool}</Text>
+                      </Text>
+                    ) : null}
+                    {selectedEvent.prizes.winner ? (
+                      <Text style={[styles.prizeRank, { color: textPrimary }]}>
+                        🥇 1st Place: <Text style={[styles.prizeRankVal, { color: textSecondary }]}>{selectedEvent.prizes.winner}</Text>
+                      </Text>
+                    ) : null}
+                    {selectedEvent.prizes.runner_up ? (
+                      <Text style={[styles.prizeRank, { color: textPrimary }]}>
+                        🥈 2nd Place: <Text style={[styles.prizeRankVal, { color: textSecondary }]}>{selectedEvent.prizes.runner_up}</Text>
+                      </Text>
+                    ) : null}
+                    {selectedEvent.prizes.second_runner_up ? (
+                      <Text style={[styles.prizeRank, { color: textPrimary }]}>
+                        🥉 3rd Place: <Text style={[styles.prizeRankVal, { color: textSecondary }]}>{selectedEvent.prizes.second_runner_up}</Text>
+                      </Text>
+                    ) : null}
+                    {selectedEvent.prizes.description ? (
+                      <Text style={[styles.prizeDesc, { color: textMuted }]}>
+                        {selectedEvent.prizes.description}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+              )}
+
+              {/* Rules & Guidelines */}
+              {selectedEvent?.rules && selectedEvent.rules.length > 0 && (
+                <View style={styles.sheetSection}>
+                  <Text style={[styles.modalHeading, { color: theme.primary }]}>📜 RULES & GUIDELINES</Text>
+                  {selectedEvent.rules.map((rule, idx) => (
+                    <Text key={idx} style={[styles.ruleItem, { color: textSecondary }]}>
+                      • {rule}
+                    </Text>
+                  ))}
+                </View>
+              )}
+
+              {/* Eligibility */}
+              {selectedEvent?.eligibility && selectedEvent.eligibility.length > 0 && (
+                <View style={styles.sheetSection}>
+                  <Text style={[styles.modalHeading, { color: theme.primary }]}>🎓 ELIGIBILITY</Text>
+                  {selectedEvent.eligibility.map((el, idx) => (
+                    <Text key={idx} style={[styles.ruleItem, { color: textSecondary }]}>
+                      • {el}
+                    </Text>
+                  ))}
+                </View>
+              )}
+
+              {/* Event Heads */}
+              {selectedEvent?.event_heads && selectedEvent.event_heads.length > 0 && (
+                <View style={styles.sheetSection}>
+                  <Text style={[styles.modalHeading, { color: theme.primary }]}>👤 EVENT HEADS</Text>
+                  <View style={styles.headsGrid}>
+                    {selectedEvent.event_heads.map((head, idx) => (
+                      <View
+                        key={idx}
+                        style={[
+                          styles.headCard,
+                          {
+                            backgroundColor: isDark ? "rgba(255, 255, 255, 0.04)" : "#f8fafc",
+                            borderColor: borderSubtle,
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.headName, { color: textPrimary }]}>{head.name}</Text>
+                        <Text style={[styles.headRole, { color: textSecondary }]}>{head.role}</Text>
+                        {head.phone ? (
+                          <TouchableOpacity onPress={() => Linking.openURL(`tel:${head.phone}`)}>
+                            <Text style={styles.headPhone}>📞 {head.phone}</Text>
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Full Rulebook Download Link */}
+              {selectedEvent?.rules_pdf_url && (
+                <TouchableOpacity
+                  style={[
+                    styles.pdfDownloadBtn,
+                    {
+                      backgroundColor: theme.primaryContainer,
+                      borderColor: theme.primary,
+                    },
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={() => Linking.openURL(selectedEvent.rules_pdf_url!)}
+                >
+                  <Ionicons name="document-text-outline" size={15} color={theme.primary} />
+                  <Text style={[styles.pdfDownloadBtnText, { color: theme.primary }]}>
+                    DOWNLOAD FULL RULEBOOK PDF
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              <View style={{ height: px(40) }} />
+            </ScrollView>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -534,14 +728,12 @@ export default function EventsTab() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#0a0e17",
     paddingHorizontal: px(14),
   },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#0a0e17",
   },
   loadingText: {
     fontFamily: fonts.pixelBold,
@@ -559,15 +751,21 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(18),
-    color: "#ffffff",
+    fontSize: px(17),
     letterSpacing: px(0.5),
   },
   subtitle: {
     fontFamily: fonts.body,
     fontSize: px(12),
-    color: "#8e99a8",
     marginTop: px(2),
+  },
+  themeToggleBtn: {
+    width: px(38),
+    height: px(38),
+    borderRadius: px(19),
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   // Filter Bar Styles
@@ -582,220 +780,291 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: px(6),
-    paddingHorizontal: px(14),
-    paddingVertical: px(8),
+    paddingHorizontal: px(13),
+    paddingVertical: px(7),
     borderRadius: px(20),
-    backgroundColor: "rgba(22, 28, 40, 0.75)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
   },
   filterChipActive: {
     borderWidth: 1.2,
   },
   filterChipText: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(10),
-    color: "#8e99a8",
+    fontSize: px(9.5),
     letterSpacing: px(0.5),
   },
   filterChipTextActive: {},
 
   listContainer: {
-    paddingBottom: px(110), // Padding to keep clear of floating bottom tab bar
+    paddingBottom: px(110),
   },
 
-  // Card Styles
-  card: {
-    backgroundColor: "#131824",
-    borderRadius: px(18),
-    borderWidth: 1.2,
-    marginBottom: px(18),
+  // Minimal Clean Card
+  cleanCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: px(12),
+    borderRadius: px(14),
+    borderWidth: 1,
+    marginBottom: px(10),
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  thumbWrapper: {
+    width: px(54),
+    height: px(54),
+    borderRadius: px(10),
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
+    marginRight: px(12),
   },
-  imageCardContainer: {
-    position: "relative",
-    width: "100%",
-    height: px(175),
-    backgroundColor: "#1a2233",
-  },
-  bannerImage: {
+  thumbImage: {
     width: "100%",
     height: "100%",
   },
-  placeholderBanner: {
+  thumbPlaceholder: {
     width: "100%",
     height: "100%",
     alignItems: "center",
     justifyContent: "center",
   },
-  imageOverlayGradient: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(10, 14, 23, 0.35)",
+  cardCenter: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  cardBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: px(6),
+    marginBottom: px(3),
+  },
+  typeBadge: {
+    paddingHorizontal: px(6),
+    paddingVertical: px(2),
+    borderRadius: px(6),
+  },
+  typeBadgeText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: px(8.5),
+    letterSpacing: 0.5,
+  },
+  metaTextInline: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: px(10),
+  },
+  cardTitle: {
+    fontFamily: fonts.pixelBold,
+    fontSize: px(13.5),
+    letterSpacing: 0.2,
+  },
+  cardSubtitle: {
+    fontFamily: fonts.body,
+    fontSize: px(11.5),
+    marginTop: px(1),
+  },
+  cardMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: px(10),
+    marginTop: px(5),
+  },
+  metaChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: px(3),
+  },
+  metaChipText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: px(10.5),
+  },
+  cardRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: px(8),
+    marginLeft: px(8),
+  },
+  bookmarkBtn: {
+    width: px(32),
+    height: px(32),
+    borderRadius: px(8),
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
-  // Floating Info Bubbles
-  floatingTopBubblesRow: {
-    position: "absolute",
-    top: px(10),
-    left: px(10),
-    right: px(10),
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  // Modal Bottom Sheet Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.65)",
+    justifyContent: "flex-end",
   },
-  floatingBottomBubblesRow: {
-    position: "absolute",
-    bottom: px(10),
-    left: px(10),
-    right: px(10),
+  modalSheet: {
+    borderTopLeftRadius: px(22),
+    borderTopRightRadius: px(22),
+    paddingHorizontal: px(18),
+    paddingTop: px(10),
+    paddingBottom: px(24),
+    maxHeight: "84%",
+    borderWidth: 1,
+    borderBottomWidth: 0,
+  },
+  modalDragHandleZone: {
+    paddingTop: px(2),
+    paddingBottom: px(8),
+  },
+  modalDragBar: {
+    width: px(40),
+    height: px(4),
+    borderRadius: px(2),
+    alignSelf: "center",
+    marginBottom: px(10),
+  },
+  modalHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  modalCloseBtn: {
+    padding: px(6),
+    borderRadius: px(16),
+  },
+  modalBadgePill: {
+    paddingHorizontal: px(8),
+    paddingVertical: px(3),
+    borderRadius: px(8),
+  },
+  modalBadgeText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: px(9.5),
+    letterSpacing: 0.8,
+  },
+  sheetScrollContent: {
+    paddingTop: px(8),
+  },
+  sheetBannerWrap: {
+    width: "100%",
+    height: px(150),
+    borderRadius: px(12),
+    overflow: "hidden",
+    marginBottom: px(14),
+  },
+  sheetBannerImage: {
+    width: "100%",
+    height: "100%",
+  },
+  modalMainTitle: {
+    fontFamily: fonts.pixelBold,
+    fontSize: px(19),
+    letterSpacing: 0.3,
+  },
+  modalSubTitle: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: px(13),
+    marginTop: px(3),
+  },
+  modalMetaRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: px(6),
+    marginVertical: px(12),
   },
-  floatingBubble: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: px(4),
-    backgroundColor: "rgba(10, 15, 24, 0.82)",
-    paddingHorizontal: px(10),
-    paddingVertical: px(4.5),
-    borderRadius: px(16),
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
+  modalMetaChip: {
+    paddingHorizontal: px(9),
+    paddingVertical: px(5),
+    borderRadius: px(8),
   },
-  floatingBubbleText: {
+  modalMetaChipText: {
     fontFamily: fonts.bodyMedium,
     fontSize: px(11),
-    color: "#e2e8f0",
   },
-
-  // Card Body
-  cardBody: {
-    padding: px(14),
-  },
-  eventTitle: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(16),
-    color: "#ffffff",
-    letterSpacing: px(0.3),
-  },
-  eventSubtitle: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: px(13),
-    color: "#94a3b8",
-    marginTop: px(2),
-  },
-  participateBtn: {
+  participateActionBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: px(6),
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
-    borderWidth: 1,
-    paddingVertical: px(8),
+    gap: px(8),
+    paddingVertical: px(11),
     borderRadius: px(10),
-    marginTop: px(12),
-    marginBottom: px(8),
-  },
-  participateBtnActive: {
-    borderWidth: 1.2,
-  },
-  participateBtnText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(9.5),
-    letterSpacing: px(0.5),
-  },
-  participateBtnTextActive: {},
-  description: {
-    fontFamily: fonts.body,
-    fontSize: px(13),
-    color: "#cbd5e1",
-    lineHeight: px(19),
-    marginTop: px(4),
-  },
-
-  // Expanded Content
-  expandedContent: {
-    marginTop: px(14),
-    paddingTop: px(12),
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.08)",
-  },
-  section: {
+    borderWidth: 1,
     marginBottom: px(14),
   },
-  sectionTitle: {
+  participateActionBtnActive: {},
+  participateActionBtnText: {
+    fontFamily: fonts.pixelBold,
+    fontSize: px(10),
+    letterSpacing: px(0.6),
+  },
+  sheetSection: {
+    marginTop: px(14),
+  },
+  modalHeading: {
     fontFamily: fonts.pixelBold,
     fontSize: px(11),
-    marginBottom: px(6),
     letterSpacing: px(0.8),
+    marginBottom: px(6),
+    marginTop: px(10),
+  },
+  modalParagraph: {
+    fontFamily: fonts.body,
+    fontSize: px(13),
+    lineHeight: px(19),
   },
   prizeBox: {
-    backgroundColor: "#0d131f",
-    padding: px(10),
-    borderRadius: px(8),
+    padding: px(12),
+    borderRadius: px(10),
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    gap: px(3),
   },
   prizeRank: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(12.5),
-    color: "#cbd5e1",
-    marginBottom: px(4),
+    fontSize: px(12),
   },
-  prizeValue: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(12.5),
-    color: "#3ee89a",
+  prizeRankVal: {
+    fontFamily: fonts.bodyMedium,
+  },
+  prizeLit: {
+    color: "#10b981",
+  },
+  prizeDesc: {
+    fontFamily: fonts.body,
+    fontSize: px(11.5),
+    fontStyle: "italic",
+    marginTop: px(4),
   },
   ruleItem: {
     fontFamily: fonts.body,
     fontSize: px(12.5),
-    color: "#94a3b8",
     lineHeight: px(18),
     marginBottom: px(4),
   },
-  headGrid: {
+  headsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: px(8),
   },
   headCard: {
-    backgroundColor: "#0d131f",
-    padding: px(8),
+    padding: px(10),
     borderRadius: px(8),
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
     flex: 1,
     minWidth: px(130),
   },
   headName: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(12.5),
-    color: "#ffffff",
+    fontSize: px(12),
   },
   headRole: {
     fontFamily: fonts.body,
     fontSize: px(10.5),
-    color: "#94a3b8",
+    marginTop: px(1),
   },
-  headContact: {
+  headPhone: {
     fontFamily: fonts.bodyMedium,
     fontSize: px(11),
     color: "#38bdf8",
     marginTop: px(4),
   },
-  pdfBtn: {
+  pdfDownloadBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -803,25 +1072,12 @@ const styles = StyleSheet.create({
     paddingVertical: px(10),
     borderRadius: px(8),
     borderWidth: 1,
-    marginTop: px(4),
+    marginTop: px(16),
   },
-  pdfBtnText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(10),
-    letterSpacing: px(0.5),
-  },
-  expandBtn: {
-    marginTop: px(10),
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
-    borderWidth: 1,
-    paddingVertical: px(8),
-    borderRadius: px(10),
-    alignItems: "center",
-  },
-  expandBtnText: {
+  pdfDownloadBtnText: {
     fontFamily: fonts.pixelBold,
     fontSize: px(9.5),
-    letterSpacing: px(0.8),
+    letterSpacing: px(0.5),
   },
 
   // Fallback Notice
