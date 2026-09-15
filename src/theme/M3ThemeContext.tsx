@@ -205,7 +205,20 @@ interface M3ThemeContextType {
   setColorMode: (mode: ColorMode) => Promise<void>;
 }
 
-const M3ThemeContext = createContext<M3ThemeContextType | undefined>(undefined);
+const DEFAULT_SHAPE = M3_EXPRESSIVE_SHAPES[0];
+
+const DEFAULT_THEME_CONTEXT: M3ThemeContextType = {
+  activeShape: DEFAULT_SHAPE,
+  shapes: M3_EXPRESSIVE_SHAPES,
+  setShapeById: async () => {},
+  theme: DEFAULT_SHAPE.palette,
+  colorMode: "dark",
+  isDark: true,
+  toggleColorMode: async () => {},
+  setColorMode: async () => {},
+};
+
+const M3ThemeContext = createContext<M3ThemeContextType>(DEFAULT_THEME_CONTEXT);
 
 export function M3ThemeProvider({ children }: { children: React.ReactNode }) {
   const [activeShapeId, setActiveShapeId] = useState<string>("stadium_pill");
@@ -234,7 +247,7 @@ export function M3ThemeProvider({ children }: { children: React.ReactNode }) {
   const activeShape = useMemo(() => {
     return (
       M3_EXPRESSIVE_SHAPES.find((s) => s.id === activeShapeId) ||
-      M3_EXPRESSIVE_SHAPES[0]
+      DEFAULT_SHAPE
     );
   }, [activeShapeId]);
 
@@ -305,9 +318,6 @@ export function M3ThemeProvider({ children }: { children: React.ReactNode }) {
 
 export function useM3Theme() {
   const context = useContext(M3ThemeContext);
-  if (!context) {
-    throw new Error("useM3Theme must be used within an M3ThemeProvider");
-  }
-  return context;
+  return context || DEFAULT_THEME_CONTEXT;
 }
 
