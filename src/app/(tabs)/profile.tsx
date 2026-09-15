@@ -130,19 +130,13 @@ function renderMiniGlyph(category: string, color: string, isSelected: boolean) {
   const bg = isSelected ? "#070b12" : color;
   switch (category) {
     case "Pill":
-      return <View style={{ width: 8, height: 16, borderRadius: 4, backgroundColor: bg }} />;
     case "Squircle":
-      return <View style={{ width: 13, height: 13, borderRadius: 4.5, backgroundColor: bg }} />;
     case "Flower":
       return (
         <View
           style={{
             width: 14,
             height: 14,
-            borderTopLeftRadius: 7,
-            borderTopRightRadius: 1.5,
-            borderBottomRightRadius: 7,
-            borderBottomLeftRadius: 1.5,
             backgroundColor: bg,
           }}
         />
@@ -153,7 +147,6 @@ function renderMiniGlyph(category: string, color: string, isSelected: boolean) {
           style={{
             width: 11,
             height: 11,
-            borderRadius: 1.5,
             transform: [{ rotate: "45deg" }],
             backgroundColor: bg,
           }}
@@ -163,7 +156,6 @@ function renderMiniGlyph(category: string, color: string, isSelected: boolean) {
       return <Ionicons name="sparkles" size={13} color={bg} />;
     case "Circle":
     default:
-      return <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: bg }} />;
   }
 }
 
@@ -231,7 +223,7 @@ const FloatingSatellite = React.memo(function FloatingSatellite({
 export default function ProfileTab() {
   const insets = useSafeAreaInsets();
   const { role, logout } = useAuth();
-  const { activeShape, setShapeById, shapes, theme } = useM3Theme();
+  const { activeShape, setShapeById, shapes, theme, isDark, toggleColorMode } = useM3Theme();
 
   const [profile, setProfile] = useState<UserProfileData>(DEFAULT_PROFILE);
   const [activeSkin, setActiveSkin] = useState<MinecraftSkin>(MINECRAFT_SKINS[0]);
@@ -506,21 +498,43 @@ export default function ProfileTab() {
         <View style={{ height: Math.max(insets.top, px(24)) + px(22) }} />
 
         {/* Hero Massive Bold Header */}
-        <View style={styles.heroHeaderRow}>
+        <View style={[styles.heroHeaderRow, { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }]}>
           <View style={styles.titleColumn}>
             <Text style={styles.heroSupTitle}>STAGE IDENTITY,</Text>
-            <Text style={styles.heroFirstNameTitle} numberOfLines={1}>
-              {firstName}
-            </Text>
-            {lastName ? (
-              <Text style={[styles.heroLastNameTitle, { color: theme.primary }]} numberOfLines={1}>
-                {lastName}
+            <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
+              <Text style={styles.heroFirstNameTitle} numberOfLines={1}>
+                {firstName}
               </Text>
-            ) : null}
+              {lastName ? (
+                <Text style={[styles.heroLastNameTitle, { color: theme.primary }]} numberOfLines={1}>
+                  {lastName}
+                </Text>
+              ) : null}
+            </View>
             <Text style={styles.heroSubtitle}>
               {profile.participantId} • {activeSkin.title}
             </Text>
           </View>
+
+          {/* Dark / Light Mode Switcher */}
+          <TouchableOpacity
+            style={{
+              width: 38,
+              height: 38,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)",
+              borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)",
+            }}
+            activeOpacity={0.7}
+            onPress={toggleColorMode}
+          >
+            <Ionicons
+              name={isDark ? "sunny-outline" : "moon-outline"}
+              size={18}
+              color={theme.primary}
+            />
+          </TouchableOpacity>
         </View>
 
         {/* The Artistic Centerpiece:
@@ -1011,7 +1025,6 @@ const styles = StyleSheet.create({
     left: -px(100),
     width: px(450),
     height: px(450),
-    borderRadius: px(225),
     opacity: 0.65,
   },
   ambientAuraBottom: {
@@ -1020,7 +1033,6 @@ const styles = StyleSheet.create({
     right: -px(100),
     width: px(380),
     height: px(380),
-    borderRadius: px(190),
     opacity: 0.45,
   },
   heroHeaderRow: {
@@ -1080,8 +1092,6 @@ const styles = StyleSheet.create({
   satelliteOrb: {
     width: px(34),
     height: px(34),
-    borderRadius: px(17),
-    borderWidth: 1.8,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000000",
@@ -1092,7 +1102,6 @@ const styles = StyleSheet.create({
   },
   satelliteOrbActive: {
     transform: [{ scale: 1.15 }],
-    borderWidth: 2.4,
     shadowOpacity: 0.95,
     shadowRadius: 14,
     elevation: 14,
@@ -1106,7 +1115,6 @@ const styles = StyleSheet.create({
   floatingCapsuleShape: {
     overflow: "hidden",
     backgroundColor: "#0d131f",
-    borderWidth: 2,
     position: "relative",
     shadowColor: "#dfb15b",
     shadowOffset: { width: 0, height: 10 },
@@ -1136,8 +1144,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(11, 16, 26, 0.92)",
     paddingVertical: px(5),
     paddingHorizontal: px(18),
-    borderRadius: px(12),
-    borderWidth: 1,
   },
   capsuleTagName: {
     fontFamily: fonts.bodyBold,
@@ -1158,8 +1164,6 @@ const styles = StyleSheet.create({
     gap: px(8),
     paddingVertical: px(10),
     paddingHorizontal: px(16),
-    borderRadius: px(14),
-    borderWidth: 1,
     marginBottom: px(8),
   },
   switchSkinPillText: {
@@ -1203,16 +1207,12 @@ const styles = StyleSheet.create({
     gap: px(8),
     paddingHorizontal: px(14),
     paddingVertical: px(8),
-    borderRadius: px(18),
     backgroundColor: "rgba(255, 255, 255, 0.04)",
-    borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.08)",
   },
   shelfGlyphFrame: {
     width: px(24),
     height: px(24),
-    borderRadius: px(12),
-    borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1226,8 +1226,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: px(8),
     backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderWidth: 1,
-    borderRadius: px(10),
     padding: px(12),
     marginBottom: px(12),
   },
@@ -1238,8 +1236,6 @@ const styles = StyleSheet.create({
   },
   credentialsCard: {
     backgroundColor: "rgba(17, 24, 39, 0.55)",
-    borderWidth: 1,
-    borderRadius: px(16),
     padding: px(16),
     gap: px(14),
     marginVertical: px(8),
@@ -1270,8 +1266,6 @@ const styles = StyleSheet.create({
     gap: px(4),
     paddingHorizontal: px(12),
     paddingVertical: px(5),
-    borderRadius: px(12),
-    borderWidth: 1,
   },
   editToggleText: {
     fontFamily: fonts.bodyBold,
@@ -1294,8 +1288,6 @@ const styles = StyleSheet.create({
   },
   inputField: {
     backgroundColor: "rgba(10, 15, 26, 0.9)",
-    borderWidth: 1,
-    borderRadius: px(8),
     paddingHorizontal: px(12),
     paddingVertical: px(8),
     color: "#ffffff",
@@ -1312,9 +1304,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: px(14),
     paddingVertical: px(7),
     backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.12)",
-    borderRadius: px(14),
   },
   choiceChipText: {
     fontFamily: fonts.bodyMedium,
@@ -1325,9 +1315,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: px(16),
     paddingVertical: px(7),
     backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.12)",
-    borderRadius: px(14),
   },
   sizeChipText: {
     fontFamily: fonts.bodyMedium,
@@ -1336,7 +1324,6 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     paddingVertical: px(12),
-    borderRadius: px(12),
     alignItems: "center",
     marginTop: px(6),
   },
@@ -1353,8 +1340,6 @@ const styles = StyleSheet.create({
   festInfoCard: {
     flex: 1,
     backgroundColor: "rgba(17, 24, 39, 0.55)",
-    borderWidth: 1,
-    borderRadius: px(14),
     padding: px(14),
     alignItems: "center",
   },
@@ -1381,10 +1366,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: px(8),
     backgroundColor: "rgba(255, 99, 99, 0.10)",
-    borderWidth: 1,
     borderColor: "rgba(255, 99, 99, 0.3)",
     paddingVertical: px(14),
-    borderRadius: px(14),
     marginTop: px(14),
   },
   logoutBtnText: {
@@ -1400,9 +1383,6 @@ const styles = StyleSheet.create({
   },
   modalSheet: {
     backgroundColor: "#0d131f",
-    borderTopLeftRadius: px(24),
-    borderTopRightRadius: px(24),
-    borderWidth: 1,
     maxHeight: "85%",
     paddingHorizontal: px(20),
     paddingBottom: px(36),
@@ -1415,7 +1395,6 @@ const styles = StyleSheet.create({
   modalDragBar: {
     width: px(38),
     height: px(4),
-    borderRadius: px(2),
     marginBottom: px(14),
   },
   modalHeaderRow: {
@@ -1438,7 +1417,6 @@ const styles = StyleSheet.create({
   modalCloseBtn: {
     width: px(32),
     height: px(32),
-    borderRadius: px(16),
     backgroundColor: "rgba(255, 255, 255, 0.08)",
     alignItems: "center",
     justifyContent: "center",
@@ -1454,15 +1432,12 @@ const styles = StyleSheet.create({
   skinCard: {
     width: (SCREEN_W - px(64)) / 2,
     backgroundColor: "rgba(255, 255, 255, 0.04)",
-    borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.08)",
-    borderRadius: px(14),
     padding: px(12),
     alignItems: "center",
     position: "relative",
   },
   skinCardActive: {
-    borderWidth: 1.8,
   },
   activeCheckPill: {
     position: "absolute",
@@ -1470,7 +1445,6 @@ const styles = StyleSheet.create({
     right: px(8),
     paddingHorizontal: px(6),
     paddingVertical: px(2),
-    borderRadius: px(4),
   },
   activeCheckPillText: {
     fontFamily: fonts.bodyBold,

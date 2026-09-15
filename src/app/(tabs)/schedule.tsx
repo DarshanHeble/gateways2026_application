@@ -322,12 +322,9 @@ const styles = StyleSheet.create({
     paddingVertical: px(8),
     paddingHorizontal: px(14),
     backgroundColor: "rgba(22, 28, 40, 0.75)",
-    borderRadius: px(20),
-    borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.08)",
   },
   dayTabActive: {
-    borderWidth: 1.2,
   },
   dayTabText: {
     fontFamily: fonts.pixelBold,
@@ -340,9 +337,7 @@ const styles = StyleSheet.create({
   // Fallback notice
   fallbackNotice: {
     backgroundColor: "rgba(239, 68, 68, 0.12)",
-    borderWidth: 1,
     borderColor: "rgba(239, 68, 68, 0.35)",
-    borderRadius: px(10),
     padding: px(12),
     marginBottom: px(14),
     gap: px(8),
@@ -370,10 +365,8 @@ const styles = StyleSheet.create({
   fallbackRetryBtn: {
     backgroundColor: "rgba(239, 68, 68, 0.2)",
     borderColor: "rgba(239, 68, 68, 0.5)",
-    borderWidth: 1,
     paddingVertical: px(6),
     paddingHorizontal: px(12),
-    borderRadius: px(6),
     alignSelf: "flex-start",
     marginTop: px(2),
   },
@@ -414,9 +407,7 @@ const styles = StyleSheet.create({
   nodeDot: {
     width: px(12),
     height: px(12),
-    borderRadius: px(6),
     marginTop: px(4),
-    borderWidth: px(2),
   },
   verticalLine: {
     flex: 1,
@@ -428,8 +419,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#131824",
     padding: px(12),
-    borderRadius: px(12),
-    borderWidth: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -467,8 +456,6 @@ const styles = StyleSheet.create({
   tagBadge: {
     paddingVertical: px(2),
     paddingHorizontal: px(7),
-    borderRadius: px(6),
-    borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.08)",
   },
   tagGen: {

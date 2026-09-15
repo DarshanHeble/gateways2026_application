@@ -138,12 +138,12 @@ export const fonts = {
   pixelBold: "Silkscreen_700Bold",
   // DM Sans for normal text
   body: "DMSans_400Regular",
-  bodyMedium: "Rubik_500Medium",
-  bodySemi: "Rubik_600SemiBold",
+  bodyMedium: "DMSans_500Medium",
+  bodySemi: "DMSans_700Bold", // Use bold for semi
   bodyBold: "DMSans_700Bold",
-  // Retain Rubik fallbacks if needed
-  rubikRegular: "Rubik_400Regular",
-  rubikBold: "Rubik_700Bold",
+  // Fallbacks if used somewhere specifically
+  rubikRegular: "DMSans_400Regular",
+  rubikBold: "DMSans_700Bold",
 } as const;
 
 /**

@@ -395,102 +395,38 @@ export default function EventsTab() {
                 style={[
                   styles.cleanCard,
                   {
-                    backgroundColor: bgCard,
-                    borderColor: isRegistered ? theme.primary : borderSubtle,
-                    shadowColor,
+                    backgroundColor: isRegistered ? theme.primaryContainer : bgCard,
                   },
                 ]}
               >
-                {/* Event Thumbnail */}
-                <View style={styles.thumbWrapper}>
-                  {item.image_url ? (
-                    <Image
-                      source={{ uri: item.image_url }}
-                      style={styles.thumbImage}
-                      contentFit="cover"
-                      cachePolicy="memory-disk"
-                      transition={200}
-                    />
-                  ) : (
-                    <View style={[styles.thumbPlaceholder, { backgroundColor: isDark ? "#1e293b" : "#e2e8f0" }]}>
-                      <Ionicons name="trophy-outline" size={22} color={theme.primary} />
-                    </View>
-                  )}
-                </View>
-
-                {/* Event Center Info */}
-                <View style={styles.cardCenter}>
-                  <View style={styles.cardBadgeRow}>
-                    <View
-                      style={[
-                        styles.typeBadge,
-                        {
-                          backgroundColor: isDark ? "rgba(255, 255, 255, 0.06)" : "#f1f5f9",
-                        },
-                      ]}
-                    >
-                      <Text style={[styles.typeBadgeText, { color: theme.primary }]}>
-                        {(item.type || "GENERAL").toUpperCase()}
-                      </Text>
-                    </View>
-                    {item.date ? (
-                      <Text style={[styles.metaTextInline, { color: textMuted }]}>
-                        {item.date}
-                      </Text>
-                    ) : null}
-                  </View>
-
-                  <Text style={[styles.cardTitle, { color: textPrimary }]} numberOfLines={1}>
+                <View style={styles.cardHeader}>
+                  <Text style={[styles.itemTitle, { color: textPrimary }]} numberOfLines={1}>
                     {item.title}
                   </Text>
-                  <Text style={[styles.cardSubtitle, { color: textSecondary }]} numberOfLines={1}>
-                    {item.subtitle || item.description}
-                  </Text>
-
-                  {/* Clean Bottom Meta Row */}
-                  <View style={styles.cardMetaRow}>
-                    {item.venue ? (
-                      <View style={styles.metaChip}>
-                        <Ionicons name="location-outline" size={11} color={textSecondary} />
-                        <Text style={[styles.metaChipText, { color: textSecondary }]} numberOfLines={1}>
-                          {item.venue}
-                        </Text>
-                      </View>
-                    ) : null}
-                    {item.prizes?.pool ? (
-                      <View style={styles.metaChip}>
-                        <Ionicons name="ribbon-outline" size={11} color="#10b981" />
-                        <Text style={[styles.metaChipText, { color: "#10b981" }]} numberOfLines={1}>
-                          {item.prizes.pool}
-                        </Text>
-                      </View>
-                    ) : null}
+                  <View
+                    style={[
+                      styles.tagBadge,
+                      isRegistered
+                        ? { backgroundColor: theme.primaryContainer }
+                        : { backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "#f1f5f9" },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.tagText,
+                        isRegistered ? { color: theme.primary } : { color: textMuted },
+                      ]}
+                    >
+                      {(item.type || "GENERAL").toUpperCase()}
+                    </Text>
                   </View>
                 </View>
 
-                {/* Right Action: Bookmark & Arrow */}
-                <View style={styles.cardRight}>
-                  <TouchableOpacity
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      toggleParticipate(item.id);
-                    }}
-                    style={[
-                      styles.bookmarkBtn,
-                      {
-                        backgroundColor: isRegistered ? theme.primaryContainer : "transparent",
-                        borderColor: isRegistered ? theme.primary : borderSubtle,
-                      },
-                    ]}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons
-                      name={isRegistered ? "bookmark" : "bookmark-outline"}
-                      size={16}
-                      color={isRegistered ? theme.primary : textMuted}
-                    />
-                  </TouchableOpacity>
-                  <Ionicons name="chevron-forward" size={16} color={textMuted} />
+                <View style={styles.timeRow}>
+                  <Ionicons name="time-outline" size={14} color={isRegistered ? theme.primary : textSecondary} />
+                  <Text style={[styles.timeText, { color: isRegistered ? theme.primary : textSecondary }]}>
+                    {item.from_time ? `${item.from_time}${item.end_time ? ` - ${item.end_time}` : ""}` : "Time TBA"}
+                  </Text>
                 </View>
               </TouchableOpacity>
             </Animated.View>
@@ -762,8 +698,6 @@ const styles = StyleSheet.create({
   themeToggleBtn: {
     width: px(38),
     height: px(38),
-    borderRadius: px(19),
-    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -782,11 +716,8 @@ const styles = StyleSheet.create({
     gap: px(6),
     paddingHorizontal: px(13),
     paddingVertical: px(7),
-    borderRadius: px(20),
-    borderWidth: 1,
   },
   filterChipActive: {
-    borderWidth: 1.2,
   },
   filterChipText: {
     fontFamily: fonts.pixelBold,
@@ -801,96 +732,38 @@ const styles = StyleSheet.create({
 
   // Minimal Clean Card
   cleanCard: {
+    padding: px(16),
+    marginBottom: px(8),
+  },
+  cardHeader: {
     flexDirection: "row",
-    alignItems: "center",
-    padding: px(12),
-    borderRadius: px(14),
-    borderWidth: 1,
-    marginBottom: px(10),
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 2,
+    justifyContent: "space-between",
+    alignItems: "flex-start",
   },
-  thumbWrapper: {
-    width: px(54),
-    height: px(54),
-    borderRadius: px(10),
-    overflow: "hidden",
-    marginRight: px(12),
-  },
-  thumbImage: {
-    width: "100%",
-    height: "100%",
-  },
-  thumbPlaceholder: {
-    width: "100%",
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cardCenter: {
+  itemTitle: {
     flex: 1,
-    justifyContent: "center",
+    fontFamily: fonts.bodyBold,
+    fontSize: px(14.5),
+    paddingRight: px(8),
   },
-  cardBadgeRow: {
+  tagBadge: {
+    paddingVertical: px(4),
+    paddingHorizontal: px(8),
+  },
+  tagText: {
+    fontFamily: fonts.pixelBold,
+    fontSize: px(9),
+    letterSpacing: px(0.4),
+  },
+  timeRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: px(6),
-    marginBottom: px(3),
+    marginTop: px(12),
   },
-  typeBadge: {
-    paddingHorizontal: px(6),
-    paddingVertical: px(2),
-    borderRadius: px(6),
-  },
-  typeBadgeText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(8.5),
-    letterSpacing: 0.5,
-  },
-  metaTextInline: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: px(10),
-  },
-  cardTitle: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(13.5),
-    letterSpacing: 0.2,
-  },
-  cardSubtitle: {
+  timeText: {
     fontFamily: fonts.body,
-    fontSize: px(11.5),
-    marginTop: px(1),
-  },
-  cardMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: px(10),
-    marginTop: px(5),
-  },
-  metaChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: px(3),
-  },
-  metaChipText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: px(10.5),
-  },
-  cardRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: px(8),
-    marginLeft: px(8),
-  },
-  bookmarkBtn: {
-    width: px(32),
-    height: px(32),
-    borderRadius: px(8),
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    fontSize: px(12),
   },
 
   // Modal Bottom Sheet Styles
@@ -900,14 +773,10 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalSheet: {
-    borderTopLeftRadius: px(22),
-    borderTopRightRadius: px(22),
     paddingHorizontal: px(18),
     paddingTop: px(10),
     paddingBottom: px(24),
     maxHeight: "84%",
-    borderWidth: 1,
-    borderBottomWidth: 0,
   },
   modalDragHandleZone: {
     paddingTop: px(2),
@@ -916,7 +785,6 @@ const styles = StyleSheet.create({
   modalDragBar: {
     width: px(40),
     height: px(4),
-    borderRadius: px(2),
     alignSelf: "center",
     marginBottom: px(10),
   },
@@ -927,12 +795,10 @@ const styles = StyleSheet.create({
   },
   modalCloseBtn: {
     padding: px(6),
-    borderRadius: px(16),
   },
   modalBadgePill: {
     paddingHorizontal: px(8),
     paddingVertical: px(3),
-    borderRadius: px(8),
   },
   modalBadgeText: {
     fontFamily: fonts.bodyBold,
@@ -945,7 +811,6 @@ const styles = StyleSheet.create({
   sheetBannerWrap: {
     width: "100%",
     height: px(150),
-    borderRadius: px(12),
     overflow: "hidden",
     marginBottom: px(14),
   },
@@ -972,7 +837,6 @@ const styles = StyleSheet.create({
   modalMetaChip: {
     paddingHorizontal: px(9),
     paddingVertical: px(5),
-    borderRadius: px(8),
   },
   modalMetaChipText: {
     fontFamily: fonts.bodyMedium,
@@ -984,8 +848,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: px(8),
     paddingVertical: px(11),
-    borderRadius: px(10),
-    borderWidth: 1,
     marginBottom: px(14),
   },
   participateActionBtnActive: {},
@@ -1011,8 +873,6 @@ const styles = StyleSheet.create({
   },
   prizeBox: {
     padding: px(12),
-    borderRadius: px(10),
-    borderWidth: 1,
     gap: px(3),
   },
   prizeRank: {
@@ -1044,8 +904,6 @@ const styles = StyleSheet.create({
   },
   headCard: {
     padding: px(10),
-    borderRadius: px(8),
-    borderWidth: 1,
     flex: 1,
     minWidth: px(130),
   },
@@ -1070,8 +928,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: px(6),
     paddingVertical: px(10),
-    borderRadius: px(8),
-    borderWidth: 1,
     marginTop: px(16),
   },
   pdfDownloadBtnText: {
@@ -1083,9 +939,7 @@ const styles = StyleSheet.create({
   // Fallback Notice
   fallbackNotice: {
     backgroundColor: "rgba(239, 68, 68, 0.12)",
-    borderWidth: 1,
     borderColor: "rgba(239, 68, 68, 0.35)",
-    borderRadius: px(10),
     padding: px(12),
     marginBottom: px(14),
     gap: px(8),
@@ -1113,10 +967,8 @@ const styles = StyleSheet.create({
   fallbackRetryBtn: {
     backgroundColor: "rgba(239, 68, 68, 0.2)",
     borderColor: "rgba(239, 68, 68, 0.5)",
-    borderWidth: 1,
     paddingVertical: px(6),
     paddingHorizontal: px(12),
-    borderRadius: px(6),
     alignSelf: "flex-start",
     marginTop: px(2),
   },

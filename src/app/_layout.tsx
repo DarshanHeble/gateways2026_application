@@ -6,12 +6,10 @@ import * as SplashScreen from "expo-splash-screen";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Silkscreen_400Regular, Silkscreen_700Bold } from "@expo-google-fonts/silkscreen";
 import {
-  Rubik_400Regular,
-  Rubik_500Medium,
-  Rubik_600SemiBold,
-  Rubik_700Bold,
-} from "@expo-google-fonts/rubik";
-import { DMSans_400Regular, DMSans_700Bold } from "@expo-google-fonts/dm-sans";
+  DMSans_400Regular,
+  DMSans_500Medium,
+  DMSans_700Bold,
+} from "@expo-google-fonts/dm-sans";
 import { colors } from "@/theme/tokens";
 import { MobConvergenceOverlay } from "@/features/splash/MobConvergenceOverlay";
 import { AuthProvider, useAuth } from "@/features/auth/AuthContext";
@@ -53,11 +51,8 @@ export default function RootLayout() {
   const [loaded, error] = useFonts({
     Silkscreen_400Regular,
     Silkscreen_700Bold,
-    Rubik_400Regular,
-    Rubik_500Medium,
-    Rubik_600SemiBold,
-    Rubik_700Bold,
     DMSans_400Regular,
+    DMSans_500Medium,
     DMSans_700Bold,
   });
 

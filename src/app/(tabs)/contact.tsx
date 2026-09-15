@@ -74,8 +74,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: "rgba(255,255,255,0.05)",
     padding: px(16),
-    borderRadius: px(8),
-    borderWidth: 1,
     borderColor: colors.gold.muted,
   },
   cardInfo: {
@@ -95,7 +93,6 @@ const styles = StyleSheet.create({
   callButton: {
     backgroundColor: colors.gold.muted,
     padding: px(10),
-    borderRadius: px(20),
     alignItems: "center",
     justifyContent: "center",
   },

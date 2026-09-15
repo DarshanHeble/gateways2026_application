@@ -38,16 +38,14 @@ export default function TabLayout() {
           left: 16,
           right: 16,
           height: 64,
-          borderRadius: 24,
           backgroundColor: "transparent",
           borderTopWidth: 0,
-          borderWidth: 1.2,
           borderColor: theme.rimBorder,
           shadowColor: theme.primary,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.35,
-          shadowRadius: 18,
-          elevation: 12,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.1,
+          shadowRadius: 6,
+          elevation: 6,
           overflow: "hidden",
           paddingBottom: Platform.OS === "ios" ? 0 : 8,
           paddingTop: 8,
@@ -105,8 +103,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
-          tabBarIcon: ({ color }) => <Ionicons name="person" size={24} color={color} />,
+          title: "Settings",
+          tabBarIcon: ({ color }) => <Ionicons name="settings" size={24} color={color} />,
         }}
       />
       <Tabs.Screen

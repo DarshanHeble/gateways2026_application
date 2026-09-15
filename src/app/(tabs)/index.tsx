@@ -27,6 +27,7 @@ import Animated, {
   interpolateColor,
   runOnJS,
   type SharedValue,
+  useAnimatedScrollHandler,
 } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
@@ -52,29 +53,16 @@ function renderMiniGlyph(category: string, color: string, isSelected: boolean) {
     case "Pill":
       return <View style={{ width: 8, height: 16, borderRadius: 4, backgroundColor: bg }} />;
     case "Squircle":
-      return <View style={{ width: 13, height: 13, borderRadius: 4.5, backgroundColor: bg }} />;
     case "Flower":
-      return (
-        <View
-          style={{
-            width: 14,
-            height: 14,
-            borderTopLeftRadius: 7,
-            borderTopRightRadius: 1.5,
-            borderBottomRightRadius: 7,
-            borderBottomLeftRadius: 1.5,
-            backgroundColor: bg,
-          }}
-        />
-      );
+      return <View style={{ width: 13, height: 13, borderRadius: 4.5, backgroundColor: bg }} />;
     case "Gem":
       return (
         <View
           style={{
             width: 11,
             height: 11,
-            borderRadius: 1.5,
             transform: [{ rotate: "45deg" }],
+            borderRadius: 1.5,
             backgroundColor: bg,
           }}
         />
@@ -155,7 +143,7 @@ const FloatingSatellite = React.memo(function FloatingSatellite({
 export default function ModernHomeTab() {
   const insets = useSafeAreaInsets();
   const { role } = useAuth();
-  const { activeShape, setShapeById, shapes, theme } = useM3Theme();
+  const { activeShape, setShapeById, shapes, theme, isDark, toggleColorMode } = useM3Theme();
 
   const [allEvents, setAllEvents] = useState<EventItem[]>(MOCK_EVENTS);
   const [myEventIds, setMyEventIds] = useState<string[]>([]);
@@ -167,6 +155,56 @@ export default function ModernHomeTab() {
   }>({});
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [pickerModalVisible, setPickerModalVisible] = useState(false);
+
+  // Scroll tracking for collapsible header
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler((event: any) => {
+    scrollY.value = event.contentOffset.y;
+  });
+
+  const HEADER_MAX_HEIGHT = px(480);
+  const HEADER_MIN_HEIGHT = px(100) + insets.top;
+  const SCROLL_DISTANCE = HEADER_MAX_HEIGHT - HEADER_MIN_HEIGHT;
+
+  const animatedHeaderStyle = useAnimatedStyle(() => {
+    const height = Math.max(HEADER_MIN_HEIGHT, HEADER_MAX_HEIGHT - scrollY.value);
+    return {
+      height,
+    };
+  });
+
+  const animatedHeroTextStyle = useAnimatedStyle(() => {
+    const opacity = Math.max(0, 1 - scrollY.value / (SCROLL_DISTANCE * 0.4));
+    const scale = Math.max(0.8, 1 - scrollY.value / SCROLL_DISTANCE * 0.2);
+    const translateY = -(scrollY.value * 0.3);
+    return {
+      opacity,
+      transform: [{ scale }, { translateY }],
+    };
+  });
+
+  const animatedSatellitesStyle = useAnimatedStyle(() => {
+    const opacity = Math.max(0, 1 - scrollY.value / (SCROLL_DISTANCE * 0.3));
+    return {
+      opacity,
+      display: opacity === 0 ? "none" : "flex",
+    };
+  });
+
+  const animatedAvatarContainerStyle = useAnimatedStyle(() => {
+    const progress = Math.min(1, Math.max(0, scrollY.value / SCROLL_DISTANCE));
+    const scale = 1 - progress * 0.55; 
+    const translateY = -(progress * px(160)); 
+    const translateX = progress * px(120);
+
+    return {
+      transform: [
+        { translateX },
+        { translateY },
+        { scale },
+      ],
+    };
+  });
 
   // Gesture slide-down to close for Pick Events Modal
   const pickerSheetY = useSharedValue(0);
@@ -441,8 +479,10 @@ export default function ModernHomeTab() {
       <View style={[styles.ambientAuraTop, { backgroundColor: theme.ambientTop }]} />
       <View style={[styles.ambientAuraBottom, { backgroundColor: theme.ambientBottom }]} />
 
-      <ScrollView
+      <Animated.ScrollView
         style={styles.scroll}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -450,24 +490,46 @@ export default function ModernHomeTab() {
         <View style={{ height: Math.max(insets.top, px(24)) + px(22) }} />
 
         {/* Massive Bold Header (Participant Name) */}
-        <View style={styles.heroHeaderRow}>
+        <Animated.View style={[styles.heroHeaderRow, animatedHeroTextStyle, { paddingTop: Math.max(insets.top, px(24)) + px(16), flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }]}>
           <View style={styles.titleColumn}>
             <Text style={styles.heroSupTitle}>WELCOME BACK,</Text>
-            <Text style={styles.heroFirstNameTitle} numberOfLines={1}>
-              {firstName}
-            </Text>
-            {lastName ? (
-              <Text style={[styles.heroLastNameTitle, { color: theme.primary }]} numberOfLines={1}>
-                {lastName}
+            <View style={{ flexDirection: "row", alignItems: "baseline", gap: px(6) }}>
+              <Text style={styles.heroFirstNameTitle} numberOfLines={1}>
+                {firstName}
               </Text>
-            ) : null}
+              {lastName ? (
+                <Text style={[styles.heroLastNameTitle, { color: theme.primary }]} numberOfLines={1}>
+                  {lastName}
+                </Text>
+              ) : null}
+            </View>
             <Text style={styles.heroSubtitle}>
               {participatingEvents.length > 0
                 ? `${participatingEvents.length} event${participatingEvents.length > 1 ? "s" : ""} lined up for you`
                 : "Your personal stage is ready"}
             </Text>
           </View>
-        </View>
+
+          {/* Dark / Light Mode Switcher */}
+          <TouchableOpacity
+            style={{
+              width: px(38),
+              height: px(38),
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)",
+              borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)",
+            }}
+            activeOpacity={0.7}
+            onPress={toggleColorMode}
+          >
+            <Ionicons
+              name={isDark ? "sunny-outline" : "moon-outline"}
+              size={18}
+              color={theme.primary}
+            />
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* The Artistic Centerpiece:
             Floating Shapes around the Avatar.
@@ -736,7 +798,7 @@ export default function ModernHomeTab() {
 
         {/* Generous bottom padding to clear the floating navigation bar */}
         <View style={{ height: px(115) }} />
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Full Event Details Modal with Slide-Down to Dismiss */}
       <Modal
@@ -962,6 +1024,14 @@ const styles = StyleSheet.create({
     borderRadius: SCREEN_W * 0.42,
     backgroundColor: "rgba(223, 177, 91, 0.10)", // Parallax Amber Gold
   },
+  collapsibleHeaderContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    overflow: "hidden",
+  },
   scroll: {
     flex: 1,
   },
@@ -970,47 +1040,44 @@ const styles = StyleSheet.create({
   },
   heroHeaderRow: {
     marginBottom: px(12),
+    paddingHorizontal: px(20),
   },
   titleColumn: {
-    width: "100%",
+    gap: px(2),
   },
   heroSupTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(13),
-    fontWeight: "700",
-    letterSpacing: 2.2,
-    color: "#d6c8aa", // Sandstone Parchment
-    marginBottom: px(4),
+    fontFamily: fonts.pixelBold,
+    fontSize: px(11),
+    color: "#8e99a8",
+    letterSpacing: px(1),
+    marginBottom: px(2),
   },
   heroFirstNameTitle: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(42),
-    lineHeight: px(44),
+    fontSize: px(36),
+    lineHeight: px(40),
     fontWeight: "900",
     color: "#ffffff",
     letterSpacing: -1,
   },
   heroLastNameTitle: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(42),
-    lineHeight: px(44),
+    fontSize: px(36),
+    lineHeight: px(40),
     fontWeight: "900",
-    color: "#dfb15b", // Parallax Gold
     letterSpacing: -1,
-    marginBottom: px(4),
   },
   heroSubtitle: {
     fontFamily: fonts.bodyMedium,
     fontSize: px(13),
-    color: "#8e9ea8",
+    color: "#64748b",
     marginTop: px(4),
   },
   artisticCenterpieceWrapper: {
-    alignItems: "center",
+    height: SCREEN_W * 0.9,
     justifyContent: "center",
-    height: px(390),
-    position: "relative",
-    marginVertical: px(12),
+    alignItems: "center",
+    marginTop: px(10),
   },
   ambientCenterGlow: {
     position: "absolute",
@@ -1051,7 +1118,6 @@ const styles = StyleSheet.create({
   floatingCapsuleShape: {
     overflow: "hidden",
     backgroundColor: "#0d131f",
-    borderWidth: 2,
     position: "relative",
     shadowColor: "#dfb15b",
     shadowOffset: { width: 0, height: 10 },
@@ -1081,8 +1147,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(11, 16, 26, 0.92)",
     paddingVertical: px(5),
     paddingHorizontal: px(18),
-    borderRadius: px(12),
-    borderWidth: 1,
     borderColor: "rgba(223, 177, 91, 0.35)",
   },
   capsuleTagName: {
@@ -1134,16 +1198,12 @@ const styles = StyleSheet.create({
     gap: px(8),
     paddingHorizontal: px(14),
     paddingVertical: px(8),
-    borderRadius: px(18),
     backgroundColor: "rgba(255, 255, 255, 0.04)",
-    borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.08)",
   },
   shelfGlyphFrame: {
     width: px(24),
     height: px(24),
-    borderRadius: px(12),
-    borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1172,11 +1232,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: px(4),
     backgroundColor: "rgba(223, 177, 91, 0.12)",
-    borderWidth: 1,
     borderColor: "rgba(223, 177, 91, 0.28)",
     paddingHorizontal: px(10),
     paddingVertical: px(4),
-    borderRadius: px(12),
   },
   managePillText: {
     fontFamily: fonts.bodyBold,
@@ -1194,9 +1252,7 @@ const styles = StyleSheet.create({
     gap: px(6),
     paddingHorizontal: px(14),
     paddingVertical: px(8),
-    borderRadius: px(20),
     backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderWidth: 1,
     borderColor: "rgba(214, 200, 170, 0.16)",
   },
   eventPillActive: {
@@ -1206,7 +1262,6 @@ const styles = StyleSheet.create({
   eventPillDot: {
     width: px(6),
     height: px(6),
-    borderRadius: px(3),
   },
   eventPillText: {
     fontFamily: fonts.bodyMedium,
@@ -1222,9 +1277,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: px(12),
     backgroundColor: "rgba(255, 255, 255, 0.04)",
-    borderWidth: 1,
     borderColor: "rgba(223, 177, 91, 0.18)",
-    borderRadius: px(14),
     padding: px(14),
   },
   emptyLineupTitle: {
@@ -1243,9 +1296,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: "rgba(255, 255, 255, 0.04)",
-    borderWidth: 1,
     borderColor: "rgba(223, 177, 91, 0.3)",
-    borderRadius: px(14),
     paddingVertical: px(12),
     paddingHorizontal: px(14),
     marginTop: px(12),
@@ -1259,7 +1310,6 @@ const styles = StyleSheet.create({
   activeEventIconWrap: {
     width: px(34),
     height: px(34),
-    borderRadius: px(17),
     backgroundColor: "rgba(91, 162, 184, 0.18)",
     alignItems: "center",
     justifyContent: "center",
@@ -1282,7 +1332,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(91, 162, 184, 0.16)",
     paddingVertical: px(6),
     paddingHorizontal: px(10),
-    borderRadius: px(12),
     marginLeft: px(8),
   },
   viewDetailsBtnText: {
@@ -1298,11 +1347,8 @@ const styles = StyleSheet.create({
   },
   modalSheet: {
     backgroundColor: "#0d131f",
-    borderTopLeftRadius: px(24),
-    borderTopRightRadius: px(24),
     padding: px(20),
     maxHeight: "80%",
-    borderWidth: 1,
     borderColor: "rgba(223, 177, 91, 0.2)",
   },
   modalDragHandleZone: {
@@ -1312,7 +1358,6 @@ const styles = StyleSheet.create({
   modalDragBar: {
     width: px(42),
     height: px(5),
-    borderRadius: px(3),
     backgroundColor: "#313845",
     alignSelf: "center",
     marginBottom: px(12),
@@ -1325,14 +1370,12 @@ const styles = StyleSheet.create({
   },
   modalCloseBtn: {
     padding: px(6),
-    borderRadius: px(18),
     backgroundColor: "rgba(255, 255, 255, 0.08)",
   },
   modalBadgePill: {
     backgroundColor: "rgba(223, 177, 91, 0.16)",
     paddingHorizontal: px(10),
     paddingVertical: px(4),
-    borderRadius: px(12),
   },
   modalBadgeText: {
     fontFamily: fonts.bodyBold,
@@ -1362,7 +1405,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.06)",
     paddingHorizontal: px(10),
     paddingVertical: px(6),
-    borderRadius: px(8),
   },
   modalMetaChipText: {
     fontFamily: fonts.bodyMedium,
@@ -1386,7 +1428,6 @@ const styles = StyleSheet.create({
   prizingContainer: {
     backgroundColor: "rgba(223, 177, 91, 0.1)",
     padding: px(12),
-    borderRadius: px(8),
     gap: px(4),
   },
   prizingText: {
@@ -1407,7 +1448,6 @@ const styles = StyleSheet.create({
     gap: px(8),
     backgroundColor: "#3a6b35", // Mossy lush green from poster
     paddingVertical: px(14),
-    borderRadius: px(12),
     marginTop: px(20),
     marginBottom: px(20),
   },
@@ -1428,9 +1468,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(255, 255, 255, 0.04)",
     padding: px(14),
-    borderRadius: px(12),
     marginBottom: px(8),
-    borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.06)",
   },
   pickerRowSelected: {
