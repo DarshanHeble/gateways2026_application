@@ -9,10 +9,12 @@ import { PixelInput } from "@/components/pixel/PixelInput";
 import { PixelCard } from "@/components/pixel/PixelCard";
 import { PixelToast } from "@/components/pixel/PixelToast";
 import { MinecraftButton } from "@/components/MaterialCraft/MinecraftButton";
-import { useAuth } from "@/features/auth/AuthContext";
-import { useNotifications } from "./NotificationsContext";
+import { useAuth } from "@/modules/auth";
+import { useNotifications } from "../../stores/NotificationsContext";
 import { fetchNotifications } from "@/services/notifications";
 import { AppNotification, NotificationTarget, targetLabel } from "@/services/notificationTypes";
+import { useM3Theme } from "@/theme/M3ThemeContext";
+import { styles } from "./broadcast.styles";
 
 type TargetOption = "all" | "participant" | "team" | "email";
 
@@ -25,6 +27,7 @@ const TARGET_OPTIONS: { key: TargetOption; label: string }[] = [
 
 export function BroadcastScreen() {
   const insets = useSafeAreaInsets();
+  const { theme } = useM3Theme();
   const { role } = useAuth();
   const { sendNotification } = useNotifications();
   const [title, setTitle] = useState("");
@@ -85,7 +88,7 @@ export function BroadcastScreen() {
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <ScrollView
-        style={styles.root}
+        style={[styles.root, { backgroundColor: theme.background }]}
         contentContainerStyle={[
           styles.scrollContent,
           { paddingTop: Math.max(insets.top, px(16)) + px(8) },
@@ -93,7 +96,7 @@ export function BroadcastScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <PixelCard headerTitle="BROADCAST" badge="TEAM ONLY">
-          <Text style={styles.demoNotice}>
+          <Text style={[styles.demoNotice, { color: theme.primary }]}>
             DEMO MODE — sends land on this device only until the backend is connected.
           </Text>
 
@@ -112,17 +115,17 @@ export function BroadcastScreen() {
 
           <View style={{ height: px(14) }} />
 
-          <Text style={styles.fieldLabel}>SEND TO</Text>
+          <Text style={[styles.fieldLabel, { color: theme.text }]}>SEND TO</Text>
           <View style={styles.targetRow}>
             {TARGET_OPTIONS.map((opt) => {
               const active = targetOption === opt.key;
               return (
                 <TouchableOpacity
                   key={opt.key}
-                  style={[styles.targetChip, active && styles.targetChipActive]}
+                  style={[styles.targetChip, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }, active && { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}
                   onPress={() => setTargetOption(opt.key)}
                 >
-                  <Text style={[styles.targetChipText, active && styles.targetChipTextActive]}>{opt.label}</Text>
+                  <Text style={[styles.targetChipText, { color: theme.textDim }, active && { color: theme.primary }]}>{opt.label}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -149,21 +152,21 @@ export function BroadcastScreen() {
           </MinecraftButton>
         </PixelCard>
 
-        <Text style={styles.historyHeader}>SENT HISTORY</Text>
+        <Text style={[styles.historyHeader, { color: theme.text }]}>SENT HISTORY</Text>
         {history.length === 0 ? (
-          <Text style={styles.emptyText}>Nothing sent yet.</Text>
+          <Text style={[styles.emptyText, { color: theme.textDim }]}>Nothing sent yet.</Text>
         ) : (
           history.map((item) => (
-            <View key={item.id} style={styles.historyCard}>
+            <View key={item.id} style={[styles.historyCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
               <View style={styles.historyHeaderRow}>
-                <Text style={styles.historyTitle} numberOfLines={1}>
+                <Text style={[styles.historyTitle, { color: theme.text }]} numberOfLines={1}>
                   {item.title}
                 </Text>
-                <View style={styles.targetBadge}>
-                  <Text style={styles.targetBadgeText}>{targetLabel(item.target)}</Text>
+                <View style={[styles.targetBadge, { backgroundColor: theme.surface }]}>
+                  <Text style={[styles.targetBadgeText, { color: theme.textDim }]}>{targetLabel(item.target)}</Text>
                 </View>
               </View>
-              <Text style={styles.historyBody} numberOfLines={2}>
+              <Text style={[styles.historyBody, { color: theme.textDim }]} numberOfLines={2}>
                 {item.body}
               </Text>
             </View>
@@ -175,108 +178,4 @@ export function BroadcastScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  root: {
-    flex: 1,
-    backgroundColor: "#0d1018",
-  },
-  scrollContent: {
-    padding: px(14),
-    paddingBottom: px(40),
-  },
-  demoNotice: {
-    fontFamily: fonts.body,
-    fontSize: px(11),
-    color: "#e2af64",
-    marginBottom: px(14),
-    lineHeight: px(16),
-  },
-  multiline: {
-    height: px(90),
-    textAlignVertical: "top",
-    paddingTop: px(10),
-  },
-  fieldLabel: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(11),
-    letterSpacing: px(1.5),
-    color: "#ffe9b8",
-    marginBottom: px(8),
-  },
-  targetRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: px(8),
-  },
-  targetChip: {
-    paddingVertical: px(8),
-    paddingHorizontal: px(12),
-    backgroundColor: "#202736",
-    borderRadius: px(6),
-    borderWidth: px(1),
-    borderColor: "#2a3245",
-  },
-  targetChipActive: {
-    backgroundColor: "#2a1e12",
-    borderColor: "#c8a679",
-  },
-  targetChipText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(10),
-    color: "#8090a8",
-  },
-  targetChipTextActive: {
-    color: "#ffe9b8",
-  },
-  historyHeader: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(12),
-    color: "#a08c70",
-    letterSpacing: px(1),
-    marginTop: px(20),
-    marginBottom: px(10),
-  },
-  emptyText: {
-    fontFamily: fonts.body,
-    fontSize: px(13),
-    color: "#5a6478",
-  },
-  historyCard: {
-    backgroundColor: "#161b26",
-    borderRadius: px(8),
-    borderWidth: px(1),
-    borderColor: "#2a3245",
-    padding: px(12),
-    marginBottom: px(10),
-  },
-  historyHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: px(8),
-  },
-  historyTitle: {
-    flex: 1,
-    fontFamily: fonts.bodyBold,
-    fontSize: px(14),
-    color: "#ffe9b8",
-  },
-  historyBody: {
-    fontFamily: fonts.body,
-    fontSize: px(12),
-    color: "#a0a0a0",
-    marginTop: px(4),
-  },
-  targetBadge: {
-    backgroundColor: "#202736",
-    paddingVertical: px(3),
-    paddingHorizontal: px(8),
-    borderRadius: px(4),
-  },
-  targetBadgeText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(9),
-    color: "#8090a8",
-  },
-});
+

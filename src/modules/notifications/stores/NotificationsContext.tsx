@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, R
 import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 
-import { useAuth } from "@/features/auth/AuthContext";
+import { useAuth } from "@/modules/auth";
 import {
   configureNotificationHandler,
   fetchNotifications,

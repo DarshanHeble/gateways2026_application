@@ -4,7 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
+   
   TextInput,
   Modal,
   Dimensions,
@@ -16,6 +16,7 @@ import {
   PanResponder,
 } from "react-native";
 import { PixelToast } from "@/components/pixel/PixelToast";
+import { MinecraftButton } from "@/components/MaterialCraft/MinecraftButton";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, {
@@ -36,11 +37,11 @@ import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { fonts } from "@/theme/tokens";
+import { fonts, typography } from "@/theme/tokens";
 import { px } from "@/theme/scale";
-import { useAuth } from "@/features/auth/AuthContext";
+import { useAuth } from "@/modules/auth";
 import { useM3Theme, M3ShapeDefinition } from "@/theme/M3ThemeContext";
-import { coverScreen, revealScreen } from "@/features/splash/chunkTransition";
+import { coverScreen, revealScreen } from "@/modules/splash";
 import { API_BASE_URL, apiClient } from "@/services/api";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
@@ -126,99 +127,10 @@ const DEFAULT_PROFILE: UserProfileData = {
 const STORAGE_PROFILE_KEY = "@gateways_user_profile_v1";
 
 // Mini shape silhouette renderer matching index.tsx
-function renderMiniGlyph(category: string, color: string, isSelected: boolean) {
-  const bg = isSelected ? "#070b12" : color;
-  switch (category) {
-    case "Pill":
-    case "Squircle":
-    case "Flower":
-      return (
-        <View
-          style={{
-            width: 14,
-            height: 14,
-            backgroundColor: bg,
-          }}
-        />
-      );
-    case "Gem":
-      return (
-        <View
-          style={{
-            width: 11,
-            height: 11,
-            transform: [{ rotate: "45deg" }],
-            backgroundColor: bg,
-          }}
-        />
-      );
-    case "Burst":
-      return <Ionicons name="sparkles" size={13} color={bg} />;
-    case "Circle":
-    default:
-  }
-}
 
 // 6 non-circular flanking positions around avatar
-const FLANKING_POSITIONS = [
-  { x: -px(150), y: -px(96) }, // 0: Upper Left (Stadium Pill)
-  { x: -px(162), y: px(4) },   // 1: Mid Left (Soft Squircle)
-  { x: -px(146), y: px(106) }, // 2: Lower Left (Clover Flower)
-  { x: px(150), y: -px(96) },  // 3: Upper Right (Faceted Gem)
-  { x: px(162), y: px(4) },    // 4: Mid Right (Solar Burst)
-  { x: px(146), y: px(106) },  // 5: Lower Right (Full Circle)
-];
 
 // Floating satellite pod component
-const FloatingSatellite = React.memo(function FloatingSatellite({
-  item,
-  index,
-  floatProgress,
-  isSelected,
-  onPress,
-}: {
-  item: M3ShapeDefinition;
-  index: number;
-  floatProgress: SharedValue<number>;
-  isSelected: boolean;
-  onPress: () => void;
-}) {
-  const pos = FLANKING_POSITIONS[index % FLANKING_POSITIONS.length];
-  const phase = index * 1.05;
-
-  const animatedStyle = useAnimatedStyle(() => {
-    const floatY = Math.sin(floatProgress.value * Math.PI * 2 + phase) * 6;
-    const floatX = Math.cos(floatProgress.value * Math.PI * 2 + phase) * 3;
-
-    return {
-      transform: [
-        { translateX: pos.x + floatX },
-        { translateY: pos.y + floatY },
-        { scale: isSelected ? 1.25 : 0.95 },
-      ],
-    };
-  });
-
-  return (
-    <Animated.View style={[styles.satelliteWrapper, animatedStyle]}>
-      <TouchableOpacity
-        activeOpacity={0.7}
-        onPress={onPress}
-        style={[
-          styles.satelliteOrb,
-          {
-            borderColor: item.seedColor,
-            backgroundColor: isSelected ? item.seedColor : "rgba(10, 15, 26, 0.94)",
-            shadowColor: item.seedColor,
-          },
-          isSelected && styles.satelliteOrbActive,
-        ]}
-      >
-        {renderMiniGlyph(item.category, item.seedColor, isSelected)}
-      </TouchableOpacity>
-    </Animated.View>
-  );
-});
 
 export default function ProfileTab() {
   const insets = useSafeAreaInsets();
@@ -480,10 +392,10 @@ export default function ProfileTab() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#070b12" }}
+      style={{ flex: 1, backgroundColor: theme.background }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <StatusBar barStyle="light-content" backgroundColor="#070b12" />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.background} />
 
       {/* Atmospheric Radial Gradients Driven by Dynamic M3 Seed Color */}
       <View style={[styles.ambientAuraTop, { backgroundColor: theme.ambientTop }]} />
@@ -500,9 +412,9 @@ export default function ProfileTab() {
         {/* Hero Massive Bold Header */}
         <View style={[styles.heroHeaderRow, { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }]}>
           <View style={styles.titleColumn}>
-            <Text style={styles.heroSupTitle}>STAGE IDENTITY,</Text>
+            <Text style={[styles.heroSupTitle, { color: theme.textDim }]}>STAGE IDENTITY,</Text>
             <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
-              <Text style={styles.heroFirstNameTitle} numberOfLines={1}>
+              <Text style={[styles.heroFirstNameTitle, { color: theme.text }]} numberOfLines={1}>
                 {firstName}
               </Text>
               {lastName ? (
@@ -511,22 +423,36 @@ export default function ProfileTab() {
                 </Text>
               ) : null}
             </View>
-            <Text style={styles.heroSubtitle}>
+            <Text style={[styles.heroSubtitle, { color: theme.textDim }]}>
               {profile.participantId} • {activeSkin.title}
             </Text>
           </View>
 
-          {/* Dark / Light Mode Switcher */}
-          <TouchableOpacity
+          
+        </View>
+
+        
+
+        
+        <View style={{ marginTop: px(32), marginBottom: px(8) }}>
+          <Text style={{ fontFamily: fonts.pixelBold, fontSize: px(18), color: theme.text, marginBottom: px(16) }}>APP PREFERENCES</Text>
+          
+          <View style={[styles.credentialsCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, marginBottom: px(16) }]}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <View>
+                <Text style={[styles.fieldValue, { color: theme.text }]}>Color Theme</Text>
+                <Text style={[styles.fieldLabel, { color: theme.textDim, marginTop: px(4) }]}>Toggle between light and dark mode</Text>
+              </View>
+              {/* Dark / Light Mode Switcher */}
+          <Pressable
             style={{
               width: 38,
               height: 38,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)",
-              borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)",
+              backgroundColor: theme.surfaceElevated,
+              borderColor: theme.border,
             }}
-            activeOpacity={0.7}
             onPress={toggleColorMode}
           >
             <Ionicons
@@ -534,183 +460,40 @@ export default function ProfileTab() {
               size={18}
               color={theme.primary}
             />
-          </TouchableOpacity>
-        </View>
-
-        {/* The Artistic Centerpiece:
-            Smooth 360 rotating centerpiece surrounded by 6 floating shape pods */}
-        <View style={styles.artisticCenterpieceWrapper}>
-          {/* Subtle Ambient Glow Aura */}
-          <View style={[styles.ambientCenterGlow, { backgroundColor: theme.surfaceTint }]} />
-
-          {/* Floating Shape Pods in Left & Right Vertical Flanking Columns */}
-          {shapes.map((item, idx) => (
-            <FloatingSatellite
-              key={item.id}
-              item={item}
-              index={idx}
-              floatProgress={floatProgress}
-              isSelected={activeShape.id === item.id}
-              onPress={() => {
-                Haptics.selectionAsync();
-                setShapeById(item.id);
-              }}
-            />
-          ))}
-
-          <TouchableOpacity
-            activeOpacity={0.9}
-            style={styles.capsuleTouchable}
-            onPress={() => setSkinModalVisible(true)}
-          >
-            {/* Secondary Layer offset by 45° for Material 3 Expressive Sunny Starburst */}
-            {activeShape.category === "Burst" && (
-              <Animated.View
-                pointerEvents="none"
-                style={[
-                  styles.floatingCapsuleShape,
-                  {
-                    position: "absolute",
-                    borderColor: theme.primary,
-                    shadowColor: theme.primary,
-                    backgroundColor: theme.primaryContainer || "#0d131f",
-                  },
-                  burstSecondaryStyle,
-                ]}
-              >
-                <View style={[styles.capsuleBackGlow, { backgroundColor: theme.primary }]} />
-              </Animated.View>
-            )}
-
-            {/* Rotating Shape Container with Liquid Corner Transitions */}
-            <Animated.View
-              style={[
-                styles.floatingCapsuleShape,
-                {
-                  borderColor: theme.primary,
-                  shadowColor: theme.primary,
-                  backgroundColor: theme.primaryContainer || "#0d131f",
-                },
-                rotatingShapeStyle,
-              ]}
-            >
-              {/* Dynamic Seed Glow Background */}
-              <View style={[styles.capsuleBackGlow, { backgroundColor: theme.primary }]} />
-
-              {/* Character Avatar (Counter-Rotated so character stays upright) */}
-              <Animated.View style={[styles.avatarCounterWrap, counterRotateAvatarStyle]}>
-                <Image
-                  source={activeSkin.source}
-                  style={styles.capsuleAvatarImage}
-                  contentFit="contain"
-                  priority="high"
-                />
-              </Animated.View>
-            </Animated.View>
-          </TouchableOpacity>
-
-          {/* Identity Pill at the Base */}
-          <View style={[styles.avatarIdentityBadge, { borderColor: theme.rimBorder }]}>
-            <Text style={styles.capsuleTagName}>{activeSkin.name.toUpperCase()}</Text>
-            <Text style={[styles.capsuleTagRole, { color: theme.primary }]}>
-              {role === "team" ? "FEST CREW" : "PARTICIPANT"}
-            </Text>
-          </View>
-        </View>
-
-        {/* Change Skin Action Chip */}
-        <TouchableOpacity
-          style={[styles.switchSkinPill, { borderColor: theme.rimBorder, backgroundColor: theme.primaryContainer }]}
-          activeOpacity={0.8}
-          onPress={() => setSkinModalVisible(true)}
-        >
-          <Ionicons name="sparkles" size={13} color={theme.primary} />
-          <Text style={[styles.switchSkinPillText, { color: theme.primary }]}>CHANGE MINECRAFT SKIN</Text>
-          <Ionicons name="chevron-forward" size={13} color={theme.primary} />
-        </TouchableOpacity>
-
-        {/* Color Themes & Shapes Selector Shelf */}
-        <View style={styles.m3ShapeShelfSection}>
-          <View style={styles.m3ShapeShelfHeader}>
-            <View style={styles.m3HeaderBadge}>
-              <Ionicons name="color-palette" size={13} color={theme.primary} />
-              <Text style={[styles.m3ShelfTitle, { color: theme.primary }]}>
-                COLOR THEMES & SHAPES
-              </Text>
+          </Pressable>
             </View>
-            <Text style={styles.m3CurrentTag}>
-              {activeShape.name.toUpperCase()}
-            </Text>
           </View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.m3ShapeScrollContent}
-          >
-            {shapes.map((item) => {
-              const isSelected = item.id === activeShape.id;
-              return (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[
-                    styles.m3ShapeChip,
-                    isSelected && {
-                      borderColor: item.seedColor,
-                      backgroundColor: item.palette.primaryContainer,
-                      shadowColor: item.seedColor,
-                      shadowOpacity: 0.35,
-                      shadowRadius: 10,
-                      elevation: 6,
-                    },
-                  ]}
-                  activeOpacity={0.78}
-                  onPress={() => setShapeById(item.id)}
-                >
-                  <View
-                    style={[
-                      styles.shelfGlyphFrame,
-                      {
-                        borderColor: item.seedColor,
-                        backgroundColor: isSelected ? item.seedColor : "rgba(10, 15, 26, 0.9)",
-                      },
-                    ]}
-                  >
-                    {renderMiniGlyph(item.category, item.seedColor, isSelected)}
-                  </View>
-                  <Text
-                    style={[
-                      styles.m3ShapeChipText,
-                      isSelected && {
-                        color: "#ffffff",
-                        fontFamily: fonts.bodyBold,
-                      },
-                    ]}
-                  >
-                    {item.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+          
+          <View style={[styles.credentialsCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <View>
+                <Text style={[styles.fieldValue, { color: theme.text }]}>Minecraft Skin</Text>
+                <Text style={[styles.fieldLabel, { color: theme.textDim, marginTop: px(4) }]}>Choose your stage identity</Text>
+              </View>
+              <MinecraftButton mode="outlined" onPress={() => setSkinModalVisible(true)}>
+                CHANGE SKIN
+              </MinecraftButton>
+            </View>
+          </View>
         </View>
+    
 
         {/* Success Alert Banner */}
-        {saveSuccess && (
-          <Animated.View entering={FadeInUp.duration(300)} style={[styles.successBanner, { borderColor: theme.primary }]}>
+        {saveSuccess ? (<Animated.View entering={FadeInUp.duration(300)} style={[styles.successBanner, { borderColor: theme.primary }]}>
             <Ionicons name="checkmark-circle" size={18} color={theme.primary} />
             <Text style={[styles.successBannerText, { color: theme.primary }]}>PROFILE UPDATED IN THE REALM</Text>
-          </Animated.View>
-        )}
+          </Animated.View>) : null}
 
+        <View style={{ marginTop: px(24) }}>
+          <Text style={{ fontFamily: fonts.pixelBold, fontSize: px(18), color: theme.text, marginBottom: px(16) }}>ACCOUNT PROFILE</Text>
         {/* Player Credentials Spotlight Card */}
-        <View style={[styles.credentialsCard, { borderColor: theme.rimBorder }]}>
+        <View style={[styles.credentialsCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
           <View style={styles.credentialsHeader}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.credentialsSectionTitle}>PLAYER CREDENTIALS</Text>
-              <Text style={styles.credentialsSubtitle}>Registered festival details & preferences</Text>
+              <Text style={[styles.credentialsSectionTitle, { color: theme.text }]}>PLAYER CREDENTIALS</Text>
+              <Text style={[styles.credentialsSubtitle, { color: theme.textDim }]}>Registered festival details & preferences</Text>
             </View>
-            <TouchableOpacity
+            <Pressable
               style={[
                 styles.editToggleBtn,
                 {
@@ -719,7 +502,6 @@ export default function ProfileTab() {
                 },
               ]}
               onPress={() => setIsEditing(!isEditing)}
-              activeOpacity={0.8}
             >
               <Ionicons
                 name={isEditing ? "close-circle-outline" : "create-outline"}
@@ -729,12 +511,12 @@ export default function ProfileTab() {
               <Text style={[styles.editToggleText, { color: theme.primary }]}>
                 {isEditing ? "CANCEL" : "EDIT"}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Full Name */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>PLAYER / FULL NAME</Text>
+            <Text style={[styles.fieldLabel, { color: theme.textDim }]}>PLAYER / FULL NAME</Text>
             {isEditing ? (
               <TextInput
                 style={[styles.inputField, { borderColor: theme.rimBorder }]}
@@ -744,19 +526,19 @@ export default function ProfileTab() {
                 placeholderTextColor="#64748b"
               />
             ) : (
-              <Text style={styles.fieldValue}>{profile.fullName}</Text>
+              <Text style={[styles.fieldValue, { color: theme.text }]}>{profile.fullName}</Text>
             )}
           </View>
 
           {/* Email (read only) */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>REGISTERED EMAIL</Text>
+            <Text style={[styles.fieldLabel, { color: theme.textDim }]}>REGISTERED EMAIL</Text>
             <Text style={[styles.fieldValue, { color: theme.primary }]}>{profile.email}</Text>
           </View>
 
           {/* Phone Number */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>PHONE NUMBER</Text>
+            <Text style={[styles.fieldLabel, { color: theme.textDim }]}>PHONE NUMBER</Text>
             {isEditing ? (
               <TextInput
                 style={[styles.inputField, { borderColor: theme.rimBorder }]}
@@ -767,13 +549,13 @@ export default function ProfileTab() {
                 keyboardType="phone-pad"
               />
             ) : (
-              <Text style={styles.fieldValue}>{profile.phone}</Text>
+              <Text style={[styles.fieldValue, { color: theme.text }]}>{profile.phone}</Text>
             )}
           </View>
 
           {/* College / Institution */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>COLLEGE / INSTITUTION</Text>
+            <Text style={[styles.fieldLabel, { color: theme.textDim }]}>COLLEGE / INSTITUTION</Text>
             {isEditing ? (
               <TextInput
                 style={[styles.inputField, { borderColor: theme.rimBorder }]}
@@ -783,13 +565,13 @@ export default function ProfileTab() {
                 placeholderTextColor="#64748b"
               />
             ) : (
-              <Text style={styles.fieldValue}>{profile.collegeName}</Text>
+              <Text style={[styles.fieldValue, { color: theme.text }]}>{profile.collegeName}</Text>
             )}
           </View>
 
           {/* Department */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>DEPARTMENT / PROGRAM</Text>
+            <Text style={[styles.fieldLabel, { color: theme.textDim }]}>DEPARTMENT / PROGRAM</Text>
             {isEditing ? (
               <TextInput
                 style={[styles.inputField, { borderColor: theme.rimBorder }]}
@@ -799,19 +581,19 @@ export default function ProfileTab() {
                 placeholderTextColor="#64748b"
               />
             ) : (
-              <Text style={styles.fieldValue}>{profile.department}</Text>
+              <Text style={[styles.fieldValue, { color: theme.text }]}>{profile.department}</Text>
             )}
           </View>
 
           {/* Food Preference Selection */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>DIETARY PREFERENCE</Text>
+            <Text style={[styles.fieldLabel, { color: theme.textDim }]}>DIETARY PREFERENCE</Text>
             {isEditing ? (
               <View style={styles.chipRow}>
                 {(["Veg", "Non-Veg", "Jain"] as const).map((pref) => {
                   const isActive = profile.foodPref === pref;
                   return (
-                    <TouchableOpacity
+                    <Pressable
                       key={pref}
                       style={[
                         styles.choiceChip,
@@ -830,12 +612,12 @@ export default function ProfileTab() {
                       >
                         {pref === "Veg" ? "🥗 VEG" : pref === "Non-Veg" ? "🍗 NON-VEG" : "🌿 JAIN"}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 })}
               </View>
             ) : (
-              <Text style={styles.fieldValue}>
+              <Text style={[styles.fieldValue, { color: theme.text }]}>
                 {profile.foodPref === "Veg"
                   ? "🥗 Vegetarian"
                   : profile.foodPref === "Non-Veg"
@@ -847,13 +629,13 @@ export default function ProfileTab() {
 
           {/* T-Shirt Size Selection */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>FEST T-SHIRT SIZE</Text>
+            <Text style={[styles.fieldLabel, { color: theme.textDim }]}>FEST T-SHIRT SIZE</Text>
             {isEditing ? (
               <View style={styles.chipRow}>
                 {(["S", "M", "L", "XL", "XXL"] as const).map((size) => {
                   const isActive = profile.tshirtSize === size;
                   return (
-                    <TouchableOpacity
+                    <Pressable
                       key={size}
                       style={[
                         styles.sizeChip,
@@ -872,20 +654,19 @@ export default function ProfileTab() {
                       >
                         {size}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 })}
               </View>
             ) : (
-              <Text style={styles.fieldValue}>{profile.tshirtSize}</Text>
+              <Text style={[styles.fieldValue, { color: theme.text }]}>{profile.tshirtSize}</Text>
             )}
           </View>
 
           {/* Save Profile Button */}
           {isEditing && (
-            <TouchableOpacity
+            <Pressable
               style={[styles.saveBtn, { backgroundColor: theme.primary }]}
-              activeOpacity={0.8}
               onPress={handleSaveProfile}
               disabled={saving}
             >
@@ -894,33 +675,34 @@ export default function ProfileTab() {
               ) : (
                 <Text style={[styles.saveBtnText, { color: theme.onPrimary }]}>SAVE PROFILE</Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
 
         {/* Quick Fest Information Cards */}
         <View style={styles.festInfoGrid}>
-          <View style={[styles.festInfoCard, { borderColor: theme.rimBorder }]}>
+          <View style={[styles.festInfoCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
             <Text style={[styles.festInfoNumber, { color: theme.primary }]}>10 - 11</Text>
-            <Text style={styles.festInfoTitle}>OCTOBER 2026</Text>
-            <Text style={styles.festInfoSub}>Fest Dates</Text>
+            <Text style={[styles.festInfoTitle, { color: theme.text }]}>OCTOBER 2026</Text>
+            <Text style={[styles.festInfoSub, { color: theme.textDim }]}>Fest Dates</Text>
           </View>
-          <View style={[styles.festInfoCard, { borderColor: theme.rimBorder }]}>
+          <View style={[styles.festInfoCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
             <Text style={[styles.festInfoNumber, { color: theme.primary }]}>CENTRAL</Text>
-            <Text style={styles.festInfoTitle}>CAMPUS</Text>
-            <Text style={styles.festInfoSub}>Main Auditorium</Text>
+            <Text style={[styles.festInfoTitle, { color: theme.text }]}>CAMPUS</Text>
+            <Text style={[styles.festInfoSub, { color: theme.textDim }]}>Main Auditorium</Text>
           </View>
         </View>
 
         {/* Logout Button */}
-        <TouchableOpacity
+        <Pressable
           style={styles.logoutBtn}
-          activeOpacity={0.8}
           onPress={handleLogout}
         >
           <Ionicons name="log-out-outline" size={18} color="#ff8080" />
           <Text style={styles.logoutBtnText}>LOGOUT FROM REALM</Text>
-        </TouchableOpacity>
+        </Pressable>
+
+        </View>
 
         {/* Bottom padding to clear floating navigation bar */}
         <View style={{ height: px(115) }} />
@@ -933,7 +715,7 @@ export default function ProfileTab() {
         animationType="slide"
         onRequestClose={closeSkinModal}
       >
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={closeSkinModal} />
 
           <Animated.View
@@ -948,12 +730,12 @@ export default function ProfileTab() {
               <View style={[styles.modalDragBar, { backgroundColor: theme.primary, opacity: 0.8 }]} />
               <View style={styles.modalHeaderRow}>
                 <View>
-                  <Text style={styles.modalMainTitle}>Choose Minecraft Skin</Text>
-                  <Text style={styles.modalSubTitle}>Equip your live 3D avatar & traits • Swipe down to close</Text>
+                  <Text style={[styles.modalMainTitle, { color: theme.text }]}>Choose Minecraft Skin</Text>
+                  <Text style={[styles.modalSubTitle, { color: theme.textDim }]}>Equip your live 3D avatar & traits • Swipe down to close</Text>
                 </View>
-                <TouchableOpacity onPress={closeSkinModal} style={styles.modalCloseBtn} activeOpacity={0.7}>
+                <Pressable onPress={closeSkinModal} style={[styles.modalCloseBtn, { backgroundColor: theme.surfaceElevated }]}>
                   <Ionicons name="close" size={18} color="#cbd5e1" />
-                </TouchableOpacity>
+                </Pressable>
               </View>
             </View>
 
@@ -965,7 +747,7 @@ export default function ProfileTab() {
               {MINECRAFT_SKINS.map((skin) => {
                 const isSelected = activeSkin.id === skin.id;
                 return (
-                  <TouchableOpacity
+                  <Pressable
                     key={skin.id}
                     style={[
                       styles.skinCard,
@@ -974,7 +756,6 @@ export default function ProfileTab() {
                         { borderColor: theme.primary, backgroundColor: theme.primaryContainer },
                       ],
                     ]}
-                    activeOpacity={0.85}
                     onPress={() => handleSelectSkin(skin)}
                   >
                     {isSelected && (
@@ -991,14 +772,14 @@ export default function ProfileTab() {
                       />
                     </View>
 
-                    <Text style={styles.skinCardName}>{skin.name}</Text>
+                    <Text style={[styles.skinCardName, { color: theme.text }]}>{skin.name}</Text>
                     <Text style={[styles.skinCardBadge, { color: theme.primary }]}>
                       {skin.badge}
                     </Text>
-                    <Text style={styles.skinCardPerk} numberOfLines={2}>
+                    <Text style={[styles.skinCardPerk, { color: theme.textDim }]} numberOfLines={2}>
                       {skin.perk}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 );
               })}
             </ScrollView>
@@ -1043,31 +824,29 @@ const styles = StyleSheet.create({
   },
   heroSupTitle: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(13),
+    fontSize: px(19),
     fontWeight: "700",
     letterSpacing: 2.2,
     color: "#d6c8aa",
     marginBottom: px(4),
   },
   heroFirstNameTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(42),
-    lineHeight: px(44),
-    fontWeight: "900",
+    fontFamily: typography.pageTitle.fontFamily,
+    fontSize: px(typography.pageTitle.fontSize),
+    lineHeight: px(typography.pageTitle.lineHeight),
     color: "#ffffff",
-    letterSpacing: -1,
+    letterSpacing: typography.pageTitle.letterSpacing,
   },
   heroLastNameTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(42),
-    lineHeight: px(44),
-    fontWeight: "900",
-    letterSpacing: -1,
+    fontFamily: typography.pageTitle.fontFamily,
+    fontSize: px(typography.pageTitle.fontSize),
+    lineHeight: px(typography.pageTitle.lineHeight),
+    letterSpacing: typography.pageTitle.letterSpacing,
     marginBottom: px(4),
   },
   heroSubtitle: {
     fontFamily: fonts.bodyMedium,
-    fontSize: px(13),
+    fontSize: px(19),
     color: "#8e9ea8",
     marginTop: px(4),
   },
@@ -1147,13 +926,13 @@ const styles = StyleSheet.create({
   },
   capsuleTagName: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(11),
+    fontSize: px(15),
     color: "#e8dec8",
     letterSpacing: 1.2,
   },
   capsuleTagRole: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(8.5),
+    fontSize: px(12.5),
     letterSpacing: 0.8,
     marginTop: px(2),
   },
@@ -1168,7 +947,7 @@ const styles = StyleSheet.create({
   },
   switchSkinPillText: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(11),
+    fontSize: px(15),
     letterSpacing: 0.8,
   },
   m3ShapeShelfSection: {
@@ -1186,13 +965,13 @@ const styles = StyleSheet.create({
     gap: px(6),
   },
   m3ShelfTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(10.5),
+    fontFamily: fonts.pixelMedium,
+    fontSize: px(14.5),
     letterSpacing: 1.2,
   },
   m3CurrentTag: {
     fontFamily: fonts.bodyMedium,
-    fontSize: px(10),
+    fontSize: px(14),
     color: "#8e9ea8",
     letterSpacing: 0.5,
   },
@@ -1218,7 +997,7 @@ const styles = StyleSheet.create({
   },
   m3ShapeChipText: {
     fontFamily: fonts.bodyMedium,
-    fontSize: px(12),
+    fontSize: px(16),
     color: "#c8d1dc",
   },
   successBanner: {
@@ -1231,7 +1010,7 @@ const styles = StyleSheet.create({
   },
   successBannerText: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(11),
+    fontSize: px(15),
     letterSpacing: 0.5,
   },
   credentialsCard: {
@@ -1249,14 +1028,14 @@ const styles = StyleSheet.create({
     paddingBottom: px(10),
   },
   credentialsSectionTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(12),
+    fontFamily: fonts.pixelMedium,
+    fontSize: px(16),
     color: "#d6c8aa",
     letterSpacing: 1.2,
   },
   credentialsSubtitle: {
     fontFamily: fonts.body,
-    fontSize: px(11),
+    fontSize: px(15),
     color: "#8e9ea8",
     marginTop: px(2),
   },
@@ -1269,7 +1048,7 @@ const styles = StyleSheet.create({
   },
   editToggleText: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(10),
+    fontSize: px(14),
     letterSpacing: 0.5,
   },
   fieldGroup: {
@@ -1277,13 +1056,13 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(9.5),
+    fontSize: px(13.5),
     color: "#8e9ea8",
     letterSpacing: 0.8,
   },
   fieldValue: {
     fontFamily: fonts.bodyMedium,
-    fontSize: px(13),
+    fontSize: px(17),
     color: "#ffffff",
   },
   inputField: {
@@ -1292,7 +1071,7 @@ const styles = StyleSheet.create({
     paddingVertical: px(8),
     color: "#ffffff",
     fontFamily: fonts.bodyMedium,
-    fontSize: px(13),
+    fontSize: px(17),
   },
   chipRow: {
     flexDirection: "row",
@@ -1308,7 +1087,7 @@ const styles = StyleSheet.create({
   },
   choiceChipText: {
     fontFamily: fonts.bodyMedium,
-    fontSize: px(11),
+    fontSize: px(15),
     color: "#94a3b8",
   },
   sizeChip: {
@@ -1319,7 +1098,7 @@ const styles = StyleSheet.create({
   },
   sizeChipText: {
     fontFamily: fonts.bodyMedium,
-    fontSize: px(11),
+    fontSize: px(15),
     color: "#94a3b8",
   },
   saveBtn: {
@@ -1329,7 +1108,7 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(12),
+    fontSize: px(16),
     letterSpacing: 1,
   },
   festInfoGrid: {
@@ -1345,18 +1124,18 @@ const styles = StyleSheet.create({
   },
   festInfoNumber: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(16),
+    fontSize: px(20),
   },
   festInfoTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(10),
+    fontFamily: fonts.pixelMedium,
+    fontSize: px(14),
     color: "#ffffff",
     letterSpacing: 1,
     marginTop: px(2),
   },
   festInfoSub: {
     fontFamily: fonts.body,
-    fontSize: px(11),
+    fontSize: px(15),
     color: "#8e9ea8",
     marginTop: px(2),
   },
@@ -1372,7 +1151,7 @@ const styles = StyleSheet.create({
   },
   logoutBtnText: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(12),
+    fontSize: px(16),
     color: "#ff8080",
     letterSpacing: 0.8,
   },
@@ -1404,13 +1183,13 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   modalMainTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(18),
+    fontFamily: fonts.pixelMedium,
+    fontSize: px(22),
     color: "#ffffff",
   },
   modalSubTitle: {
     fontFamily: fonts.body,
-    fontSize: px(11),
+    fontSize: px(15),
     color: "#8e9ea8",
     marginTop: px(2),
   },
@@ -1448,7 +1227,7 @@ const styles = StyleSheet.create({
   },
   activeCheckPillText: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(8),
+    fontSize: px(12),
     letterSpacing: 0.5,
   },
   skinCardImageWrap: {
@@ -1464,19 +1243,19 @@ const styles = StyleSheet.create({
   },
   skinCardName: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(12),
+    fontSize: px(16),
     color: "#ffffff",
     textAlign: "center",
   },
   skinCardBadge: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(9),
+    fontSize: px(13),
     letterSpacing: 0.5,
     marginVertical: px(2),
   },
   skinCardPerk: {
     fontFamily: fonts.body,
-    fontSize: px(10),
+    fontSize: px(14),
     color: "#8e9ea8",
     textAlign: "center",
     marginTop: px(2),

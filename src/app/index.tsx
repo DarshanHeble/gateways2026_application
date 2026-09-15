@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { router } from "expo-router";
 
-import { VideoSplashScreen } from "@/features/splash/VideoSplashScreen";
+import { VideoSplashScreen } from "@/modules/splash";
 
 export default function Index() {
   const onDone = useCallback(() => router.replace("/login"), []);

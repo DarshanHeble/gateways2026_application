@@ -3,7 +3,7 @@ import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { colors } from "@/theme/tokens";
 
 const NotificationsScreen = lazy(() =>
-  import("@/features/notifications/NotificationsScreen").then((mod) => ({
+  import("@/modules/notifications").then((mod) => ({
     default: mod.NotificationsScreen,
   }))
 );

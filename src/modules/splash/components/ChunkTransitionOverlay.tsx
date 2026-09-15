@@ -13,8 +13,8 @@ import Animated, {
 
 import { colors } from "@/theme/tokens";
 import { FILL, SCREEN_WIDTH, SCREEN_HEIGHT } from "@/theme/scale";
-import { rand } from "@/features/login/scene/useAmbient";
-import { registerChunkTransitionHandlers } from "./chunkTransition";
+import { rand } from "@/modules/login/pages/login/components/scene/useAmbient";
+import { registerChunkTransitionHandlers } from "../utils/chunkTransition";
 
 /**
  * The "blank screen" between the splash video ending and the login screen

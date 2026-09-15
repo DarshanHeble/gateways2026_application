@@ -1,4 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
+import { LayoutAnimation, Platform, UIManager } from "react-native";
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 
@@ -194,11 +198,21 @@ const STORAGE_COLOR_MODE_KEY = "@gateways_color_mode_v1";
 
 export type ColorMode = "dark" | "light";
 
+export type ExtendedPalette = M3ShapeDefinition["palette"] & {
+  background: string;
+  surface: string;
+  surfaceElevated: string;
+  text: string;
+  textDim: string;
+  border: string;
+  overlay: string;
+}
+
 interface M3ThemeContextType {
   activeShape: M3ShapeDefinition;
   shapes: M3ShapeDefinition[];
   setShapeById: (shapeId: string) => Promise<void>;
-  theme: M3ShapeDefinition["palette"];
+  theme: ExtendedPalette;
   colorMode: ColorMode;
   isDark: boolean;
   toggleColorMode: () => Promise<void>;
@@ -211,7 +225,16 @@ const DEFAULT_THEME_CONTEXT: M3ThemeContextType = {
   activeShape: DEFAULT_SHAPE,
   shapes: M3_EXPRESSIVE_SHAPES,
   setShapeById: async () => {},
-  theme: DEFAULT_SHAPE.palette,
+  theme: {
+    ...DEFAULT_SHAPE.palette,
+    background: "#070b12",
+    surface: "#0d131f",
+    surfaceElevated: "rgba(255, 255, 255, 0.04)",
+    text: "#ffffff",
+    textDim: "#8e9ea8",
+    border: "rgba(255, 255, 255, 0.08)",
+    overlay: "rgba(0, 0, 0, 0.8)",
+  },
   colorMode: "dark",
   isDark: true,
   toggleColorMode: async () => {},
@@ -265,6 +288,7 @@ export function M3ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setColorMode = async (mode: ColorMode) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    LayoutAnimation.configureNext(LayoutAnimation.create(350, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity));
     setColorModeState(mode);
     try {
       await AsyncStorage.setItem(STORAGE_COLOR_MODE_KEY, mode);
@@ -281,12 +305,20 @@ export function M3ThemeProvider({ children }: { children: React.ReactNode }) {
   const isDark = colorMode === "dark";
 
   // Compute theme palette adapted for light or dark mode
-  const theme = useMemo(() => {
+  const theme = useMemo<ExtendedPalette>(() => {
     const base = activeShape.palette;
     if (isDark) {
-      return base;
+      return {
+        ...base,
+        background: "#070b12",
+        surface: "#0d131f",
+        surfaceElevated: "rgba(255, 255, 255, 0.04)",
+        text: "#ffffff",
+        textDim: "#8e9ea8",
+        border: "rgba(255, 255, 255, 0.08)",
+        overlay: "rgba(0, 0, 0, 0.8)",
+      };
     }
-    // High-readability light mode overrides
     return {
       ...base,
       onPrimary: "#ffffff",
@@ -295,6 +327,13 @@ export function M3ThemeProvider({ children }: { children: React.ReactNode }) {
       auraGlow: base.auraGlow.replace(/0\.\d+/, "0.12"),
       rimBorder: base.rimBorder.replace(/0\.\d+/, "0.28"),
       subtleText: "#475569",
+      background: "#f8fafc",
+      surface: "#ffffff",
+      surfaceElevated: "#f1f5f9",
+      text: "#0f172a",
+      textDim: "#64748b",
+      border: "rgba(0, 0, 0, 0.12)",
+      overlay: "rgba(0, 0, 0, 0.4)",
     };
   }, [activeShape.palette, isDark]);
 

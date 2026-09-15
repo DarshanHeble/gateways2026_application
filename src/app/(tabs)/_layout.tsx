@@ -1,10 +1,10 @@
 import React from "react";
-import { View, StyleSheet, Platform } from "react-native";
+import { View, Pressable, StyleSheet, Platform } from "react-native";
 import { Tabs, Redirect } from "expo-router";
 import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAuth } from "@/features/auth/AuthContext";
-import { useNotifications } from "@/features/notifications/NotificationsContext";
+import { useAuth } from "@/modules/auth";
+import { useNotifications } from "@/modules/notifications";
 import { useM3Theme } from "@/theme/M3ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -12,7 +12,7 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const { role } = useAuth();
   const { unreadCount } = useNotifications();
-  const { theme } = useM3Theme();
+  const { theme, isDark } = useM3Theme();
 
   if (!role) {
     return <Redirect href="/login" />;
@@ -25,8 +25,18 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: theme.primary,
-        tabBarInactiveTintColor: "#7e8b9b",
+        tabBarInactiveTintColor: theme.textDim,
         tabBarShowLabel: true,
+        tabBarButton: (props) => (
+          <Pressable
+            {...(props as any)}
+            android_ripple={{ color: theme.primaryContainer, borderless: false }}
+            style={({ pressed }) => [
+              props.style,
+              pressed && { opacity: 0.8 } // Fallback for iOS
+            ]}
+          />
+        ),
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: "600",
@@ -54,7 +64,7 @@ export default function TabLayout() {
           <View style={StyleSheet.absoluteFill}>
             <BlurView
               intensity={Platform.OS === "ios" ? 50 : 70}
-              tint="dark"
+              tint={isDark ? "dark" : "light"}
               blurMethod="none"
               style={StyleSheet.absoluteFill}
             />
@@ -62,7 +72,7 @@ export default function TabLayout() {
               style={[
                 StyleSheet.absoluteFill,
                 {
-                  backgroundColor: "rgba(10, 15, 26, 0.65)", // Translucent tinted glass - elements behind are visible through the blur!
+                  backgroundColor: isDark ? "rgba(10, 15, 26, 0.65)" : "rgba(255, 255, 255, 0.65)",
                 },
               ]}
             />

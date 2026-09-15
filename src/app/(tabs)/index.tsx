@@ -34,10 +34,11 @@ import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 
 import { px } from "@/theme/scale";
-import { fonts } from "@/theme/tokens";
-import { useAuth } from "@/features/auth/AuthContext";
+import { fonts, typography } from "@/theme/tokens";
+import { useAuth } from "@/modules/auth";
 import { useM3Theme, M3ShapeDefinition } from "@/theme/M3ThemeContext";
-import { fetchEvents, EventItem, MOCK_EVENTS } from "@/services/api";
+import { EventItem, MOCK_EVENTS } from "@/services/api";
+import { useAppData } from "@/modules/core/DataProvider";
 import { MINECRAFT_SKINS } from "./profile";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
@@ -47,8 +48,8 @@ const STORAGE_ACTIVE_EVENT = "@gateways_active_event_id";
 const STORAGE_PROFILE_KEY = "@gateways_user_profile_v1";
 
 // Helper to render mini M3 shape silhouette inside satellite orbs and shelf chips
-function renderMiniGlyph(category: string, color: string, isSelected: boolean) {
-  const bg = isSelected ? "#070b12" : color;
+function renderMiniGlyph(category: string, color: string, isSelected: boolean, activeBgColor: string = "#070b12") {
+  const bg = isSelected ? activeBgColor : color;
   switch (category) {
     case "Pill":
       return <View style={{ width: 8, height: 16, borderRadius: 4, backgroundColor: bg }} />;
@@ -93,12 +94,14 @@ const FloatingSatellite = React.memo(function FloatingSatellite({
   floatProgress,
   isSelected,
   onPress,
+  theme,
 }: {
   item: M3ShapeDefinition;
   index: number;
   floatProgress: SharedValue<number>;
   isSelected: boolean;
   onPress: () => void;
+  theme: any;
 }) {
   const pos = FLANKING_POSITIONS[index % FLANKING_POSITIONS.length];
   const phase = index * 1.05;
@@ -127,14 +130,14 @@ const FloatingSatellite = React.memo(function FloatingSatellite({
           {
             borderColor: item.seedColor,
             backgroundColor: isSelected
-              ? item.seedColor
-              : "rgba(10, 15, 26, 0.94)",
+                ? item.seedColor
+                : theme.surface,
             shadowColor: item.seedColor,
           },
           isSelected && styles.satelliteOrbActive,
         ]}
       >
-        {renderMiniGlyph(item.category, item.seedColor, isSelected)}
+        {renderMiniGlyph(item.category, item.seedColor, isSelected, theme.background)}
       </TouchableOpacity>
     </Animated.View>
   );
@@ -145,7 +148,7 @@ export default function ModernHomeTab() {
   const { role } = useAuth();
   const { activeShape, setShapeById, shapes, theme, isDark, toggleColorMode } = useM3Theme();
 
-  const [allEvents, setAllEvents] = useState<EventItem[]>(MOCK_EVENTS);
+  const { events: allEvents } = useAppData();
   const [myEventIds, setMyEventIds] = useState<string[]>([]);
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [userProfile, setUserProfile] = useState<{
@@ -398,11 +401,9 @@ export default function ModernHomeTab() {
   // Load events and user preferences
   const loadData = useCallback(async (isMounted?: () => boolean) => {
     try {
-      const res = await fetchEvents();
+      const res = { data: [] }; // already loaded by provider
       if (isMounted && !isMounted()) return;
-      if (res.data && res.data.length > 0) {
-        setAllEvents(res.data);
-      }
+
 
       const storedEvents = await AsyncStorage.getItem(STORAGE_MY_EVENTS);
       if (isMounted && !isMounted()) return;
@@ -472,12 +473,38 @@ export default function ModernHomeTab() {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#070b12" />
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.background} />
 
       {/* Atmospheric Radial Gradients Driven by Dynamic M3 Seed Color */}
       <View style={[styles.ambientAuraTop, { backgroundColor: theme.ambientTop }]} />
       <View style={[styles.ambientAuraBottom, { backgroundColor: theme.ambientBottom }]} />
+
+      
+      {/* Fixed Dark / Light Mode Switcher */}
+      <TouchableOpacity
+        style={{
+          position: "absolute",
+          top: Math.max(insets.top, px(12)),
+          right: px(16),
+          width: px(38),
+          height: px(38),
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: theme.surfaceElevated,
+          borderColor: theme.border,
+          borderRadius: px(8),
+          zIndex: 999,
+        }}
+        activeOpacity={0.7}
+        onPress={toggleColorMode}
+      >
+        <Ionicons
+          name={isDark ? "sunny-outline" : "moon-outline"}
+          size={18}
+          color={theme.primary}
+        />
+      </TouchableOpacity>
 
       <Animated.ScrollView
         style={styles.scroll}
@@ -487,48 +514,28 @@ export default function ModernHomeTab() {
         showsVerticalScrollIndicator={false}
       >
         {/* Generous top padding to clear status bar and notch */}
-        <View style={{ height: Math.max(insets.top, px(24)) + px(22) }} />
+        <View style={{ height: Math.max(insets.top, px(16)) + px(10) }} />
 
         {/* Massive Bold Header (Participant Name) */}
-        <Animated.View style={[styles.heroHeaderRow, animatedHeroTextStyle, { paddingTop: Math.max(insets.top, px(24)) + px(16), flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }]}>
+        <Animated.View style={[styles.heroHeaderRow, animatedHeroTextStyle, { paddingHorizontal: px(16), flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }]}>
           <View style={styles.titleColumn}>
-            <Text style={styles.heroSupTitle}>WELCOME BACK,</Text>
-            <View style={{ flexDirection: "row", alignItems: "baseline", gap: px(6) }}>
-              <Text style={styles.heroFirstNameTitle} numberOfLines={1}>
+            <Text style={[styles.heroSupTitle, { color: theme.textDim }]}>WELCOME BACK,</Text>
+            <View style={{ flexDirection: "column", alignItems: "flex-start", marginTop: -px(2) }}>
+              <Text style={[styles.heroFirstNameTitle, {  lineHeight: px(50) , color: theme.text }]} numberOfLines={1}>
                 {firstName}
               </Text>
               {lastName ? (
-                <Text style={[styles.heroLastNameTitle, { color: theme.primary }]} numberOfLines={1}>
+                <Text style={[styles.heroLastNameTitle, { color: theme.primary, lineHeight: px(50), marginTop: -px(6) }]} numberOfLines={1}>
                   {lastName}
                 </Text>
               ) : null}
             </View>
-            <Text style={styles.heroSubtitle}>
+            <Text style={[styles.heroSubtitle, { color: theme.textDim }]}>
               {participatingEvents.length > 0
                 ? `${participatingEvents.length} event${participatingEvents.length > 1 ? "s" : ""} lined up for you`
                 : "Your personal stage is ready"}
             </Text>
           </View>
-
-          {/* Dark / Light Mode Switcher */}
-          <TouchableOpacity
-            style={{
-              width: px(38),
-              height: px(38),
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)",
-              borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)",
-            }}
-            activeOpacity={0.7}
-            onPress={toggleColorMode}
-          >
-            <Ionicons
-              name={isDark ? "sunny-outline" : "moon-outline"}
-              size={18}
-              color={theme.primary}
-            />
-          </TouchableOpacity>
         </Animated.View>
 
         {/* The Artistic Centerpiece:
@@ -546,6 +553,7 @@ export default function ModernHomeTab() {
               index={idx}
               floatProgress={floatProgress}
               isSelected={activeShape.id === item.id}
+              theme={theme}
               onPress={() => {
                 Haptics.selectionAsync();
                 setShapeById(item.id);
@@ -568,7 +576,7 @@ export default function ModernHomeTab() {
                     position: "absolute",
                     borderColor: theme.primary,
                     shadowColor: theme.primary,
-                    backgroundColor: theme.primaryContainer || "#0d131f",
+                    backgroundColor: theme.primaryContainer || theme.surface,
                   },
                   burstSecondaryStyle,
                 ]}
@@ -589,7 +597,7 @@ export default function ModernHomeTab() {
                 {
                   borderColor: theme.primary,
                   shadowColor: theme.primary,
-                  backgroundColor: theme.primaryContainer || "#0d131f",
+                  backgroundColor: theme.primaryContainer || theme.surface,
                 },
                 rotatingShapeStyle,
               ]}
@@ -615,7 +623,7 @@ export default function ModernHomeTab() {
           </TouchableOpacity>
 
           {/* Identity Pill at the Base with Dynamic Theme Border */}
-          <View style={[styles.avatarIdentityBadge, { borderColor: theme.rimBorder }]}>
+          <View style={[styles.avatarIdentityBadge, { backgroundColor: theme.surface, borderColor: theme.rimBorder }]}>
             <Text style={styles.capsuleTagName}>{userSkin.name.toUpperCase()}</Text>
             <Text style={[styles.capsuleTagRole, { color: theme.primary }]}>
               {role === "team" ? "FEST CREW" : "PARTICIPANT"}
@@ -623,76 +631,10 @@ export default function ModernHomeTab() {
           </View>
         </View>
 
-        {/* Color Themes & Shapes Selector Shelf */}
-        <View style={styles.m3ShapeShelfSection}>
-          <View style={styles.m3ShapeShelfHeader}>
-            <View style={styles.m3HeaderBadge}>
-              <Ionicons name="color-palette" size={13} color={theme.primary} />
-              <Text style={[styles.m3ShelfTitle, { color: theme.primary }]}>
-                COLOR THEMES & SHAPES
-              </Text>
-            </View>
-            <Text style={styles.m3CurrentTag}>
-              {activeShape.name.toUpperCase()}
-            </Text>
-          </View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.m3ShapeScrollContent}
-          >
-            {shapes.map((item) => {
-              const isSelected = item.id === activeShape.id;
-              return (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[
-                    styles.m3ShapeChip,
-                    isSelected && {
-                      borderColor: item.seedColor,
-                      backgroundColor: item.palette.primaryContainer,
-                      shadowColor: item.seedColor,
-                      shadowOpacity: 0.35,
-                      shadowRadius: 10,
-                      elevation: 6,
-                    },
-                  ]}
-                  activeOpacity={0.78}
-                  onPress={() => setShapeById(item.id)}
-                >
-                  <View
-                    style={[
-                      styles.shelfGlyphFrame,
-                      {
-                        borderColor: item.seedColor,
-                        backgroundColor: isSelected ? item.seedColor : "rgba(10, 15, 26, 0.9)",
-                      },
-                    ]}
-                  >
-                    {renderMiniGlyph(item.category, item.seedColor, isSelected)}
-                  </View>
-                  <Text
-                    style={[
-                      styles.m3ShapeChipText,
-                      isSelected && {
-                        color: "#ffffff",
-                        fontFamily: fonts.bodyBold,
-                      },
-                    ]}
-                  >
-                    {item.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
         {/* Modern Event Lineup Deck (Different from regular cards or tables) */}
         <View style={styles.lineupDeckSection}>
           <View style={styles.lineupDeckHeader}>
-            <Text style={styles.lineupDeckTitle}>YOUR STAGE LINEUP</Text>
+            <Text style={[styles.lineupDeckTitle, { color: theme.text }]}>YOUR STAGE LINEUP</Text>
             <TouchableOpacity
               style={[
                 styles.managePill,
@@ -722,6 +664,7 @@ export default function ModernHomeTab() {
                     key={ev.id}
                     style={[
                       styles.eventPill,
+                      { backgroundColor: theme.surfaceElevated, borderColor: theme.border },
                       isActive && {
                         backgroundColor: theme.primary,
                         borderColor: theme.primary,
@@ -737,13 +680,13 @@ export default function ModernHomeTab() {
                     <View
                       style={[
                         styles.eventPillDot,
-                        { backgroundColor: isActive ? "#070b12" : theme.primary },
+                        { backgroundColor: isActive ? theme.background : theme.primary },
                       ]}
                     />
                     <Text
                       style={[
-                        styles.eventPillText,
-                        isActive && { color: theme.onPrimary, fontFamily: fonts.bodyBold },
+                        styles.eventPillText, { color: theme.textDim },
+                      isActive && { color: theme.onPrimary, fontFamily: fonts.bodyBold },
                       ]}
                       numberOfLines={1}
                     >
@@ -755,14 +698,14 @@ export default function ModernHomeTab() {
             </ScrollView>
           ) : (
             <TouchableOpacity
-              style={[styles.emptyLineupCard, { borderColor: theme.rimBorder }]}
+              style={[styles.emptyLineupCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
               activeOpacity={0.85}
               onPress={() => setPickerModalVisible(true)}
             >
               <Ionicons name="sparkles-outline" size={20} color={theme.primary} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.emptyLineupTitle}>No Events Selected</Text>
-                <Text style={styles.emptyLineupSub}>
+                <Text style={[styles.emptyLineupTitle, { color: theme.text }]}>No Events Selected</Text>
+                <Text style={[styles.emptyLineupSub, { color: theme.textDim }]}>
                   Tap here to choose competitions you want to track
                 </Text>
               </View>
@@ -771,7 +714,7 @@ export default function ModernHomeTab() {
           )}
           {participatingEvents.length > 0 && activeEvent && (
             <TouchableOpacity
-              style={[styles.activeEventCard, { borderColor: theme.rimBorder }]}
+              style={[styles.activeEventCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
               activeOpacity={0.85}
               onPress={() => setDetailModalVisible(true)}
             >
@@ -780,10 +723,10 @@ export default function ModernHomeTab() {
                   <Ionicons name="information-circle" size={18} color={theme.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.activeEventName} numberOfLines={1}>
+                  <Text style={[styles.activeEventName, { color: theme.text }]} numberOfLines={1}>
                     {activeEvent.title}
                   </Text>
-                  <Text style={styles.activeEventDetails} numberOfLines={1}>
+                  <Text style={[styles.activeEventDetails, { color: theme.textDim }]} numberOfLines={1}>
                     📍 {activeEvent.venue} • ⏰ {activeEvent.from_time}
                   </Text>
                 </View>
@@ -807,14 +750,14 @@ export default function ModernHomeTab() {
         animationType="slide"
         onRequestClose={closeDetailModal}
       >
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
           {/* Backdrop press dismisses sheet */}
           <Pressable style={StyleSheet.absoluteFill} onPress={closeDetailModal} />
 
           <Animated.View
             style={[
               styles.modalSheet,
-              { borderColor: theme.rimBorder },
+              { borderColor: theme.rimBorder, backgroundColor: theme.surface },
               animatedDetailSheetStyle,
             ]}
           >
@@ -828,15 +771,15 @@ export default function ModernHomeTab() {
                   </Text>
                 </View>
                 <TouchableOpacity onPress={closeDetailModal} style={styles.modalCloseBtn} activeOpacity={0.7}>
-                  <Ionicons name="close" size={18} color="#cbd5e1" />
+                  <Ionicons name="close" size={18} color={theme.textDim} />
                 </TouchableOpacity>
               </View>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalMainTitle}>{activeEvent?.title}</Text>
+              <Text style={[styles.modalMainTitle, { color: theme.text }]}>{activeEvent?.title}</Text>
               {activeEvent?.subtitle ? (
-                <Text style={styles.modalSubTitle}>{activeEvent.subtitle}</Text>
+                <Text style={[styles.modalSubTitle, { color: theme.textDim }]}>{activeEvent.subtitle}</Text>
               ) : null}
 
               {/* Meta Chips */}
@@ -856,7 +799,7 @@ export default function ModernHomeTab() {
 
               {/* Overview */}
               <Text style={styles.modalHeading}>OVERVIEW</Text>
-              <Text style={styles.modalParagraph}>
+              <Text style={[styles.modalParagraph, { color: theme.textDim }]}>
                 {activeEvent?.description || "Compete against top participants across colleges."}
               </Text>
 
@@ -884,7 +827,7 @@ export default function ModernHomeTab() {
                 <>
                   <Text style={styles.modalHeading}>RULES & GUIDELINES</Text>
                   {activeEvent.rules.map((r, i) => (
-                    <Text key={i} style={styles.ruleItem}>
+                    <Text key={i} style={[styles.ruleItem, { color: theme.textDim }]}>
                       • {r}
                     </Text>
                   ))}
@@ -934,14 +877,14 @@ export default function ModernHomeTab() {
         animationType="slide"
         onRequestClose={closePickerModal}
       >
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
           {/* Backdrop press dismisses sheet */}
           <Pressable style={StyleSheet.absoluteFill} onPress={closePickerModal} />
 
           <Animated.View
             style={[
               styles.modalSheet,
-              { maxHeight: "88%", borderColor: theme.rimBorder },
+              { maxHeight: "88%", borderColor: theme.rimBorder, backgroundColor: theme.surface },
               animatedPickerSheetStyle,
             ]}
           >
@@ -950,13 +893,13 @@ export default function ModernHomeTab() {
               <View style={[styles.modalDragBar, { backgroundColor: theme.primary, opacity: 0.8 }]} />
               <View style={styles.modalHeaderRow}>
                 <View>
-                  <Text style={styles.modalMainTitle}>Curate Your Lineup</Text>
-                  <Text style={styles.modalSubTitle}>
+                  <Text style={[styles.modalMainTitle, { color: theme.text }]}>Curate Your Lineup</Text>
+                  <Text style={[styles.modalSubTitle, { color: theme.textDim }]}>
                     {myEventIds.length} selected • Swipe down to close
                   </Text>
                 </View>
                 <TouchableOpacity onPress={closePickerModal} style={styles.modalCloseBtn} activeOpacity={0.7}>
-                  <Ionicons name="close" size={18} color="#cbd5e1" />
+                  <Ionicons name="close" size={18} color={theme.textDim} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -969,6 +912,7 @@ export default function ModernHomeTab() {
                     key={ev.id}
                     style={[
                       styles.pickerRow,
+                      { backgroundColor: theme.surfaceElevated, borderColor: theme.border },
                       isSelected && [
                         styles.pickerRowSelected,
                         { borderColor: theme.primary, backgroundColor: theme.primaryContainer },
@@ -978,17 +922,17 @@ export default function ModernHomeTab() {
                     onPress={() => toggleParticipate(ev.id)}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.pickerRowTitle, isSelected && { color: theme.primary }]}>
+                      <Text style={[styles.pickerRowTitle, { color: theme.text }, isSelected && { color: theme.primary }]}>
                         {ev.title}
                       </Text>
-                      <Text style={styles.pickerRowSub}>
+                      <Text style={[styles.pickerRowSub, { color: theme.textDim }]}>
                         {ev.type} • {ev.venue} • {ev.date}
                       </Text>
                     </View>
                     <Ionicons
                       name={isSelected ? "checkmark-circle" : "add-circle-outline"}
                       size={22}
-                      color={isSelected ? theme.primary : "#5b6577"}
+                      color={isSelected ? theme.primary : theme.textDim}
                     />
                   </TouchableOpacity>
                 );
@@ -1046,30 +990,28 @@ const styles = StyleSheet.create({
     gap: px(2),
   },
   heroSupTitle: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(11),
+    fontFamily: fonts.bodyBold,
+    fontSize: px(18),
     color: "#8e99a8",
     letterSpacing: px(1),
     marginBottom: px(2),
   },
   heroFirstNameTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(36),
-    lineHeight: px(40),
-    fontWeight: "900",
+    fontFamily: typography.hero.fontFamily,
+    fontSize: px(typography.hero.fontSize),
+    lineHeight: px(typography.hero.lineHeight),
     color: "#ffffff",
-    letterSpacing: -1,
+    letterSpacing: typography.hero.letterSpacing,
   },
   heroLastNameTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(36),
-    lineHeight: px(40),
-    fontWeight: "900",
-    letterSpacing: -1,
+    fontFamily: typography.hero.fontFamily,
+    fontSize: px(typography.hero.fontSize),
+    lineHeight: px(typography.hero.lineHeight),
+    letterSpacing: typography.hero.letterSpacing,
   },
   heroSubtitle: {
     fontFamily: fonts.bodyMedium,
-    fontSize: px(13),
+    fontSize: px(19),
     color: "#64748b",
     marginTop: px(4),
   },
@@ -1151,13 +1093,13 @@ const styles = StyleSheet.create({
   },
   capsuleTagName: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(11),
+    fontSize: px(15),
     color: "#e8dec8", // Sandstone Parchment
     letterSpacing: 1.2,
   },
   capsuleTagRole: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(8.5),
+    fontSize: px(12.5),
     color: "#dfb15b", // Parallax Gold
     letterSpacing: 0.8,
     marginTop: px(2),
@@ -1177,13 +1119,13 @@ const styles = StyleSheet.create({
     gap: px(6),
   },
   m3ShelfTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(10.5),
+    fontFamily: fonts.pixelMedium,
+    fontSize: px(14.5),
     letterSpacing: 1.2,
   },
   m3CurrentTag: {
     fontFamily: fonts.bodyMedium,
-    fontSize: px(10),
+    fontSize: px(14),
     color: "#8e9ea8",
     letterSpacing: 0.5,
   },
@@ -1196,7 +1138,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: px(8),
-    paddingHorizontal: px(14),
+    paddingHorizontal: px(16),
     paddingVertical: px(8),
     backgroundColor: "rgba(255, 255, 255, 0.04)",
     borderColor: "rgba(255, 255, 255, 0.08)",
@@ -1209,7 +1151,7 @@ const styles = StyleSheet.create({
   },
   m3ShapeChipText: {
     fontFamily: fonts.bodyMedium,
-    fontSize: px(12),
+    fontSize: px(16),
     color: "#c8d1dc",
   },
   lineupDeckSection: {
@@ -1222,8 +1164,8 @@ const styles = StyleSheet.create({
     marginBottom: px(12),
   },
   lineupDeckTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(12),
+    fontFamily: fonts.pixelMedium,
+    fontSize: px(16),
     color: "#d6c8aa", // Sandstone Parchment
     letterSpacing: 1.2,
   },
@@ -1238,7 +1180,7 @@ const styles = StyleSheet.create({
   },
   managePillText: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(10),
+    fontSize: px(14),
     color: "#dfb15b",
     letterSpacing: 0.5,
   },
@@ -1250,7 +1192,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: px(6),
-    paddingHorizontal: px(14),
+    paddingHorizontal: px(16),
     paddingVertical: px(8),
     backgroundColor: "rgba(255, 255, 255, 0.05)",
     borderColor: "rgba(214, 200, 170, 0.16)",
@@ -1265,7 +1207,7 @@ const styles = StyleSheet.create({
   },
   eventPillText: {
     fontFamily: fonts.bodyMedium,
-    fontSize: px(12),
+    fontSize: px(16),
     color: "#d6c8aa",
   },
   eventPillTextActive: {
@@ -1281,13 +1223,13 @@ const styles = StyleSheet.create({
     padding: px(14),
   },
   emptyLineupTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(13),
+    fontFamily: fonts.pixelMedium,
+    fontSize: px(17),
     color: "#ffffff",
   },
   emptyLineupSub: {
     fontFamily: fonts.body,
-    fontSize: px(11),
+    fontSize: px(15),
     color: "#8e9aa8",
     marginTop: px(1),
   },
@@ -1298,7 +1240,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.04)",
     borderColor: "rgba(223, 177, 91, 0.3)",
     paddingVertical: px(12),
-    paddingHorizontal: px(14),
+    paddingHorizontal: px(16),
     marginTop: px(12),
   },
   activeEventLeft: {
@@ -1316,12 +1258,12 @@ const styles = StyleSheet.create({
   },
   activeEventName: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(13),
+    fontSize: px(17),
     color: "#ffffff",
   },
   activeEventDetails: {
     fontFamily: fonts.bodyMedium,
-    fontSize: px(11),
+    fontSize: px(15),
     color: "#d6c8aa",
     marginTop: px(2),
   },
@@ -1336,7 +1278,7 @@ const styles = StyleSheet.create({
   },
   viewDetailsBtnText: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(10),
+    fontSize: px(14),
     color: "#5ba2b8",
     letterSpacing: 0.5,
   },
@@ -1379,19 +1321,19 @@ const styles = StyleSheet.create({
   },
   modalBadgeText: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(10),
+    fontSize: px(14),
     color: "#dfb15b",
     letterSpacing: 1,
   },
   modalMainTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(22),
+    fontFamily: fonts.pixelMedium,
+    fontSize: px(26),
     color: "#ffffff",
     letterSpacing: -0.4,
   },
   modalSubTitle: {
     fontFamily: fonts.bodyMedium,
-    fontSize: px(13),
+    fontSize: px(17),
     color: "#8e9aa8",
     marginTop: px(2),
   },
@@ -1408,12 +1350,12 @@ const styles = StyleSheet.create({
   },
   modalMetaChipText: {
     fontFamily: fonts.bodyMedium,
-    fontSize: px(11),
+    fontSize: px(15),
     color: "#d0d7de",
   },
   modalHeading: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(11),
+    fontSize: px(15),
     color: "#d6c8aa",
     letterSpacing: 1,
     marginTop: px(14),
@@ -1421,9 +1363,9 @@ const styles = StyleSheet.create({
   },
   modalParagraph: {
     fontFamily: fonts.body,
-    fontSize: px(13),
+    fontSize: px(17),
     color: "#c9d1d9",
-    lineHeight: px(19),
+    lineHeight: px(23),
   },
   prizingContainer: {
     backgroundColor: "rgba(223, 177, 91, 0.1)",
@@ -1432,12 +1374,12 @@ const styles = StyleSheet.create({
   },
   prizingText: {
     fontFamily: fonts.bodyMedium,
-    fontSize: px(12),
+    fontSize: px(16),
     color: "#dfb15b",
   },
   ruleItem: {
     fontFamily: fonts.body,
-    fontSize: px(12),
+    fontSize: px(16),
     color: "#8e9aa8",
     marginVertical: px(2),
   },
@@ -1456,7 +1398,7 @@ const styles = StyleSheet.create({
   },
   participateToggleText: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(12),
+    fontSize: px(16),
     color: "#ffffff",
     letterSpacing: 0.5,
   },
@@ -1466,24 +1408,21 @@ const styles = StyleSheet.create({
   pickerRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
     padding: px(14),
     marginBottom: px(8),
-    borderColor: "rgba(255, 255, 255, 0.06)",
+    borderWidth: 1,
   },
   pickerRowSelected: {
     backgroundColor: "rgba(223, 177, 91, 0.14)",
     borderColor: "#dfb15b",
   },
   pickerRowTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(14),
-    color: "#ffffff",
+    fontFamily: fonts.pixelMedium,
+    fontSize: px(18),
   },
   pickerRowSub: {
     fontFamily: fonts.body,
-    fontSize: px(11),
-    color: "#8e9aa8",
+    fontSize: px(15),
     marginTop: px(2),
   },
 });

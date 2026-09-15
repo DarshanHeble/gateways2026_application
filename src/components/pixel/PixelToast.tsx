@@ -10,6 +10,7 @@ import Animated, {
 import { fonts, type } from "@/theme/tokens";
 import { px } from "@/theme/scale";
 import { Bevel } from "./Primitives";
+import { useM3Theme } from "@/theme/M3ThemeContext";
 
 /**
  * The design's `toastIn` notice — a dark slab with a mint hairline outline,
@@ -17,6 +18,7 @@ import { Bevel } from "./Primitives";
  */
 export function PixelToast({ message, bottom = 112 }: { message: string | null; bottom?: number }) {
   const progress = useSharedValue(0);
+  const { theme } = useM3Theme();
 
   useEffect(() => {
     progress.value = withTiming(message ? 1 : 0, {
@@ -36,10 +38,10 @@ export function PixelToast({ message, bottom = 112 }: { message: string | null; 
     <Animated.View
       pointerEvents="none"
       accessibilityLiveRegion="polite"
-      style={[styles.root, { bottom: px(bottom) }, animatedStyle]}
+      style={[styles.root, { bottom: px(bottom), backgroundColor: theme.surface, borderColor: theme.primary }, animatedStyle]}
     >
       <Bevel top={{ color: "rgba(255,255,255,0.14)", size: 2 }} />
-      <Text style={styles.text}>{message}</Text>
+      <Text style={[styles.text, { color: theme.primary }]}>{message}</Text>
     </Animated.View>
   );
 }

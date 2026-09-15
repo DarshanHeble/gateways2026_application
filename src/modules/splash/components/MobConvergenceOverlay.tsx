@@ -11,9 +11,10 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 
-import { registerChunkTransitionHandlers } from "./chunkTransition";
+import { registerChunkTransitionHandlers } from "../utils/chunkTransition";
 import { colors, fonts } from "@/theme/tokens";
 import { px } from "@/theme/scale";
+import { styles } from "./MobConvergenceOverlay.styles";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 
@@ -37,7 +38,7 @@ const MOBS: DynamicMob[] = [
   // 1. Archer Gold - Upper Left
   {
     id: "archer_gold",
-    source: require("../../../assets/images/characters/archer_gold.png"),
+    source: require("../../../../assets/images/characters/archer_gold.png"),
     targetX: px(10),
     targetY: SCREEN_H * 0.08,
     startOffsetX: -SCREEN_W * 0.85,
@@ -48,7 +49,7 @@ const MOBS: DynamicMob[] = [
   // 2. Archer Blue - Upper Right
   {
     id: "archer_blue",
-    source: require("../../../assets/images/characters/archer_blue.png"),
+    source: require("../../../../assets/images/characters/archer_blue.png"),
     targetX: SCREEN_W - MOB_SIZE - px(10),
     targetY: SCREEN_H * 0.10,
     startOffsetX: SCREEN_W * 0.85,
@@ -59,7 +60,7 @@ const MOBS: DynamicMob[] = [
   // 3. Runner Pickaxe - Mid Left
   {
     id: "runner_pickaxe",
-    source: require("../../../assets/images/characters/runner_pickaxe.png"),
+    source: require("../../../../assets/images/characters/runner_pickaxe.png"),
     targetX: px(15),
     targetY: (SCREEN_H - MOB_SIZE) * 0.44,
     startOffsetX: -SCREEN_W * 0.95,
@@ -70,7 +71,7 @@ const MOBS: DynamicMob[] = [
   // 4. Adventurer - Mid Right
   {
     id: "adventurer",
-    source: require("../../../assets/images/characters/adventurer.png"),
+    source: require("../../../../assets/images/characters/adventurer.png"),
     targetX: SCREEN_W - MOB_SIZE - px(15),
     targetY: (SCREEN_H - MOB_SIZE) * 0.48,
     startOffsetX: SCREEN_W * 0.95,
@@ -81,7 +82,7 @@ const MOBS: DynamicMob[] = [
   // 5. Archer Gold (Lower Flank) - Bottom Left
   {
     id: "archer_gold_lower",
-    source: require("../../../assets/images/characters/archer_gold.png"),
+    source: require("../../../../assets/images/characters/archer_gold.png"),
     targetX: px(20),
     targetY: SCREEN_H - MOB_SIZE - SCREEN_H * 0.10,
     startOffsetX: -SCREEN_W * 0.85,
@@ -92,7 +93,7 @@ const MOBS: DynamicMob[] = [
   // 6. Runner Pickaxe (Lower Flank) - Bottom Right
   {
     id: "runner_pickaxe_lower",
-    source: require("../../../assets/images/characters/runner_pickaxe.png"),
+    source: require("../../../../assets/images/characters/runner_pickaxe.png"),
     targetX: SCREEN_W - MOB_SIZE - px(20),
     targetY: SCREEN_H - MOB_SIZE - SCREEN_H * 0.08,
     startOffsetX: SCREEN_W * 0.85,
@@ -239,62 +240,4 @@ export function MobConvergenceOverlay() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    zIndex: 99999,
-    backgroundColor: "#07080c",
-    overflow: "hidden",
-  },
-  mobWrapper: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.8,
-    shadowRadius: 16,
-    elevation: 16,
-  },
-  mobImage: {
-    width: "100%",
-    height: "100%",
-  },
-  mobBorder: {
-    ...StyleSheet.absoluteFill,
-    borderWidth: 3,
-    borderColor: "rgba(0, 0, 0, 0.6)",
-    borderRadius: 8,
-  },
-  centerEmblem: {
-    position: "absolute",
-    zIndex: 9999,
-    alignSelf: "center",
-    top: SCREEN_H / 2 - px(34),
-    width: px(180),
-    height: px(68),
-    backgroundColor: "#0f1522",
-    borderWidth: 3,
-    borderColor: colors.gold.bright,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: colors.cyan,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 20,
-  },
-  emblemTitle: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(13),
-    color: colors.gold.bright,
-    letterSpacing: px(2),
-  },
-  emblemSub: {
-    fontFamily: fonts.pixel,
-    fontSize: px(9),
-    color: colors.cta.glow,
-    letterSpacing: px(1.5),
-    marginTop: px(4),
-  },
-});
+

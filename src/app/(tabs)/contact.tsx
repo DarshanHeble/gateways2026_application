@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fonts } from "@/theme/tokens";
 import { px } from "@/theme/scale";
 import { Ionicons } from "@expo/vector-icons";
+import { useM3Theme } from "@/theme/M3ThemeContext";
 
 const TEAM_CONTACTS = [
   { id: "1", name: "Alice Event Lead", phone: "+1234567890" },
@@ -12,6 +13,7 @@ const TEAM_CONTACTS = [
 
 export default function ContactTab() {
   const insets = useSafeAreaInsets();
+  const { theme } = useM3Theme();
   const handleCall = async (phone: string) => {
     const url = `tel:${phone}`;
     const supported = await Linking.canOpenURL(url);
@@ -23,22 +25,22 @@ export default function ContactTab() {
   };
 
   return (
-    <View style={[styles.root, { paddingTop: Math.max(insets.top, px(16)) + px(8) }]}>
-      <Text style={styles.title}>Team Contacts</Text>
-      <Text style={styles.body}>Tap on a contact to initiate a call immediately.</Text>
+    <View style={[styles.root, { paddingTop: Math.max(insets.top, px(16)) + px(8), backgroundColor: theme.background }]}>
+      <Text style={[styles.title, { color: theme.text }]}>Team Contacts</Text>
+      <Text style={[styles.body, { color: theme.textDim }]}>Tap on a contact to initiate a call immediately.</Text>
 
       <View style={styles.list}>
         {TEAM_CONTACTS.map((contact) => (
-          <View key={contact.id} style={styles.card}>
+          <View key={contact.id} style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
             <View style={styles.cardInfo}>
-              <Text style={styles.contactName}>{contact.name}</Text>
-              <Text style={styles.contactPhone}>{contact.phone}</Text>
+              <Text style={[styles.contactName, { color: theme.text }]}>{contact.name}</Text>
+              <Text style={[styles.contactPhone, { color: theme.primary }]}>{contact.phone}</Text>
             </View>
             <Pressable
               onPress={() => handleCall(contact.phone)}
-              style={styles.callButton}
+              style={[styles.callButton, { backgroundColor: theme.primaryContainer }]}
             >
-              <Ionicons name="call" size={20} color={colors.stage} />
+              <Ionicons name="call" size={20} color={theme.primary} />
             </Pressable>
           </View>
         ))}

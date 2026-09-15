@@ -134,16 +134,17 @@ export const colors = {
 } as const;
 
 export const fonts = {
-  pixel: "Silkscreen_400Regular",
-  pixelBold: "Silkscreen_700Bold",
+  pixel: "PixelifySans_400Regular",
+  pixelMedium: "PixelifySans_500Medium",
+  pixelBold: "PixelifySans_700Bold",
   // DM Sans for normal text
-  body: "DMSans_400Regular",
-  bodyMedium: "DMSans_500Medium",
-  bodySemi: "DMSans_700Bold", // Use bold for semi
-  bodyBold: "DMSans_700Bold",
+  body: "SpaceGrotesk_400Regular",
+  bodyMedium: "SpaceGrotesk_500Medium",
+  bodySemi: "SpaceGrotesk_700Bold", // Use bold for semi
+  bodyBold: "SpaceGrotesk_700Bold",
   // Fallbacks if used somewhere specifically
-  rubikRegular: "DMSans_400Regular",
-  rubikBold: "DMSans_700Bold",
+  rubikRegular: "SpaceGrotesk_400Regular",
+  rubikBold: "SpaceGrotesk_700Bold",
 } as const;
 
 /**
@@ -178,4 +179,71 @@ export const motion = {
   hop: 3_400,
   gate: 1_350,
   toast: 2_200,
+} as const;
+
+/**
+ * Global App Typography
+ * Standardized typography variables to keep sizing and fonts consistent across the app.
+ */
+export const typography = {
+  // Massive screen headers
+  hero: {
+    fontFamily: fonts.pixelBold,
+    fontSize: 48,
+    lineHeight: 50,
+    letterSpacing: 0,
+  },
+  // Sub-headers or Kickers (WELCOME BACK)
+  // Main page headers (Events, Schedule, Alerts)
+  pageTitle: {
+    fontFamily: fonts.pixelBold,
+    fontSize: 48,
+    lineHeight: 50,
+    letterSpacing: 0,
+  },
+  kicker: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 18,
+    letterSpacing: 1,
+  },
+  // Large modal or page headers
+  h1: {
+    fontFamily: fonts.pixelMedium,
+    fontSize: 26,
+    letterSpacing: 0.5,
+  },
+  // Medium section headers
+  h2: {
+    fontFamily: fonts.pixelMedium,
+    fontSize: 23,
+    letterSpacing: 0.3,
+  },
+  // Card titles (Events, Schedule items)
+  h3: {
+    fontFamily: fonts.pixelMedium,
+    fontSize: 22, 
+    letterSpacing: 0.3,
+  },
+  // Standard card subtitles
+  subtitle: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 17,
+  },
+  // Body text
+  body: {
+    fontFamily: fonts.body,
+    fontSize: 17,
+    lineHeight: 23,
+  },
+  // Smaller metadata (Times, venues)
+  caption: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 15,
+  },
+  // Labels, tags, badges
+  tag: {
+    fontFamily: fonts.pixelBold,
+    fontSize: 13.5,
+    letterSpacing: 0.5,
+  }
 } as const;

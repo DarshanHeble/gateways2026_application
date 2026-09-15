@@ -10,6 +10,7 @@ import Animated, {
 import { colors, fonts, type } from "@/theme/tokens";
 import { px } from "@/theme/scale";
 import { Bevel } from "./Primitives";
+import { useM3Theme } from "@/theme/M3ThemeContext";
 
 export type PixelInputHandle = TextInput;
 
@@ -29,6 +30,7 @@ export const PixelInput = forwardRef<TextInput, PixelInputProps>(function PixelI
   ref,
 ) {
   const [focused, setFocused] = useState(false);
+  const { theme } = useM3Theme();
   const shake = useSharedValue(0);
 
   useEffect(() => {
@@ -52,18 +54,18 @@ export const PixelInput = forwardRef<TextInput, PixelInputProps>(function PixelI
 
   return (
     <Animated.View style={shakeStyle}>
-      <Text style={styles.label} accessibilityElementsHidden importantForAccessibility="no">
+      <Text style={[styles.label, { color: theme.text }]} accessibilityElementsHidden importantForAccessibility="no">
         {label}
       </Text>
 
-      <View style={[styles.frame, focused && styles.frameFocused]}>
+      <View style={[styles.frame, { backgroundColor: theme.border }, focused && { backgroundColor: theme.primary }]}>
         <Bevel top={{ color: "rgba(0,0,0,0.5)", size: 3 }} />
         <TextInput
           ref={ref}
           accessibilityLabel={label}
-          placeholderTextColor="#a08c70"
-          selectionColor={colors.gold.bright}
-          cursorColor={colors.gold.bright}
+          placeholderTextColor={theme.textDim}
+          selectionColor={theme.primary}
+          cursorColor={theme.primary}
           underlineColorAndroid="transparent"
           onFocus={(e) => {
             setFocused(true);
@@ -73,7 +75,7 @@ export const PixelInput = forwardRef<TextInput, PixelInputProps>(function PixelI
             setFocused(false);
             onBlur?.(e);
           }}
-          style={[styles.field, style, rightAccessory ? { paddingRight: px(40) } : null]}
+          style={[styles.field, { backgroundColor: theme.surface, color: theme.text }, style, rightAccessory ? { paddingRight: px(40) } : null]}
           {...rest}
         />
         {rightAccessory && (

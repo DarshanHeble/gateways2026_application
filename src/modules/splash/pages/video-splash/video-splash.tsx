@@ -7,7 +7,8 @@ import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay } fro
 import { colors, fonts } from "@/theme/tokens";
 import { px, FILL } from "@/theme/scale";
 import { Bevel } from "@/components/pixel/Primitives";
-import { useVideoSplash } from "./useVideoSplash";
+import { useVideoSplash } from "../../hooks/useVideoSplash";
+import { styles } from "./video-splash.styles";
 
 const SKIP_FADE_DELAY = 1000;
 
@@ -74,21 +75,4 @@ export function VideoSplashScreen({ onDone }: { onDone: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.stage },
-  mute: { position: "absolute", zIndex: 10 },
-  skip: { position: "absolute", zIndex: 10 },
-  chip: {
-    paddingVertical: px(8),
-    paddingHorizontal: px(12),
-    backgroundColor: "rgba(10,16,26,0.72)",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,0.2)",
-  },
-  chipText: {
-    fontFamily: fonts.pixel,
-    fontSize: px(9),
-    letterSpacing: px(1),
-    color: colors.gold.text,
-  },
-});
+

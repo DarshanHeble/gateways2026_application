@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useEventListener } from "expo";
 import { useVideoPlayer } from "expo-video";
 
-import { useReducedMotion } from "@/features/login/scene/useAmbient";
-import { coverScreen, revealScreen } from "./chunkTransition";
+import { useReducedMotion } from "@/modules/login/pages/login/components/scene/useAmbient";
+import { coverScreen, revealScreen } from "../utils/chunkTransition";
 
-const SOURCE = require("../../../assets/videos/minecraft-splash.mp4");
+const SOURCE = require("../../../../assets/videos/minecraft-splash.mp4");
 /** Clip is ~10s; this is a backstop in case playback stalls or never fires `playToEnd`. */
 const SAFETY_TIMEOUT_MS = 12_000;
 /** Time the covered overlay sits fully solid, giving the login route a beat to mount underneath. */

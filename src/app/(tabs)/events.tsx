@@ -27,10 +27,13 @@ import Animated, {
   runOnJS,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, fonts } from "@/theme/tokens";
+import { colors, fonts, typography } from "@/theme/tokens";
 import { px } from "@/theme/scale";
 import { useM3Theme } from "@/theme/M3ThemeContext";
-import { fetchEvents, EventItem, MOCK_EVENTS } from "@/services/api";
+import { EventItem } from "@/services/api";
+import { EventDetailSheet } from "@/components/EventDetailSheet";
+import { useAppData } from "@/modules/core/DataProvider";
+import { getEventImage } from "@/services/EventAssets";
 
 const { height: SCREEN_H } = Dimensions.get("window");
 type EventFilterType = "all" | "technical" | "non-technical";
@@ -39,10 +42,8 @@ export default function EventsTab() {
   const insets = useSafeAreaInsets();
   const { theme, isDark, toggleColorMode } = useM3Theme();
 
-  const [events, setEvents] = useState<EventItem[]>([]);
+  const { events, eventsSource: dataSource, eventsLoading: loading, refreshData } = useAppData();
   const [filterType, setFilterType] = useState<EventFilterType>("all");
-  const [dataSource, setDataSource] = useState<"network" | "cache" | "fallback">("network");
-  const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [myEvents, setMyEvents] = useState<string[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
@@ -120,34 +121,13 @@ export default function EventsTab() {
     await AsyncStorage.setItem("@gateways_my_events", JSON.stringify(updated));
   };
 
-  const loadEvents = useCallback(async (isMounted?: () => boolean) => {
-    try {
-      const res = await fetchEvents();
-      if (isMounted && !isMounted()) return;
-      setEvents(res.data);
-      setDataSource(res.source);
-    } catch {
-      if (isMounted && !isMounted()) return;
-      setEvents(MOCK_EVENTS);
-      setDataSource("fallback");
-    }
-  }, []);
 
-  useEffect(() => {
-    let mounted = true;
-    loadEvents(() => mounted).finally(() => {
-      if (mounted) setLoading(false);
-    });
-    return () => {
-      mounted = false;
-    };
-  }, [loadEvents]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadEvents();
+    await refreshData();
     setRefreshing(false);
-  }, [loadEvents]);
+  }, [refreshData]);
 
   const openEventDetails = (item: EventItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -188,10 +168,10 @@ export default function EventsTab() {
   }, [events]);
 
   // Color tokens depending on Dark/Light mode
-  const bgRoot = isDark ? "#0a0e17" : "#f4f6fa";
-  const bgCard = isDark ? "#121824" : "#ffffff";
-  const textPrimary = isDark ? "#ffffff" : "#0f172a";
-  const textSecondary = isDark ? "#8e99a8" : "#64748b";
+  const bgRoot = theme.background;
+  const bgCard = theme.surfaceElevated;
+  const textPrimary = theme.text;
+  const textSecondary = theme.textDim;
   const textMuted = isDark ? "#637084" : "#94a3b8";
   const borderSubtle = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)";
   const sheetBg = isDark ? "#0e1420" : "#ffffff";
@@ -216,7 +196,7 @@ export default function EventsTab() {
         <View style={styles.headerTitleRow}>
           <View>
             <Text style={[styles.headerTitle, { color: textPrimary }]}>GATEWAYS EVENTS</Text>
-            <Text style={[styles.subtitle, { color: textSecondary }]}>Explore competitions, rules & schedules</Text>
+            
           </View>
 
           {/* Dark / Light Mode Switcher */}
@@ -224,7 +204,7 @@ export default function EventsTab() {
             style={[
               styles.themeToggleBtn,
               {
-                backgroundColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)",
+                backgroundColor: theme.surfaceElevated,
                 borderColor: borderSubtle,
               },
             ]}
@@ -357,8 +337,8 @@ export default function EventsTab() {
           <TouchableOpacity
             style={styles.fallbackRetryBtn}
             onPress={() => {
-              setLoading(true);
-              loadEvents().finally(() => setLoading(false));
+              
+              refreshData();
             }}
           >
             <Text style={styles.fallbackRetryText}>TAP TO RETRY SYNC</Text>
@@ -383,6 +363,7 @@ export default function EventsTab() {
         }
         renderItem={({ item, index }) => {
           const isRegistered = myEvents.includes(item.id);
+          const hasImage = !!(getEventImage(item.title) || item.image_url);
 
           return (
             <Animated.View
@@ -390,43 +371,78 @@ export default function EventsTab() {
               layout={Layout.springify().damping(16)}
             >
               <TouchableOpacity
-                activeOpacity={0.78}
+                activeOpacity={0.85}
                 onPress={() => openEventDetails(item)}
                 style={[
-                  styles.cleanCard,
+                  styles.eventCard,
                   {
-                    backgroundColor: isRegistered ? theme.primaryContainer : bgCard,
+                    backgroundColor: isRegistered ? theme.primaryContainer : theme.surfaceElevated,
+                    borderColor: isRegistered ? theme.primary : theme.border,
                   },
                 ]}
               >
-                <View style={styles.cardHeader}>
-                  <Text style={[styles.itemTitle, { color: textPrimary }]} numberOfLines={1}>
-                    {item.title}
-                  </Text>
-                  <View
-                    style={[
-                      styles.tagBadge,
-                      isRegistered
-                        ? { backgroundColor: theme.primaryContainer }
-                        : { backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "#f1f5f9" },
-                    ]}
-                  >
-                    <Text
+                {/* Large Hero Banner */}
+                {hasImage && (
+                  <View style={[styles.cardBannerWrap, { backgroundColor: theme.surface }]}>
+                    <Image
+                      source={getEventImage(item.title) || { uri: item.image_url }}
+                      style={styles.cardBannerImage}
+                      contentFit="contain"
+                    />
+                    {isRegistered && (
+                      <View style={[styles.registeredPill, { backgroundColor: theme.primary }]}>
+                        <Ionicons name="checkmark-circle" size={12} color="#000" />
+                        <Text style={styles.registeredPillText}>REGISTERED</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {/* Content Section */}
+                <View style={styles.cardContent}>
+                  <View style={styles.cardHeader}>
+                    <Text style={[styles.itemTitle, { color: textPrimary, flex: 1 }]} numberOfLines={2}>
+                      {item.title}
+                    </Text>
+                    <View
                       style={[
-                        styles.tagText,
-                        isRegistered ? { color: theme.primary } : { color: textMuted },
+                        styles.tagBadge,
+                        { backgroundColor: isRegistered ? "rgba(0,0,0,0.1)" : theme.surface },
                       ]}
                     >
-                      {(item.type || "GENERAL").toUpperCase()}
-                    </Text>
+                      <Text
+                        style={[
+                          styles.tagText,
+                          isRegistered ? { color: theme.primary } : { color: textMuted },
+                        ]}
+                      >
+                        {(item.type || "GENERAL").toUpperCase()}
+                      </Text>
+                    </View>
                   </View>
-                </View>
 
-                <View style={styles.timeRow}>
-                  <Ionicons name="time-outline" size={14} color={isRegistered ? theme.primary : textSecondary} />
-                  <Text style={[styles.timeText, { color: isRegistered ? theme.primary : textSecondary }]}>
-                    {item.from_time ? `${item.from_time}${item.end_time ? ` - ${item.end_time}` : ""}` : "Time TBA"}
-                  </Text>
+                  {item.subtitle ? (
+                    <Text style={[styles.itemSubtitle, { color: textSecondary }]} numberOfLines={1}>
+                      {item.subtitle}
+                    </Text>
+                  ) : null}
+
+                  <View style={styles.metaRow}>
+                    <View style={styles.metaItem}>
+                      <Ionicons name="time-outline" size={14} color={isRegistered ? theme.primary : textSecondary} />
+                      <Text style={[styles.metaText, { color: isRegistered ? theme.primary : textSecondary }]}>
+                        {item.from_time ? `${item.from_time}${item.end_time ? ` - ${item.end_time}` : ""}` : "Time TBA"}
+                      </Text>
+                    </View>
+                    {item.venue ? (
+                      <View style={styles.metaItem}>
+                        <Ionicons name="location-outline" size={14} color={isRegistered ? theme.primary : textSecondary} />
+                        <Text style={[styles.metaText, { color: isRegistered ? theme.primary : textSecondary }]} numberOfLines={1}>
+                          {item.venue}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
                 </View>
               </TouchableOpacity>
             </Animated.View>
@@ -435,228 +451,11 @@ export default function EventsTab() {
       />
 
       {/* Full Event Details Bottom Sheet Modal */}
-      <Modal
+      <EventDetailSheet
         visible={!!selectedEvent}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={closeBottomSheet}
-      >
-        <View style={styles.modalOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={closeBottomSheet} />
-
-          <Animated.View
-            style={[
-              styles.modalSheet,
-              { backgroundColor: sheetBg, borderColor: sheetBorder },
-              animatedSheetStyle,
-            ]}
-          >
-            {/* Draggable Header Drag Bar */}
-            <View {...panResponder.panHandlers} style={styles.modalDragHandleZone}>
-              <View style={[styles.modalDragBar, { backgroundColor: isDark ? "#374151" : "#cbd5e1" }]} />
-              <View style={styles.modalHeaderRow}>
-                <View style={[styles.modalBadgePill, { backgroundColor: theme.primaryContainer }]}>
-                  <Text style={[styles.modalBadgeText, { color: theme.primary }]}>
-                    {(selectedEvent?.type || "COMPETITION").toUpperCase()}
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={closeBottomSheet} style={[styles.modalCloseBtn, { backgroundColor: isDark ? "rgba(255, 255, 255, 0.08)" : "#f1f5f9" }]} activeOpacity={0.7}>
-                  <Ionicons name="close" size={18} color={textSecondary} />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.sheetScrollContent}>
-              {/* Event Main Banner inside Bottom Sheet if available */}
-              {selectedEvent?.image_url ? (
-                <View style={styles.sheetBannerWrap}>
-                  <Image
-                    source={{ uri: selectedEvent.image_url }}
-                    style={styles.sheetBannerImage}
-                    contentFit="cover"
-                  />
-                </View>
-              ) : null}
-
-              <Text style={[styles.modalMainTitle, { color: textPrimary }]}>{selectedEvent?.title}</Text>
-              {selectedEvent?.subtitle ? (
-                <Text style={[styles.modalSubTitle, { color: textSecondary }]}>{selectedEvent.subtitle}</Text>
-              ) : null}
-
-              {/* Meta Chips */}
-              <View style={styles.modalMetaRow}>
-                {selectedEvent?.date ? (
-                  <View style={[styles.modalMetaChip, { backgroundColor: isDark ? "rgba(255, 255, 255, 0.06)" : "#f1f5f9" }]}>
-                    <Text style={[styles.modalMetaChipText, { color: textPrimary }]}>📅 {selectedEvent.date}</Text>
-                  </View>
-                ) : null}
-                {selectedEvent?.from_time ? (
-                  <View style={[styles.modalMetaChip, { backgroundColor: isDark ? "rgba(255, 255, 255, 0.06)" : "#f1f5f9" }]}>
-                    <Text style={[styles.modalMetaChipText, { color: textPrimary }]}>
-                      ⏰ {selectedEvent.from_time}{selectedEvent.end_time ? ` - ${selectedEvent.end_time}` : ""}
-                    </Text>
-                  </View>
-                ) : null}
-                {selectedEvent?.venue ? (
-                  <View style={[styles.modalMetaChip, { backgroundColor: isDark ? "rgba(255, 255, 255, 0.06)" : "#f1f5f9" }]}>
-                    <Text style={[styles.modalMetaChipText, { color: textPrimary }]}>📍 {selectedEvent.venue}</Text>
-                  </View>
-                ) : null}
-                {selectedEvent?.participation_type ? (
-                  <View style={[styles.modalMetaChip, { backgroundColor: isDark ? "rgba(255, 255, 255, 0.06)" : "#f1f5f9" }]}>
-                    <Text style={[styles.modalMetaChipText, { color: textPrimary }]}>
-                      👥 {selectedEvent.participation_type.toUpperCase()}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-
-              {/* Bookmark / Add to Stage Action Button */}
-              {selectedEvent && (
-                <TouchableOpacity
-                  style={[
-                    styles.participateActionBtn,
-                    myEvents.includes(selectedEvent.id)
-                      ? [styles.participateActionBtnActive, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]
-                      : { backgroundColor: theme.primary, borderColor: theme.primary },
-                  ]}
-                  activeOpacity={0.85}
-                  onPress={() => toggleParticipate(selectedEvent.id)}
-                >
-                  <Ionicons
-                    name={myEvents.includes(selectedEvent.id) ? "checkmark-circle" : "bookmark"}
-                    size={17}
-                    color={myEvents.includes(selectedEvent.id) ? theme.primary : "#ffffff"}
-                  />
-                  <Text
-                    style={[
-                      styles.participateActionBtnText,
-                      { color: myEvents.includes(selectedEvent.id) ? theme.primary : "#ffffff" },
-                    ]}
-                  >
-                    {myEvents.includes(selectedEvent.id) ? "ADDED TO FEST STAGE" : "+ ADD TO MY SCHEDULE"}
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              {/* Overview */}
-              <Text style={[styles.modalHeading, { color: theme.primary }]}>OVERVIEW</Text>
-              <Text style={[styles.modalParagraph, { color: textSecondary }]}>
-                {selectedEvent?.description || "Compete against top participants across colleges."}
-              </Text>
-
-              {/* Prizes */}
-              {selectedEvent?.prizes && (
-                <View style={styles.sheetSection}>
-                  <Text style={[styles.modalHeading, { color: theme.primary }]}>🏆 PRIZES & AWARDS</Text>
-                  <View style={[styles.prizeBox, { backgroundColor: isDark ? "rgba(255, 255, 255, 0.04)" : "#f8fafc", borderColor: borderSubtle }]}>
-                    {selectedEvent.prizes.pool ? (
-                      <Text style={[styles.prizeRank, { color: textPrimary }]}>
-                        💎 Total Pool: <Text style={styles.prizeLit}>{selectedEvent.prizes.pool}</Text>
-                      </Text>
-                    ) : null}
-                    {selectedEvent.prizes.winner ? (
-                      <Text style={[styles.prizeRank, { color: textPrimary }]}>
-                        🥇 1st Place: <Text style={[styles.prizeRankVal, { color: textSecondary }]}>{selectedEvent.prizes.winner}</Text>
-                      </Text>
-                    ) : null}
-                    {selectedEvent.prizes.runner_up ? (
-                      <Text style={[styles.prizeRank, { color: textPrimary }]}>
-                        🥈 2nd Place: <Text style={[styles.prizeRankVal, { color: textSecondary }]}>{selectedEvent.prizes.runner_up}</Text>
-                      </Text>
-                    ) : null}
-                    {selectedEvent.prizes.second_runner_up ? (
-                      <Text style={[styles.prizeRank, { color: textPrimary }]}>
-                        🥉 3rd Place: <Text style={[styles.prizeRankVal, { color: textSecondary }]}>{selectedEvent.prizes.second_runner_up}</Text>
-                      </Text>
-                    ) : null}
-                    {selectedEvent.prizes.description ? (
-                      <Text style={[styles.prizeDesc, { color: textMuted }]}>
-                        {selectedEvent.prizes.description}
-                      </Text>
-                    ) : null}
-                  </View>
-                </View>
-              )}
-
-              {/* Rules & Guidelines */}
-              {selectedEvent?.rules && selectedEvent.rules.length > 0 && (
-                <View style={styles.sheetSection}>
-                  <Text style={[styles.modalHeading, { color: theme.primary }]}>📜 RULES & GUIDELINES</Text>
-                  {selectedEvent.rules.map((rule, idx) => (
-                    <Text key={idx} style={[styles.ruleItem, { color: textSecondary }]}>
-                      • {rule}
-                    </Text>
-                  ))}
-                </View>
-              )}
-
-              {/* Eligibility */}
-              {selectedEvent?.eligibility && selectedEvent.eligibility.length > 0 && (
-                <View style={styles.sheetSection}>
-                  <Text style={[styles.modalHeading, { color: theme.primary }]}>🎓 ELIGIBILITY</Text>
-                  {selectedEvent.eligibility.map((el, idx) => (
-                    <Text key={idx} style={[styles.ruleItem, { color: textSecondary }]}>
-                      • {el}
-                    </Text>
-                  ))}
-                </View>
-              )}
-
-              {/* Event Heads */}
-              {selectedEvent?.event_heads && selectedEvent.event_heads.length > 0 && (
-                <View style={styles.sheetSection}>
-                  <Text style={[styles.modalHeading, { color: theme.primary }]}>👤 EVENT HEADS</Text>
-                  <View style={styles.headsGrid}>
-                    {selectedEvent.event_heads.map((head, idx) => (
-                      <View
-                        key={idx}
-                        style={[
-                          styles.headCard,
-                          {
-                            backgroundColor: isDark ? "rgba(255, 255, 255, 0.04)" : "#f8fafc",
-                            borderColor: borderSubtle,
-                          },
-                        ]}
-                      >
-                        <Text style={[styles.headName, { color: textPrimary }]}>{head.name}</Text>
-                        <Text style={[styles.headRole, { color: textSecondary }]}>{head.role}</Text>
-                        {head.phone ? (
-                          <TouchableOpacity onPress={() => Linking.openURL(`tel:${head.phone}`)}>
-                            <Text style={styles.headPhone}>📞 {head.phone}</Text>
-                          </TouchableOpacity>
-                        ) : null}
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {/* Full Rulebook Download Link */}
-              {selectedEvent?.rules_pdf_url && (
-                <TouchableOpacity
-                  style={[
-                    styles.pdfDownloadBtn,
-                    {
-                      backgroundColor: theme.primaryContainer,
-                      borderColor: theme.primary,
-                    },
-                  ]}
-                  activeOpacity={0.8}
-                  onPress={() => Linking.openURL(selectedEvent.rules_pdf_url!)}
-                >
-                  <Ionicons name="document-text-outline" size={15} color={theme.primary} />
-                  <Text style={[styles.pdfDownloadBtnText, { color: theme.primary }]}>
-                    DOWNLOAD FULL RULEBOOK PDF
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              <View style={{ height: px(40) }} />
-            </ScrollView>
-          </Animated.View>
-        </View>
-      </Modal>
+        event={selectedEvent}
+        onClose={closeBottomSheet}
+      />
     </View>
   );
 }
@@ -673,7 +472,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(11),
+    fontSize: px(15),
     marginTop: px(12),
     letterSpacing: px(0.8),
   },
@@ -686,13 +485,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   headerTitle: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(17),
-    letterSpacing: px(0.5),
+    fontFamily: typography.pageTitle.fontFamily,
+    fontSize: px(typography.pageTitle.fontSize),
+    lineHeight: px(typography.pageTitle.lineHeight),
+    letterSpacing: typography.pageTitle.letterSpacing,
   },
   subtitle: {
     fontFamily: fonts.body,
-    fontSize: px(12),
+    fontSize: px(16),
     marginTop: px(2),
   },
   themeToggleBtn: {
@@ -721,7 +521,7 @@ const styles = StyleSheet.create({
   },
   filterChipText: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(9.5),
+    fontSize: px(13.5),
     letterSpacing: px(0.5),
   },
   filterChipTextActive: {},
@@ -730,10 +530,65 @@ const styles = StyleSheet.create({
     paddingBottom: px(110),
   },
 
-  // Minimal Clean Card
-  cleanCard: {
-    padding: px(16),
+  eventCard: {
+    marginBottom: px(16),
+    borderRadius: px(8),
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  cardBannerWrap: {
+    width: "100%",
+    height: px(180),
+    position: "relative",
+    paddingVertical: px(8),
+  },
+  cardBannerImage: {
+    width: "100%",
+    height: "100%",
+  },
+  registeredPill: {
+    position: "absolute",
+    top: px(10),
+    right: px(10),
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: px(8),
+    paddingVertical: px(4),
+    borderRadius: px(4),
+    gap: px(4),
+  },
+  registeredPillText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: px(14),
+    color: "#000",
+  },
+  cardContent: {
+    padding: px(14),
+  },
+  itemSubtitle: {
+    fontFamily: typography.subtitle.fontFamily,
+    fontSize: px(typography.subtitle.fontSize),
+    marginTop: px(4),
     marginBottom: px(8),
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: px(12),
+    marginTop: px(10),
+    paddingTop: px(10),
+    borderTopWidth: 1,
+    borderTopColor: "rgba(150, 150, 150, 0.15)",
+  },
+  metaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: px(4),
+  },
+  metaText: {
+    fontFamily: typography.caption.fontFamily,
+    fontSize: px(typography.caption.fontSize),
   },
   cardHeader: {
     flexDirection: "row",
@@ -742,8 +597,9 @@ const styles = StyleSheet.create({
   },
   itemTitle: {
     flex: 1,
-    fontFamily: fonts.bodyBold,
-    fontSize: px(14.5),
+    fontFamily: typography.h3.fontFamily,
+    fontSize: px(typography.h3.fontSize),
+    letterSpacing: typography.h3.letterSpacing,
     paddingRight: px(8),
   },
   tagBadge: {
@@ -751,19 +607,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: px(8),
   },
   tagText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(9),
-    letterSpacing: px(0.4),
-  },
-  timeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: px(6),
-    marginTop: px(12),
-  },
-  timeText: {
-    fontFamily: fonts.body,
-    fontSize: px(12),
+    fontFamily: typography.tag.fontFamily,
+    fontSize: px(typography.tag.fontSize),
+    letterSpacing: px(typography.tag.letterSpacing),
   },
 
   // Modal Bottom Sheet Styles
@@ -802,7 +648,7 @@ const styles = StyleSheet.create({
   },
   modalBadgeText: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(9.5),
+    fontSize: px(13.5),
     letterSpacing: 0.8,
   },
   sheetScrollContent: {
@@ -819,13 +665,13 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   modalMainTitle: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(19),
+    fontFamily: fonts.pixelMedium,
+    fontSize: px(23),
     letterSpacing: 0.3,
   },
   modalSubTitle: {
     fontFamily: fonts.bodyMedium,
-    fontSize: px(13),
+    fontSize: px(17),
     marginTop: px(3),
   },
   modalMetaRow: {
@@ -840,7 +686,7 @@ const styles = StyleSheet.create({
   },
   modalMetaChipText: {
     fontFamily: fonts.bodyMedium,
-    fontSize: px(11),
+    fontSize: px(15),
   },
   participateActionBtn: {
     flexDirection: "row",
@@ -853,7 +699,7 @@ const styles = StyleSheet.create({
   participateActionBtnActive: {},
   participateActionBtnText: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(10),
+    fontSize: px(14),
     letterSpacing: px(0.6),
   },
   sheetSection: {
@@ -861,15 +707,15 @@ const styles = StyleSheet.create({
   },
   modalHeading: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(11),
+    fontSize: px(15),
     letterSpacing: px(0.8),
     marginBottom: px(6),
     marginTop: px(10),
   },
   modalParagraph: {
     fontFamily: fonts.body,
-    fontSize: px(13),
-    lineHeight: px(19),
+    fontSize: px(17),
+    lineHeight: px(23),
   },
   prizeBox: {
     padding: px(12),
@@ -877,7 +723,7 @@ const styles = StyleSheet.create({
   },
   prizeRank: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(12),
+    fontSize: px(16),
   },
   prizeRankVal: {
     fontFamily: fonts.bodyMedium,
@@ -887,14 +733,14 @@ const styles = StyleSheet.create({
   },
   prizeDesc: {
     fontFamily: fonts.body,
-    fontSize: px(11.5),
+    fontSize: px(15.5),
     fontStyle: "italic",
     marginTop: px(4),
   },
   ruleItem: {
     fontFamily: fonts.body,
-    fontSize: px(12.5),
-    lineHeight: px(18),
+    fontSize: px(16.5),
+    lineHeight: px(22),
     marginBottom: px(4),
   },
   headsGrid: {
@@ -909,16 +755,16 @@ const styles = StyleSheet.create({
   },
   headName: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(12),
+    fontSize: px(16),
   },
   headRole: {
     fontFamily: fonts.body,
-    fontSize: px(10.5),
+    fontSize: px(14.5),
     marginTop: px(1),
   },
   headPhone: {
     fontFamily: fonts.bodyMedium,
-    fontSize: px(11),
+    fontSize: px(15),
     color: "#38bdf8",
     marginTop: px(4),
   },
@@ -932,7 +778,7 @@ const styles = StyleSheet.create({
   },
   pdfDownloadBtnText: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(9.5),
+    fontSize: px(13.5),
     letterSpacing: px(0.5),
   },
 
@@ -950,17 +796,17 @@ const styles = StyleSheet.create({
     gap: px(10),
   },
   fallbackNoticeIcon: {
-    fontSize: px(18),
+    fontSize: px(22),
   },
   fallbackNoticeTitle: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(11),
+    fontFamily: fonts.pixelMedium,
+    fontSize: px(15),
     color: "#f87171",
     letterSpacing: px(0.8),
   },
   fallbackNoticeText: {
     fontFamily: fonts.bodyMedium,
-    fontSize: px(11),
+    fontSize: px(15),
     color: "#cbd5e1",
     marginTop: px(2),
   },
@@ -974,7 +820,7 @@ const styles = StyleSheet.create({
   },
   fallbackRetryText: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(9),
+    fontSize: px(13),
     color: "#fca5a5",
     letterSpacing: px(0.5),
   },

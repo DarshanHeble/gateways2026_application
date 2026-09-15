@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   label: {
-    fontFamily: 'Silkscreen_400Regular',
+    fontFamily: 'PixelifySans_400Regular',
     fontSize: 16,
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 1, height: 1 },

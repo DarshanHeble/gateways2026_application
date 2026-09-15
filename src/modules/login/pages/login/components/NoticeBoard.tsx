@@ -9,7 +9,7 @@ import { BoardFill, PlankFill, StripeFill } from "@/components/pixel/Fills";
 import { PixelButton } from "@/components/pixel/PixelButton";
 import { PixelInput } from "@/components/pixel/PixelInput";
 import { GoogleMark } from "./GoogleMark";
-import type { LoginFieldError } from "./useLoginForm";
+import type { LoginFieldError } from "../hooks/useLoginForm";
 
 export const BOARD_WIDTH = 328;
 export const BOARD_PADDING = 18;

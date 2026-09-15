@@ -10,18 +10,20 @@ interface PixelCardProps {
   badge?: string;
 }
 
+import { useM3Theme } from "@/theme/M3ThemeContext";
 export function PixelCard({ children, style, headerTitle, badge }: PixelCardProps) {
+  const { theme } = useM3Theme();
   return (
-    <View style={[styles.card, style]}>
+    <View style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }, style]}>
       {/* Top Pixel Border Frame */}
-      <View style={styles.topCap} />
+      <View style={[styles.topCap, { backgroundColor: theme.primary }]} />
       <View style={styles.contentContainer}>
         {(headerTitle || badge) && (
-          <View style={styles.headerRow}>
-            {headerTitle ? <Text style={styles.headerTitle}>{headerTitle}</Text> : <View />}
+          <View style={[styles.headerRow, { borderBottomColor: theme.border }]}>
+            {headerTitle ? <Text style={[styles.headerTitle, { color: theme.text }]}>{headerTitle}</Text> : <View />}
             {badge ? (
-              <View style={styles.badgeContainer}>
-                <Text style={styles.badgeText}>{badge}</Text>
+              <View style={[styles.badgeContainer, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}>
+                <Text style={[styles.badgeText, { color: theme.primary }]}>{badge}</Text>
               </View>
             ) : null}
           </View>
@@ -29,7 +31,7 @@ export function PixelCard({ children, style, headerTitle, badge }: PixelCardProp
         {children}
       </View>
       {/* Bottom Pixel Border Frame */}
-      <View style={styles.bottomCap} />
+      <View style={[styles.bottomCap, { backgroundColor: theme.surfaceTint }]} />
     </View>
   );
 }

@@ -4,16 +4,17 @@ import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Silkscreen_400Regular, Silkscreen_700Bold } from "@expo-google-fonts/silkscreen";
+import { PixelifySans_400Regular, PixelifySans_500Medium, PixelifySans_700Bold } from "@expo-google-fonts/pixelify-sans";
 import {
-  DMSans_400Regular,
-  DMSans_500Medium,
-  DMSans_700Bold,
-} from "@expo-google-fonts/dm-sans";
+  SpaceGrotesk_400Regular,
+  SpaceGrotesk_500Medium,
+  SpaceGrotesk_700Bold,
+} from "@expo-google-fonts/space-grotesk";
 import { colors } from "@/theme/tokens";
-import { MobConvergenceOverlay } from "@/features/splash/MobConvergenceOverlay";
-import { AuthProvider, useAuth } from "@/features/auth/AuthContext";
-import { NotificationsProvider } from "@/features/notifications/NotificationsContext";
+import { MobConvergenceOverlay } from "@/modules/splash";
+import { AuthProvider, useAuth } from "@/modules/auth";
+import { NotificationsProvider } from "@/modules/notifications";
+import { DataProvider } from "@/modules/core/DataProvider";
 import { M3ThemeProvider } from "@/theme/M3ThemeContext";
 import { PaperProvider } from 'react-native-paper';
 import { minecraftTheme } from '@/theme/minecraftTheme';
@@ -49,11 +50,12 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    Silkscreen_400Regular,
-    Silkscreen_700Bold,
-    DMSans_400Regular,
-    DMSans_500Medium,
-    DMSans_700Bold,
+    PixelifySans_400Regular,
+    PixelifySans_500Medium,
+    PixelifySans_700Bold,
+    SpaceGrotesk_400Regular,
+    SpaceGrotesk_500Medium,
+    SpaceGrotesk_700Bold,
   });
 
   if (!loaded && !error) return null;
@@ -65,7 +67,9 @@ export default function RootLayout() {
         <M3ThemeProvider>
           <AuthProvider>
             <NotificationsProvider>
-              <RootLayoutNav />
+              <DataProvider>
+                <RootLayoutNav />
+              </DataProvider>
             </NotificationsProvider>
           </AuthProvider>
         </M3ThemeProvider>
