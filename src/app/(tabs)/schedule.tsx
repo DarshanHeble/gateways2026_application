@@ -33,42 +33,59 @@ export default function ScheduleTab() {
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const toastTimerRef = React.useRef<any>(null);
-
-  const showToast = useCallback((msg: string) => {
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    setToastMessage(msg);
-    toastTimerRef.current = setTimeout(() => setToastMessage(null), 2500);
-  }, []);
-
-  const loadSchedule = useCallback(async () => {
+  const loadSchedule = useCallback(async (isMounted?: () => boolean, onToast?: (msg: string) => void) => {
     try {
       const res = await fetchSchedule();
+      if (isMounted && !isMounted()) return;
       setScheduleData(res.data);
       setDataSource(res.source);
 
-      if (res.source === "cache") {
-        showToast("LOADED OFFLINE SCHEDULE CACHE");
-      } else if (res.source === "network") {
-        showToast("LIVE SCHEDULE SYNCED");
+      if (onToast) {
+        if (res.source === "cache") {
+          onToast("LOADED OFFLINE SCHEDULE CACHE");
+        } else if (res.source === "network") {
+          onToast("LIVE SCHEDULE SYNCED");
+        }
       }
     } catch {
+      if (isMounted && !isMounted()) return;
       setScheduleData(MOCK_SCHEDULE);
       setDataSource("fallback");
-      showToast("OFFLINE DEMO BACKUP LOADED");
+      if (onToast) {
+        onToast("OFFLINE DEMO BACKUP LOADED");
+      }
     }
-  }, [showToast]);
+  }, []);
 
   useEffect(() => {
-    loadSchedule().finally(() => setLoading(false));
+    let mounted = true;
+    let toastTimer: any = null;
+
+    const showToast = (msg: string) => {
+      if (!mounted) return;
+      setToastMessage(msg);
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        if (mounted) setToastMessage(null);
+      }, 2500);
+    };
+
+    loadSchedule(() => mounted, showToast).finally(() => {
+      if (mounted) setLoading(false);
+    });
+
     return () => {
-      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      mounted = false;
+      if (toastTimer) clearTimeout(toastTimer);
     };
   }, [loadSchedule]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadSchedule();
+    await loadSchedule(undefined, (msg) => {
+      setToastMessage(msg);
+      setTimeout(() => setToastMessage(null), 2500);
+    });
     setRefreshing(false);
   }, [loadSchedule]);
 
@@ -81,8 +98,8 @@ export default function ScheduleTab() {
     );
   }
 
-  const daysList = scheduleData?.days && scheduleData.days.length > 0 ? scheduleData.days : MOCK_SCHEDULE.days;
-  const safeDayIndex = Math.min(selectedDayIndex, daysList.length - 1);
+  const daysList = scheduleData?.days || MOCK_SCHEDULE.days;
+  const safeDayIndex = Math.min(Math.max(0, selectedDayIndex), Math.max(0, daysList.length - 1));
   const activeDay = daysList[safeDayIndex] || MOCK_SCHEDULE.days[0];
 
   return (

@@ -317,9 +317,12 @@ export default function ModernHomeTab() {
     });
   }, [activeShape, burstLayerOpacity]);
 
+  const isCircle = activeShape.category === "Circle";
+
   // Central shape smoothly rotates 360° without bounce or vertical wobble
+  // For circle shapes, rotation produces no visible change but causes subpixel rasterization flicker
   const rotatingShapeStyle = useAnimatedStyle(() => {
-    const deg = rotationProgress.value * 360;
+    const deg = isCircle ? 0 : rotationProgress.value * 360;
     return {
       width: animWidth.value,
       height: animHeight.value,
@@ -348,21 +351,23 @@ export default function ModernHomeTab() {
 
   // Avatar inside stays strictly upright by counter-rotating by exact negative angle
   const counterRotateAvatarStyle = useAnimatedStyle(() => {
-    const deg = -rotationProgress.value * 360;
+    const deg = isCircle ? 0 : -rotationProgress.value * 360;
     return {
       transform: [{ rotate: `${deg}deg` }],
     };
   });
 
   // Load events and user preferences
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (isMounted?: () => boolean) => {
     try {
       const res = await fetchEvents();
+      if (isMounted && !isMounted()) return;
       if (res.data && res.data.length > 0) {
         setAllEvents(res.data);
       }
 
       const storedEvents = await AsyncStorage.getItem(STORAGE_MY_EVENTS);
+      if (isMounted && !isMounted()) return;
       let parsedIds: string[] = [];
       if (storedEvents) {
         try {
@@ -372,12 +377,14 @@ export default function ModernHomeTab() {
       }
 
       const activeId = await AsyncStorage.getItem(STORAGE_ACTIVE_EVENT);
+      if (isMounted && !isMounted()) return;
       if (activeId && parsedIds.length > 0) {
         const foundIdx = parsedIds.indexOf(activeId);
         if (foundIdx >= 0) setActiveIndex(foundIdx);
       }
 
       const profileData = await AsyncStorage.getItem(STORAGE_PROFILE_KEY);
+      if (isMounted && !isMounted()) return;
       if (profileData) {
         try {
           setUserProfile(JSON.parse(profileData));
@@ -389,7 +396,11 @@ export default function ModernHomeTab() {
   }, []);
 
   useEffect(() => {
-    loadData();
+    let mounted = true;
+    loadData(() => mounted);
+    return () => {
+      mounted = false;
+    };
   }, [loadData]);
 
   // Derived list of participating events

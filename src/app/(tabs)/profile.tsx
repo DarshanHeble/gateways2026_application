@@ -291,9 +291,12 @@ export default function ProfileTab() {
     });
   }, [activeShape, burstLayerOpacity]);
 
+  const isCircle = activeShape.category === "Circle";
+
   // Primary rotating centerpiece
+  // For circle shapes, rotation produces no visible change but causes subpixel rasterization flicker
   const rotatingShapeStyle = useAnimatedStyle(() => {
-    const deg = rotationProgress.value * 360;
+    const deg = isCircle ? 0 : rotationProgress.value * 360;
     return {
       width: animWidth.value,
       height: animHeight.value,
@@ -322,7 +325,7 @@ export default function ProfileTab() {
 
   // Upright counter-rotating avatar
   const counterRotateAvatarStyle = useAnimatedStyle(() => {
-    const deg = -rotationProgress.value * 360;
+    const deg = isCircle ? 0 : -rotationProgress.value * 360;
     return {
       transform: [{ rotate: `${deg}deg` }],
     };
@@ -385,12 +388,14 @@ export default function ProfileTab() {
     async function loadData() {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_PROFILE_KEY);
-        if (stored && isMounted) {
+        if (!isMounted) return;
+        if (stored) {
           const parsed = JSON.parse(stored);
           setProfile((prev) => ({ ...prev, ...parsed }));
           const skin = MINECRAFT_SKINS.find((s) => s.id === parsed.skinId);
           if (skin) setActiveSkin(skin);
           setToastMessage("LOADED FROM LOCAL STORAGE");
+          clearTimeout(toastTimer);
           toastTimer = setTimeout(() => {
             if (isMounted) setToastMessage(null);
           }, 2400);
@@ -401,14 +406,15 @@ export default function ProfileTab() {
           skipAuthRedirect: true,
         })
           .then((res) => {
-            if (isMounted && res.data?.session?.email) {
+            if (!isMounted) return;
+            if (res.data?.session?.email) {
               setProfile((prev) => ({
                 ...prev,
                 email: res.data.session?.email || prev.email,
                 participantId: `GW26-${(res.data.session?.userId || "4091").slice(-4).toUpperCase()}`,
               }));
-              if (toastTimer) clearTimeout(toastTimer);
               setToastMessage("SYNCED WITH SERVER");
+              clearTimeout(toastTimer);
               toastTimer = setTimeout(() => {
                 if (isMounted) setToastMessage(null);
               }, 2400);
