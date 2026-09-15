@@ -14,16 +14,16 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import * as Linking from "expo-linking";
 import { useAuth } from "@/features/auth/AuthContext";
-import { colors, fonts } from "@/theme/tokens";
-import { px } from "@/theme/scale";
-import { PixelInput } from "@/components/pixel/PixelInput";
-import { PixelCard } from "@/components/pixel/PixelCard";
+import { fonts } from "@/theme/tokens";
+import { px, SCREEN_HEIGHT } from "@/theme/scale";
+import { Bevel } from "@/components/pixel/Primitives";
+import { DitherFill } from "@/components/pixel/Fills";
+import { GlassInput } from "./GlassInput";
+import { CreeperFaceIcon, GoogleGIcon } from "./PixelIcons";
 import { useLoginForm } from "./useLoginForm";
 import { API_BASE_URL, apiClient } from "@/services/api";
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { MinecraftButton } from "@/components/MaterialCraft/MinecraftButton";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -90,7 +90,7 @@ export function LoginScreen() {
           body: JSON.stringify({ idToken }),
         }
       );
-      
+
       // 4. Handle response (usually requires OTP verification in our system)
       if (res.data.requiresVerification) {
         form.say("CHECK EMAIL FOR OTP");
@@ -111,7 +111,7 @@ export function LoginScreen() {
 
   return (
     <ImageBackground
-      source={require("../../../assets/images/minecraft_bg.webp")}
+      source={require("../../../assets/images/login-parallax-bg.webp")}
       style={styles.background}
       resizeMode="cover"
     >
@@ -125,66 +125,97 @@ export function LoginScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* Positioned nicely over the vertical background image */}
+            {/* Positioned over the empty band the background reserves between the
+                #PARALLEX title and the campus scene below — a plain light
+                glass card this time, matching this brighter daytime poster. */}
             <View style={styles.cardWrapper}>
-              <PixelCard headerTitle="GATEWAYS 2026" badge="PARALLAX">
-                <Text style={styles.welcomeSubtitle}>ENTER THE DIGITAL MIRROR</Text>
+                  <View style={styles.card}>
+                    <GlassInput
+                      icon="mail-outline"
+                      value={form.email}
+                      onChangeText={form.setEmail}
+                      placeholder="College Email"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      editable={!form.busy}
+                      returnKeyType="next"
+                      onSubmitEditing={() => form.passwordRef.current?.focus()}
+                    />
 
-                <View style={styles.formGroup}>
-                  <PixelInput
-                    label="EMAIL ADDRESS"
-                    value={form.email}
-                    onChangeText={form.setEmail}
-                    placeholder="adventurer@christuniversity.in"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    editable={!form.busy}
-                    onSubmitEditing={() => form.passwordRef.current?.focus()}
-                  />
+                    <GlassInput
+                      ref={form.passwordRef}
+                      icon="lock-closed-outline"
+                      value={form.password}
+                      onChangeText={form.setPassword}
+                      placeholder="Password"
+                      secureTextEntry={!showPassword}
+                      editable={!form.busy}
+                      returnKeyType="done"
+                      onSubmitEditing={form.submit}
+                      rightAccessory={
+                        <TouchableOpacity onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
+                          <Ionicons
+                            name={showPassword ? "eye-off-outline" : "eye-outline"}
+                            size={px(15)}
+                            color="#8d93ab"
+                          />
+                        </TouchableOpacity>
+                      }
+                    />
 
-                  <View style={{ height: px(12) }} />
+                    {/* Primary Sign In — a grass-block-textured Minecraft button:
+                        dither noise for the grainy grass look, a light top/left
+                        bevel and dark bottom/right one for the chunky 3D-pixel edge. */}
+                    <TouchableOpacity
+                      style={[styles.signInBtn, form.busy && styles.btnDisabled]}
+                      onPress={form.submit}
+                      disabled={form.busy}
+                      activeOpacity={0.85}
+                    >
+                      <DitherFill style={styles.signInDither} light={0.14} dark={0.16} size={3} />
+                      <Bevel
+                        top={{ color: "rgba(255,255,255,0.4)", size: 3 }}
+                        left={{ color: "rgba(255,255,255,0.25)", size: 3 }}
+                        bottom={{ color: "rgba(6,40,20,0.55)", size: 4 }}
+                        right={{ color: "rgba(6,40,20,0.4)", size: 4 }}
+                      />
+                      <CreeperFaceIcon size={17} />
+                      {form.busy ? (
+                        <ActivityIndicator color="#ffffff" style={styles.signInText} />
+                      ) : (
+                        <Text style={styles.signInText}>SIGN IN</Text>
+                      )}
+                      <Ionicons name="arrow-forward" size={px(15)} color="#ffffff" />
+                    </TouchableOpacity>
 
-                  <PixelInput
-                    ref={form.passwordRef}
-                    label="PASSWORD"
-                    value={form.password}
-                    onChangeText={form.setPassword}
-                    placeholder="••••••••••••"
-                    secureTextEntry={!showPassword}
-                    editable={!form.busy}
-                    onSubmitEditing={form.submit}
-                    rightAccessory={
-                      <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: px(4) }}>
-                        <Ionicons name={showPassword ? "eye-off" : "eye"} size={px(20)} color={colors.gold.muted} />
-                      </TouchableOpacity>
-                    }
-                  />
+                    <View style={styles.dividerRow}>
+                      <View style={styles.dividerLine} />
+                      <Text style={styles.dividerText}>OR</Text>
+                      <View style={styles.dividerLine} />
+                    </View>
 
-                  <TouchableOpacity style={styles.forgotBtn} onPress={() => form.say("RAVEN SENT · CHECK YOUR INBOX")}>
-                    <Text style={styles.forgotText}>FORGOT PASSWORD?</Text>
-                  </TouchableOpacity>
+                    {/* Google OAuth is wired up (handleGoogleSignIn) but the backend
+                        doesn't have POST /auth/signin/google/native yet — show
+                        "coming soon" instead of actually attempting it for now.
+                        Swap the onPress back to handleGoogleSignIn once that
+                        endpoint exists; nothing else here needs to change. */}
+                    <TouchableOpacity
+                      style={[styles.googleBtn, form.busy && styles.btnDisabled]}
+                      onPress={() => form.say("GOOGLE SIGN-IN — COMING SOON")}
+                      disabled={form.busy}
+                      activeOpacity={0.85}
+                    >
+                      <GoogleGIcon size={15} />
+                      <Text style={styles.googleText}>Continue with Google</Text>
+                    </TouchableOpacity>
 
-                  {/* Primary Sign In Button */}
-                  <MinecraftButton
-                    mode="contained"
-                    onPress={form.submit}
-                    disabled={form.busy}
-                    loading={form.busy}
-                  >
-                    ENTER FEST
-                  </MinecraftButton>
-
-                  {/* Google OAuth Button */}
-                  <MinecraftButton
-                    mode="outlined"
-                    onPress={handleGoogleSignIn}
-                    disabled={form.busy}
-                  >
-                    CONTINUE WITH GOOGLE
-                  </MinecraftButton>
-                </View>
-              </PixelCard>
+                    {form.toast ? (
+                      <View style={styles.toast}>
+                        <Text style={styles.toastText}>{form.toast}</Text>
+                      </View>
+                    ) : null}
+                  </View>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -207,75 +238,120 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: px(16),
-    paddingVertical: px(24),
+    paddingHorizontal: px(24),
+    paddingBottom: px(32),
   },
   cardWrapper: {
     width: "100%",
-    maxWidth: px(350),
-    marginTop: px(80), // Lifted up to show full card over the background
+    maxWidth: px(252),
+    alignItems: "center",
+    // Clears the "GATEWAYS 2026 / #PARALLEX" title that's baked into the
+    // background art, landing the card in the empty sky gap above the
+    // campus scene below — proportional to screen height so it tracks the
+    // same spot on the source poster across device sizes.
+    marginTop: SCREEN_HEIGHT * 0.335,
   },
-  welcomeSubtitle: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(12), // Larger subtitle
-    color: colors.gold.bright,
-    textAlign: "center",
-    marginBottom: px(18),
-    letterSpacing: px(1.5),
+  // Light frosted-glass card — this background is a bright daytime shot, so
+  // (unlike the dark stone-framed version built for an earlier night-time
+  // background) a light, minimal panel reads correctly against it instead of
+  // fighting the sky for contrast. Toned down from a near-white first pass
+  // to a deeper, warmer stone-cream so it doesn't glow against the sky —
+  // then pulled back toward white on request, keeping just enough warmth
+  // to read as glass rather than a flat white card.
+  card: {
+    width: "100%",
+    backgroundColor: "rgba(242,240,232,0.90)",
+    borderRadius: px(16),
+    borderWidth: px(1.5),
+    borderColor: "rgba(255,255,255,0.75)",
+    paddingHorizontal: px(13),
+    paddingVertical: px(14),
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: px(10) },
+    shadowOpacity: 0.3,
+    shadowRadius: px(20),
+    elevation: 12,
   },
-  formGroup: {
-    marginTop: px(6),
-  },
-  forgotBtn: {
-    alignSelf: "flex-end",
-    marginTop: px(10),
-    marginBottom: px(20),
-  },
-  forgotText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(11), // Larger, readable link
-    color: colors.gold.title,
-    textDecorationLine: "underline",
-  },
-  submitBtn: {
-    backgroundColor: colors.cta.lit,
-    paddingVertical: px(14), // Taller button
-    borderRadius: px(4),
-    borderWidth: px(2),
-    borderColor: colors.cta.glow,
+  signInBtn: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: colors.cta.deep,
-    shadowOffset: { width: 0, height: px(4) },
-    shadowOpacity: 0.8,
-    shadowRadius: 0,
+    gap: px(6),
+    backgroundColor: "#4caf50",
+    borderRadius: px(9),
+    height: px(40),
+    paddingHorizontal: px(12),
+    marginTop: px(2),
+    overflow: "hidden",
+    shadowColor: "#0b3d1f",
+    shadowOffset: { width: 0, height: px(3) },
+    shadowOpacity: 0.35,
+    shadowRadius: px(5),
     elevation: 4,
+  },
+  signInDither: {
+    borderRadius: px(9),
   },
   btnDisabled: {
     opacity: 0.6,
   },
-  submitBtnText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(16), // Large punchy text
-    color: colors.cta.ink,
-    letterSpacing: px(1.5),
+  signInText: {
+    flex: 1,
+    textAlign: "center",
+    fontFamily: fonts.bodyBold,
+    fontSize: px(12.5),
+    color: "#ffffff",
+    letterSpacing: px(0.8),
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: px(10),
+  },
+  dividerLine: {
+    flex: 1,
+    height: px(1),
+    backgroundColor: "rgba(60,55,40,0.18)",
+  },
+  dividerText: {
+    marginHorizontal: px(8),
+    fontFamily: fonts.bodyMedium,
+    fontSize: px(9.5),
+    letterSpacing: px(1),
+    color: "#6b6a63",
   },
   googleBtn: {
-    backgroundColor: colors.google.lit,
-    paddingVertical: px(14), // Taller button
-    borderRadius: px(4),
-    borderWidth: px(1),
-    borderColor: colors.google.base,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: px(12),
+    gap: px(6),
+    backgroundColor: "#ffffff",
+    borderRadius: px(9),
+    height: px(40),
+    borderWidth: px(1),
+    borderColor: "rgba(0,0,0,0.08)",
   },
-  googleBtnText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(13), // Larger Google button text
-    color: colors.google.ink,
-    letterSpacing: px(1),
+  googleText: {
+    fontFamily: fonts.bodySemi,
+    fontSize: px(12),
+    color: "#1f1f1f",
+  },
+  toast: {
+    marginTop: px(16),
+    alignSelf: "center",
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: px(10),
+    paddingVertical: px(8),
+    paddingHorizontal: px(14),
+  },
+  toastText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: px(12),
+    color: "#ffe9b8",
+    textAlign: "center",
   },
 });
