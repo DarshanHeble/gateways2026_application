@@ -1,3 +1,4 @@
+import { TimelineCard } from "@/components/TimelineCard";
 import React, { useCallback, useEffect, useState, useMemo } from "react";
 import {
   View,
@@ -48,16 +49,15 @@ const STORAGE_ACTIVE_EVENT = "@gateways_active_event_id";
 const STORAGE_PROFILE_KEY = "@gateways_user_profile_v1";
 
 // Helper to render mini M3 shape silhouette inside satellite orbs and shelf chips
-function renderMiniGlyph(category: string, color: string, isSelected: boolean, activeBgColor: string = "#070b12") {
-  const bg = isSelected ? activeBgColor : color;
-  switch (category) {
-    case "Pill":
-      return <View style={{ width: 8, height: 16, borderRadius: 4, backgroundColor: bg }} />;
-    case "Squircle":
-    case "Flower":
-      return <View style={{ width: 13, height: 13, borderRadius: 4.5, backgroundColor: bg }} />;
-    case "Gem":
-      return (
+function renderMiniGlyph(item: any, isSelected: boolean, activeBgColor: string = "#070b12") {
+  const bg = isSelected ? activeBgColor : item.seedColor;
+  
+  if (item.category === "Burst") {
+    return <Ionicons name="sparkles" size={13} color={bg} />;
+  }
+
+  if (item.category === "Gem") {
+     return (
         <View
           style={{
             width: 11,
@@ -67,13 +67,25 @@ function renderMiniGlyph(category: string, color: string, isSelected: boolean, a
             backgroundColor: bg,
           }}
         />
-      );
-    case "Burst":
-      return <Ionicons name="sparkles" size={13} color={bg} />;
-    case "Circle":
-    default:
-      return <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: bg }} />;
+     );
   }
+
+  // Calculate dynamic scale to fit within a ~14x14 box while maintaining exact shape proportions
+  const scale = 14 / Math.max(item.styleConfig.width, item.styleConfig.height);
+  
+  return (
+    <View 
+      style={{ 
+        width: item.styleConfig.width * scale, 
+        height: item.styleConfig.height * scale, 
+        borderTopLeftRadius: item.styleConfig.borderTopLeftRadius * scale,
+        borderTopRightRadius: item.styleConfig.borderTopRightRadius * scale,
+        borderBottomRightRadius: item.styleConfig.borderBottomRightRadius * scale,
+        borderBottomLeftRadius: item.styleConfig.borderBottomLeftRadius * scale,
+        backgroundColor: bg 
+      }} 
+    />
+  );
 }
 
 // Non-circular asymmetric flanking positions for floating shape pods
@@ -137,7 +149,7 @@ const FloatingSatellite = React.memo(function FloatingSatellite({
           isSelected && styles.satelliteOrbActive,
         ]}
       >
-        {renderMiniGlyph(item.category, item.seedColor, isSelected, theme.background)}
+        {renderMiniGlyph(item, isSelected, theme.background)}
       </TouchableOpacity>
     </Animated.View>
   );
@@ -485,7 +497,7 @@ export default function ModernHomeTab() {
       <TouchableOpacity
         style={{
           position: "absolute",
-          top: Math.max(insets.top, px(12)),
+          top: Math.max(insets.top, px(24)) + px(16),
           right: px(16),
           width: px(38),
           height: px(38),
@@ -652,50 +664,27 @@ export default function ModernHomeTab() {
           </View>
 
           {participatingEvents.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.eventPillStrip}
-            >
+            <View style={styles.timelineContainer}>
               {participatingEvents.map((ev, idx) => {
-                const isActive = ev.id === activeEvent?.id;
+                const isFirst = idx === 0;
+                const isLast = idx === participatingEvents.length - 1;
                 return (
-                  <TouchableOpacity
+                  <TimelineCard
                     key={ev.id}
-                    style={[
-                      styles.eventPill,
-                      { backgroundColor: theme.surfaceElevated, borderColor: theme.border },
-                      isActive && {
-                        backgroundColor: theme.primary,
-                        borderColor: theme.primary,
-                      },
-                    ]}
-                    activeOpacity={0.8}
+                    item={ev}
+                    index={idx}
+                    isLast={isLast}
+                    badgeOverride={isFirst ? "NEXT" : "LATER"}
+                    theme={theme}
                     onPress={() => {
                       Haptics.selectionAsync();
                       setActiveIndex(idx);
-                      AsyncStorage.setItem(STORAGE_ACTIVE_EVENT, ev.id);
+                      setDetailModalVisible(true);
                     }}
-                  >
-                    <View
-                      style={[
-                        styles.eventPillDot,
-                        { backgroundColor: isActive ? theme.background : theme.primary },
-                      ]}
-                    />
-                    <Text
-                      style={[
-                        styles.eventPillText, { color: theme.textDim },
-                      isActive && { color: theme.onPrimary, fontFamily: fonts.bodyBold },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {ev.title}
-                    </Text>
-                  </TouchableOpacity>
+                  />
                 );
               })}
-            </ScrollView>
+            </View>
           ) : (
             <TouchableOpacity
               style={[styles.emptyLineupCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
@@ -712,35 +701,11 @@ export default function ModernHomeTab() {
               <Ionicons name="chevron-forward" size={18} color={theme.primary} />
             </TouchableOpacity>
           )}
-          {participatingEvents.length > 0 && activeEvent && (
-            <TouchableOpacity
-              style={[styles.activeEventCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
-              activeOpacity={0.85}
-              onPress={() => setDetailModalVisible(true)}
-            >
-              <View style={styles.activeEventLeft}>
-                <View style={[styles.activeEventIconWrap, { backgroundColor: theme.primaryContainer }]}>
-                  <Ionicons name="information-circle" size={18} color={theme.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.activeEventName, { color: theme.text }]} numberOfLines={1}>
-                    {activeEvent.title}
-                  </Text>
-                  <Text style={[styles.activeEventDetails, { color: theme.textDim }]} numberOfLines={1}>
-                    📍 {activeEvent.venue} • ⏰ {activeEvent.from_time}
-                  </Text>
-                </View>
-              </View>
-              <View style={[styles.viewDetailsBtn, { backgroundColor: theme.primaryContainer }]}>
-                <Text style={[styles.viewDetailsBtnText, { color: theme.primary }]}>VIEW</Text>
-                <Ionicons name="arrow-forward" size={13} color={theme.primary} />
-              </View>
-            </TouchableOpacity>
-          )}
+
         </View>
 
         {/* Generous bottom padding to clear the floating navigation bar */}
-        <View style={{ height: px(115) }} />
+        <View style={{ height: px(24) }} />
       </Animated.ScrollView>
 
       {/* Full Event Details Modal with Slide-Down to Dismiss */}
@@ -1019,7 +984,7 @@ const styles = StyleSheet.create({
     height: SCREEN_W * 0.9,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: px(10),
+    marginTop: px(40),
   },
   ambientCenterGlow: {
     position: "absolute",
@@ -1155,7 +1120,7 @@ const styles = StyleSheet.create({
     color: "#c8d1dc",
   },
   lineupDeckSection: {
-    marginTop: px(10),
+    marginTop: px(40),
   },
   lineupDeckHeader: {
     flexDirection: "row",
@@ -1425,4 +1390,21 @@ const styles = StyleSheet.create({
     fontSize: px(15),
     marginTop: px(2),
   },
+
+  timelineContainer: {
+    marginTop: px(8),
+    paddingHorizontal: px(4),
+  },
+
+
+
+
+
+
+
+
+
+
+
+
 });

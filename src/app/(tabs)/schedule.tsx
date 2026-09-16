@@ -23,6 +23,9 @@ import { useM3Theme } from "@/theme/M3ThemeContext";
 import { ScheduleResponse, MOCK_SCHEDULE } from "@/services/api";
 import { useAppData } from "@/modules/core/DataProvider";
 import { getEventImage } from "@/services/EventAssets";
+import { EventDetailSheet } from "@/components/EventDetailSheet";
+import { TimelineCard } from "@/components/TimelineCard";
+import { EventItem } from "@/services/api";
 import { PixelToast } from "@/components/pixel/PixelToast";
 
 export default function ScheduleTab() {
@@ -33,6 +36,7 @@ export default function ScheduleTab() {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
 
 
   const onRefresh = useCallback(async () => {
@@ -146,95 +150,25 @@ export default function ScheduleTab() {
           />
         }
         renderItem={({ item, index }) => {
-          const isCompetition = Boolean(item.is_competition);
-
           return (
-            <Animated.View
-              entering={FadeInDown.delay(index * 60).duration(320)}
-              layout={Layout.springify().damping(16)}
-              style={styles.timelineCard}
-            >
-              
-
-              {/* Vertical Line Divider with Animated Node */}
-              <View style={styles.dividerContainer}>
-                <Animated.View
-                  entering={ZoomIn.delay(index * 60 + 80).duration(260)}
-                  style={[
-                    styles.nodeDot,
-                    {
-                      backgroundColor: isCompetition ? theme.primary : "#52a3c4",
-                      borderColor: "#0a0e17",
-                    },
-                  ]}
-                />
-                <View style={[styles.verticalLine, { backgroundColor: theme.border }]} />
-              </View>
-
-              {/* Card Body */}
-              <View
-                style={[
-                  styles.cardContent,
-                  { backgroundColor: theme.surfaceElevated },
-                  {
-                    borderColor: isCompetition ? theme.primary : theme.border,
-                  },
-                ]}
-              >
-                <View style={styles.cardHeader}>
-                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: px(10) }}>
-                    {getEventImage(item.title) ? (
-                      <View style={{ width: px(32), height: px(32), borderRadius: px(4), overflow: 'hidden', backgroundColor: theme.surfaceTint }}>
-                        <Image
-                          source={getEventImage(item.title)}
-                          style={{ width: "100%", height: "100%" }}
-                          contentFit="cover"
-                        />
-                      </View>
-                    ) : null}
-                    <Text style={[styles.itemTitle, { color: theme.text, flex: 1 }]}>{item.title}</Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.tagBadge,
-                      isCompetition
-                        ? { backgroundColor: theme.primaryContainer, borderColor: theme.primary }
-                        : [styles.tagGen, { backgroundColor: theme.surfaceTint, borderColor: theme.border }],
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.tagText,
-                        isCompetition ? { color: theme.primary } : { color: "#94a3b8" },
-                      ]}
-                    >
-                      {item.category.toUpperCase()}
-                    </Text>
-                  </View>
-                </View>
-
-                {item.subtitle ? (
-                  <Text style={[styles.itemSubtitle, { color: theme.textDim }, { color: theme.primary }]}>
-                    {item.subtitle}
-                  </Text>
-                ) : null}
-
-                <View style={styles.metaRow}>
-                  <View style={styles.metaItem}>
-                    <Ionicons name="time-outline" size={13} color={theme.textDim} />
-                    <Text style={[styles.metaText, { color: theme.textDim }]}>{item.from_time}{item.end_time ? ` - ${item.end_time}` : ""}</Text>
-                  </View>
-                  {item.venue ? (
-                    <View style={styles.metaItem}>
-                      <Ionicons name="location-outline" size={13} color={theme.textDim} />
-                      <Text style={[styles.metaText, { color: theme.textDim }]}>{item.venue}</Text>
-                    </View>
-                  ) : null}
-                </View>
-              </View>
-            </Animated.View>
+            <TimelineCard
+              item={item}
+              index={index}
+              isLast={index === activeDay.timeline.length - 1}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setSelectedEvent(item as any);
+              }}
+              theme={theme}
+            />
           );
         }}
+      />
+
+      <EventDetailSheet
+        visible={!!selectedEvent}
+        event={selectedEvent}
+        onClose={() => setSelectedEvent(null)}
       />
 
       {/* Sync Status PixelToast */}
@@ -345,95 +279,25 @@ const styles = StyleSheet.create({
   },
 
   listContainer: {
-    paddingBottom: px(110),
+    paddingBottom: px(24),
     paddingHorizontal: px(16),
   },
-  timelineCard: {
-    flexDirection: "row",
-    marginBottom: px(12),
-  },
-  dividerContainer: {
-    alignItems: "center",
-    marginHorizontal: px(6),
-  },
-  nodeDot: {
-    width: px(12),
-    height: px(12),
-    marginTop: px(4),
-  },
-  verticalLine: {
-    flex: 1,
-    width: px(2),
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    marginTop: px(4),
-  },
-  cardContent: {
-    flex: 1,
-    backgroundColor: "#131824",
-    padding: px(12),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  itemTitle: {
-    flex: 1,
-    fontFamily: typography.h3.fontFamily,
-    fontSize: px(typography.h3.fontSize),
-    letterSpacing: typography.h3.letterSpacing,
-    color: "#ffffff",
-    paddingRight: px(8),
-  },
-  itemSubtitle: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: px(16),
-    marginTop: px(3),
-  },
-  venueRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: px(4),
-    marginTop: px(6),
-  },
-  venueText: {
-    fontFamily: fonts.body,
-    fontSize: px(16),
-    color: "#94a3b8",
-  },
-  tagBadge: {
-    paddingVertical: px(2),
-    paddingHorizontal: px(7),
-    borderColor: "rgba(255, 255, 255, 0.08)",
-  },
-  tagGen: {
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-  },
-  tagText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(13),
-    letterSpacing: px(0.4),
-  },
 
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: px(12),
-    marginTop: px(8),
-  },
-  metaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: px(4),
-  },
-  metaText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: px(15),
-  },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 });

@@ -7,6 +7,8 @@ import { useAuth } from "@/modules/auth";
 import { useNotifications } from "@/modules/notifications";
 import { useM3Theme } from "@/theme/M3ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
+import { fonts } from "@/theme/tokens";
+import { px } from "@/theme/scale";
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
@@ -27,57 +29,46 @@ export default function TabLayout() {
         tabBarActiveTintColor: theme.primary,
         tabBarInactiveTintColor: theme.textDim,
         tabBarShowLabel: true,
-        tabBarButton: (props) => (
-          <Pressable
-            {...(props as any)}
-            android_ripple={{ color: theme.primaryContainer, borderless: false }}
-            style={({ pressed }) => [
-              props.style,
-              pressed && { opacity: 0.8 } // Fallback for iOS
-            ]}
-          />
-        ),
+        tabBarButton: (props: any) => {
+          const isActive = props.accessibilityState?.selected;
+          return (
+            <Pressable
+              {...props}
+              android_ripple={{ color: theme.primaryContainer, borderless: false }}
+              style={({ pressed }) => [
+                props.style,
+                {
+                  borderWidth: 2,
+                  borderColor: isActive ? theme.primary : "transparent",
+                  backgroundColor: isActive ? theme.primaryContainer : (pressed ? theme.surfaceTint : "transparent"),
+                  borderRadius: 0,
+                  marginHorizontal: 8,
+                  marginVertical: 4,
+                  // Ensure flex layout centers the icon and text correctly within the border
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  flex: 1,
+                }
+              ]}
+            />
+          );
+        },
         tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: "600",
+          fontFamily: fonts.pixelBold,
+          fontSize: 11,
+          letterSpacing: 0.5,
           marginTop: -2,
         },
         tabBarStyle: {
-          position: "absolute",
-          bottom: Platform.OS === "ios" ? Math.max(insets.bottom, 12) + 6 : 16,
-          left: 16,
-          right: 16,
-          height: 64,
-          backgroundColor: "transparent",
-          borderTopWidth: 0,
-          borderColor: theme.rimBorder,
-          shadowColor: theme.primary,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.1,
-          shadowRadius: 6,
-          elevation: 6,
-          overflow: "hidden",
-          paddingBottom: Platform.OS === "ios" ? 0 : 8,
-          paddingTop: 8,
+          height: 64 + insets.bottom,
+          paddingBottom: insets.bottom + 4,
+          paddingTop: 4,
+          backgroundColor: theme.surfaceElevated,
+          borderTopWidth: 1,
+          borderTopColor: theme.border,
+          elevation: 10,
         },
-        tabBarBackground: () => (
-          <View style={StyleSheet.absoluteFill}>
-            <BlurView
-              intensity={Platform.OS === "ios" ? 50 : 70}
-              tint={isDark ? "dark" : "light"}
-              blurMethod="none"
-              style={StyleSheet.absoluteFill}
-            />
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                {
-                  backgroundColor: isDark ? "rgba(10, 15, 26, 0.65)" : "rgba(255, 255, 255, 0.65)",
-                },
-              ]}
-            />
-          </View>
-        ),
+
       }}
     >
       <Tabs.Screen

@@ -705,7 +705,7 @@ export default function ProfileTab() {
         </View>
 
         {/* Bottom padding to clear floating navigation bar */}
-        <View style={{ height: px(115) }} />
+        <View style={{ height: px(24) }} />
       </ScrollView>
 
       {/* Skin Selection Modal with Slide-Down Gesture */}

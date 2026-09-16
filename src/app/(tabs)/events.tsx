@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
   filterChipTextActive: {},
 
   listContainer: {
-    paddingBottom: px(110),
+    paddingBottom: px(24),
   },
 
   eventCard: {
