@@ -15,10 +15,12 @@ import { MobConvergenceOverlay } from "@/modules/splash";
 import { AuthProvider, useAuth } from "@/modules/auth";
 import { NotificationsProvider } from "@/modules/notifications";
 import { DataProvider } from "@/modules/core/DataProvider";
+import { NetworkProvider } from "@/modules/core/NetworkProvider";
 import { M3ThemeProvider } from "@/theme/M3ThemeContext";
 import { PaperProvider } from 'react-native-paper';
 import { minecraftTheme } from '@/theme/minecraftTheme';
 import { ConnectionStatus } from '@/components/ConnectionStatus';
+import { SyncStatusPill } from '@/components/SyncStatusPill';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -43,6 +45,7 @@ function RootLayoutNav() {
         }}
       />
       <ConnectionStatus />
+      <SyncStatusPill />
       <MobConvergenceOverlay />
     </>
   );
@@ -65,13 +68,15 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <StatusBar style="light" />
         <M3ThemeProvider>
-          <AuthProvider>
-            <NotificationsProvider>
-              <DataProvider>
-                <RootLayoutNav />
-              </DataProvider>
-            </NotificationsProvider>
-          </AuthProvider>
+          <NetworkProvider>
+            <AuthProvider>
+              <NotificationsProvider>
+                <DataProvider>
+                  <RootLayoutNav />
+                </DataProvider>
+              </NotificationsProvider>
+            </AuthProvider>
+          </NetworkProvider>
         </M3ThemeProvider>
       </SafeAreaProvider>
     </PaperProvider>

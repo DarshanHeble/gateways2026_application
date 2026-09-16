@@ -43,6 +43,8 @@ import { useAuth } from "@/modules/auth";
 import { useM3Theme, M3ShapeDefinition } from "@/theme/M3ThemeContext";
 import { coverScreen, revealScreen } from "@/modules/splash";
 import { API_BASE_URL, apiClient } from "@/services/api";
+import { enqueue } from "@/services/offline/outbox";
+import { useAppData } from "@/modules/core/DataProvider";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 
@@ -136,6 +138,7 @@ export default function ProfileTab() {
   const insets = useSafeAreaInsets();
   const { role, logout } = useAuth();
   const { activeShape, setShapeById, shapes, theme, isDark, toggleColorMode } = useM3Theme();
+  const { refreshPending } = useAppData();
 
   const [profile, setProfile] = useState<UserProfileData>(DEFAULT_PROFILE);
   const [activeSkin, setActiveSkin] = useState<MinecraftSkin>(MINECRAFT_SKINS[0]);
@@ -144,6 +147,9 @@ export default function ProfileTab() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  // Set when a save had to be queued instead of sent, so the banner can tell
+  // the truth ("saved on device") rather than claiming a server round-trip.
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
 
   // Floating levitation oscillation
   const floatProgress = useSharedValue(0);
@@ -352,18 +358,37 @@ export default function ProfileTab() {
     try {
       await AsyncStorage.setItem(STORAGE_PROFILE_KEY, JSON.stringify(profile));
 
-      await apiClient(`${API_BASE_URL}/profile`, {
-        method: "POST",
-        body: JSON.stringify({
-          fullName: profile.fullName,
-          phone: profile.phone,
-          customCollegeName: profile.collegeName,
-          tshirtSize: profile.tshirtSize,
-          dietaryPref: profile.foodPref,
-        }),
-        timeout: 4000,
-        skipAuthRedirect: true,
-      }).catch(() => {});
+      const payload = {
+        fullName: profile.fullName,
+        phone: profile.phone,
+        customCollegeName: profile.collegeName,
+        tshirtSize: profile.tshirtSize,
+        dietaryPref: profile.foodPref,
+      };
+
+      // Try to send immediately; if that fails for any reason (offline, dead
+      // tunnel, server down) queue it instead of swallowing the error, which is
+      // what this used to do — the user saw "saved" and the server never knew.
+      try {
+        await apiClient(`${API_BASE_URL}/profile`, {
+          method: "POST",
+          body: JSON.stringify(payload),
+          timeout: 4000,
+          skipAuthRedirect: true,
+        });
+        setSyncNotice(null);
+      } catch {
+        await enqueue({
+          endpoint: "/profile",
+          method: "POST",
+          body: payload,
+          label: "Profile update",
+          // Repeated edits while offline collapse into one pending request.
+          dedupeKey: "profile",
+        });
+        await refreshPending();
+        setSyncNotice("SAVED ON DEVICE · WILL SYNC WHEN ONLINE");
+      }
 
       setIsEditing(false);
       setSaveSuccess(true);
@@ -479,9 +504,15 @@ export default function ProfileTab() {
     
 
         {/* Success Alert Banner */}
-        {saveSuccess ? (<Animated.View entering={FadeInUp.duration(300)} style={[styles.successBanner, { borderColor: theme.primary }]}>
-            <Ionicons name="checkmark-circle" size={18} color={theme.primary} />
-            <Text style={[styles.successBannerText, { color: theme.primary }]}>PROFILE UPDATED IN THE REALM</Text>
+        {saveSuccess ? (<Animated.View entering={FadeInUp.duration(300)} style={[styles.successBanner, { borderColor: syncNotice ? "#FFAA00" : theme.primary }]}>
+            <Ionicons
+              name={syncNotice ? "cloud-offline" : "checkmark-circle"}
+              size={18}
+              color={syncNotice ? "#FFAA00" : theme.primary}
+            />
+            <Text style={[styles.successBannerText, { color: syncNotice ? "#FFAA00" : theme.primary }]}>
+              {syncNotice ?? "PROFILE UPDATED IN THE REALM"}
+            </Text>
           </Animated.View>) : null}
 
         <View style={{ marginTop: px(24) }}>

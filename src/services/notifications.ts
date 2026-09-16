@@ -1,10 +1,10 @@
 import { Platform } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { API_BASE_URL, apiClient } from "./api";
 import { notificationStore } from "./notificationStore";
 import { AppNotification, NotificationTarget } from "./notificationTypes";
+import { SEED_ANNOUNCEMENTS } from "./offline/seed";
 
 /**
  * The EAS projectId is real (see app.json), so this returns a genuine, working
@@ -119,44 +119,58 @@ export async function sendNotification(input: {
   });
 }
 
+/** Normalise a raw sheet/seed announcement row into an AppNotification. */
+function toAppNotification(item: any, readSet: Set<string>): AppNotification {
+  const rawTarget = (item.target || "").toString().toLowerCase().trim();
+  let target: NotificationTarget = "all";
+  if (rawTarget.startsWith("participant")) {
+    target = "participant";
+  } else if (rawTarget.startsWith("team") || rawTarget.startsWith("admin")) {
+    target = "team";
+  }
+
+  const id = String(item.id || `announcement-${item.sr_no ?? item.title ?? "unknown"}`);
+  return {
+    id,
+    title: item.title || "ANNOUNCEMENT",
+    body: item.body || item.content || "",
+    target,
+    createdAt: item.createdAt || Date.now(),
+    read: readSet.has(id),
+  };
+}
+
+/**
+ * Offline-first announcements: network → local store → bundled seed.
+ *
+ * Read/unread state is preserved across syncs, and the seed is only rendered —
+ * never written into the local store — so a bundled snapshot can't masquerade
+ * as a live announcement.
+ */
 export async function fetchNotifications(): Promise<AppNotification[]> {
+  const stored = await notificationStore.getAll();
+  const readSet = new Set(stored.filter((n) => n.read).map((n) => n.id));
+
   try {
     const { data } = await apiClient<any[]>(`${API_BASE_URL}/events/announcements`, {
       method: "GET",
       timeout: 15000,
     });
-    if (Array.isArray(data) && data.length > 0) {
-      // Get previously stored notifications so we retain the read/unread state
-      const existingStored = await notificationStore.getAll();
-      const readSet = new Set(existingStored.filter((n) => n.read).map((n) => n.id));
 
-      const liveAnnouncements: AppNotification[] = data.map((item) => {
-        const rawTarget = (item.target || "").toString().toLowerCase().trim();
-        let target: NotificationTarget = "all";
-        if (rawTarget.startsWith("participant")) {
-          target = "participant";
-        } else if (rawTarget.startsWith("team") || rawTarget.startsWith("admin")) {
-          target = "team";
-        }
-
-        const id = String(item.id || `announcement-${item.sr_no || Math.random()}`);
-        return {
-          id,
-          title: item.title || "ANNOUNCEMENT",
-          body: item.body || item.content || "",
-          target,
-          createdAt: item.createdAt || Date.now(),
-          read: readSet.has(id),
-        };
-      });
-
-      // Persist to local device storage for offline caching
-      AsyncStorage.setItem("gateways.notifications.v1", JSON.stringify(liveAnnouncements)).catch(() => {});
-
-      return liveAnnouncements;
+    if (Array.isArray(data)) {
+      const live = data.map((item) => toAppNotification(item, readSet));
+      // Persist so the next cold start has them without a network round-trip.
+      await notificationStore.replaceAll(live);
+      return live;
     }
-  } catch (err) {
-    console.warn("Live announcements fetch failed, falling back to local storage...", err);
+  } catch (err: any) {
+    if (!err?.isOffline) {
+      console.warn("[notifications] Live announcements fetch failed, using local data.", err?.message);
+    }
   }
-  return notificationStore.getAll();
+
+  if (stored.length > 0) return stored;
+
+  // Nothing synced yet and no network: fall back to the bundled snapshot.
+  return SEED_ANNOUNCEMENTS.map((item) => toAppNotification(item, readSet));
 }

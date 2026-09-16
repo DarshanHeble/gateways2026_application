@@ -1,46 +1,34 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
-import { API_ROOT_URL } from '@/services/api';
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNetwork } from '@/modules/core/NetworkProvider';
 
+/**
+ * The little corner dot. It used to run its own /health poll every 5 seconds;
+ * connectivity now comes from NetworkProvider, so this is purely presentational
+ * and the whole app agrees on what "online" means.
+ *
+ * Three states, because "device is offline" and "our tunnel is down" are
+ * different problems and the second one is the common one in dev:
+ *   green  — backend reachable
+ *   amber  — device online, backend not answering (dead tunnel / server down)
+ *   red    — device offline
+ */
 export function ConnectionStatus() {
-  const [isConnected, setIsConnected] = useState<boolean>(false);
   const insets = useSafeAreaInsets();
+  const { isOnline, isBackendReachable } = useNetwork();
 
-  useEffect(() => {
-    const checkConnection = async () => {
-      // 1. Try configured API_ROOT_URL
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2500);
-        const res = await fetch(`${API_ROOT_URL}/health`, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (res.ok) {
-          setIsConnected(true);
-          return;
-        }
-      } catch {}
-
-      // 2. Fallback to direct USB adb reverse port
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-        const res = await fetch(`http://localhost:5000/health`, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        setIsConnected(res.ok);
-      } catch {
-        setIsConnected(false);
-      }
-    };
-
-    checkConnection();
-    const interval = setInterval(checkConnection, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  const color = !isOnline
+    ? '#FF5555'
+    : isBackendReachable === false
+      ? '#FFAA00'
+      : isBackendReachable
+        ? '#55FF55'
+        : '#8D8D8D'; // not yet probed
 
   return (
-    <View style={[styles.container, { top: insets.top + 10 }]}>
-      <View style={[styles.dot, { backgroundColor: isConnected ? '#55FF55' : '#FF5555' }]} />
+    <View style={[styles.container, { top: insets.top + 10 }]} pointerEvents="none">
+      <View style={[styles.dot, { backgroundColor: color }]} />
     </View>
   );
 }

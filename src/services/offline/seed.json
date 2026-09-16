@@ -1,0 +1,563 @@
+{
+  "generatedAt": "2026-09-16T15:24:34.929Z",
+  "source": "http://localhost:5000/api/v1",
+  "events": [
+    {
+      "id": "24-shift",
+      "title": "24° Shift",
+      "subtitle": "24 Hour Hackathon",
+      "category": "Technical",
+      "type": "Technical",
+      "participation_type": "Team of 2-4 Members",
+      "date": "30th September - 01st October, 2026",
+      "from_time": "10:00 AM",
+      "end_time": "10:00 AM",
+      "venue": "Online",
+      "description": "A problem rarely has just one solution, and the best ideas often emerge when conventional approaches are pushed aside. 24° Shift is an intense 24-hour hackathon where teams step into a race against time to transform ideas into functional solutions for real-world problems. From identifying the core challenge to designing, developing, testing, and refining their solution, participants will experience the complete journey from concept to execution. The clock never stops, and neither does the need to adapt. With technology, creativity, teamwork, and strategic thinking working together, every decision can change the direction of the project. At 24° Shift, participants are not simply building a product - they are shifting their approach, challenging assumptions, and proving what can be created when an idea is given just 24 hours to become reality.",
+      "eligibility": [
+        "Students from all Undergraduate (UG) and Postgraduate (PG) programmes and final-year B.Tech (CS & Relevant) students, from any college or university are eligible to participate."
+      ],
+      "max_slots": null,
+      "rules": [
+        "Detailed Rules & Guidelines: https://docs.google.com/document/d/1-C9U3Aq6IbIum4RSiM3ztNYppbBjweacv4ugnNDGBlo/edit?usp=drive_link"
+      ],
+      "rules_pdf_url": "https://docs.google.com/document/d/1-C9U3Aq6IbIum4RSiM3ztNYppbBjweacv4ugnNDGBlo/edit?usp=drive_link",
+      "prizes": {
+        "pool": "₹65,000",
+        "winner": "₹29,250",
+        "runner_up": "₹19,500",
+        "second_runner_up": "₹16,250",
+        "description": "Winners, 1st Runner-ups, and 2nd Runner-ups"
+      },
+      "event_heads": []
+    },
+    {
+      "id": "deviation",
+      "title": "Deviation",
+      "subtitle": "IT Quiz",
+      "category": "Technical",
+      "type": "Technical",
+      "participation_type": "Team of 2 Members",
+      "date": "8th & 9th October 2026",
+      "from_time": "TBA",
+      "end_time": "TBA",
+      "venue": "Offline on-campus",
+      "description": "Knowledge is only one part of the equation. Deviation challenges participants to look beyond what they know and question what they think they know. Designed as a fast-paced exploration of the world of information technology, the quiz brings together concepts, connections, patterns, and unexpected twists that demand more than simple recall. Participants will need to recognize familiar ideas from unfamiliar angles, connect seemingly unrelated pieces of information, and distinguish the obvious from the correct. Technology evolves constantly, and so does the knowledge required to understand it. Deviation puts that adaptability to the test, rewarding those who can think quickly, reason under pressure, and notice the detail that others overlook. When the expected path suddenly changes, the ability to deviate could be what leads you to the answer.",
+      "eligibility": [
+        "Students pursuing PG programmes in Computer Science, Information Technology, AI & ML, Data Science, and other relevant fields from any college or university are eligible to participate."
+      ],
+      "max_slots": 30,
+      "rules": [
+        "Detailed Rules & Guidelines: https://docs.google.com/document/d/1wOYCyd_9Fpyp2wUl1wnsnkQOOYcCTGCcIfZc6bmHZ7o/edit?usp=sharing"
+      ],
+      "rules_pdf_url": "https://docs.google.com/document/d/1wOYCyd_9Fpyp2wUl1wnsnkQOOYcCTGCcIfZc6bmHZ7o/edit?usp=sharing",
+      "prizes": {
+        "pool": "₹20,000",
+        "winner": "₹9,000",
+        "runner_up": "₹6,000",
+        "second_runner_up": "₹5,000",
+        "description": "Winners, 1st Runner-ups, and 2nd Runner-ups"
+      },
+      "event_heads": []
+    },
+    {
+      "id": "pixel-paradox",
+      "title": "Pixel Paradox",
+      "subtitle": "UI/UX",
+      "category": "Technical",
+      "type": "Technical",
+      "participation_type": "Team of 2 Members",
+      "date": "8th & 9th October 2026",
+      "from_time": "TBA",
+      "end_time": "TBA",
+      "venue": "Offline on-campus",
+      "description": "Design cutting edge interfaces for technologies, turning unconventional prompts into bold, intuitive experiences under time pressure.",
+      "eligibility": [
+        "Students pursuing PG programmes in Computer Science, Information Technology, AI & ML, Data Science, and other relevant fields from any college or university are eligible to participate."
+      ],
+      "max_slots": 30,
+      "rules": [
+        "Detailed Rules & Guidelines: https://docs.google.com/document/d/1pBdmNK8FVUw2Ivlkftcm3NNeFz2PdTnpiH7MFUtXGAA/edit?usp=sharing"
+      ],
+      "rules_pdf_url": "https://docs.google.com/document/d/1pBdmNK8FVUw2Ivlkftcm3NNeFz2PdTnpiH7MFUtXGAA/edit?usp=sharing",
+      "prizes": {
+        "pool": "₹20,000",
+        "winner": "₹9,000",
+        "runner_up": "₹6,000",
+        "second_runner_up": "₹5,000",
+        "description": "Winners, 1st Runner-ups, and 2nd Runner-ups"
+      },
+      "event_heads": []
+    },
+    {
+      "id": "the-last-commit",
+      "title": "The Last Commit",
+      "subtitle": "Coding/Debugging",
+      "category": "Technical",
+      "type": "Technical",
+      "participation_type": "Team of 2 Members",
+      "date": "8th & 9th October 2026",
+      "from_time": "TBA",
+      "end_time": "TBA",
+      "venue": "Offline on-campus",
+      "description": "Every system tells a story, and somewhere within broken code lies the moment where that story went wrong. *The Last Commit* puts participants in the role of the investigator, challenging them to uncover the discrepancies hidden inside deliberately broken programs and restore them to working order. Errors may appear obvious, while the real problem hides somewhere deeper in the logic. Participants will need to read between the lines, trace unexpected behaviour, identify the source of failures, and make strategic corrections without losing sight of the larger system. Under the pressure of a ticking clock, every modification becomes a calculated decision. One unnecessary change could create another problem, while one overlooked detail could keep the entire system from running. In The Last Commit, debugging is not simply about finding errors—it is about understanding how a system is supposed to behave and discovering where reality deviated from that intention.",
+      "eligibility": [
+        "Students pursuing PG programmes in Computer Science, Information Technology, AI & ML, Data Science, and other relevant fields from any college or university are eligible to participate."
+      ],
+      "max_slots": 30,
+      "rules": [
+        "Detailed Rules & Guidelines: https://docs.google.com/document/d/1YsGG4V1yartshMuDNMZ6oIWTyZhhlekiRD9kBPmBd0c/edit?usp=sharing"
+      ],
+      "rules_pdf_url": "https://docs.google.com/document/d/1YsGG4V1yartshMuDNMZ6oIWTyZhhlekiRD9kBPmBd0c/edit?usp=sharing",
+      "prizes": {
+        "pool": "₹29,000",
+        "winner": "₹13,050",
+        "runner_up": "₹8,700",
+        "second_runner_up": "₹7,250",
+        "description": "Winners, 1st Runner-ups, and 2nd Runner-ups"
+      },
+      "event_heads": []
+    },
+    {
+      "id": "promptx",
+      "title": "PromptX",
+      "subtitle": "Prompt Engineering",
+      "category": "Technical",
+      "type": "Technical",
+      "participation_type": "Individual",
+      "date": "8th & 9th October 2026",
+      "from_time": "TBA",
+      "end_time": "TBA",
+      "venue": "Offline on-campus",
+      "description": "The rise of intelligent systems has introduced an entirely new form of interaction: communicating with machines through language. PromptX takes participants into this evolving space, challenging them to discover how precisely crafted instructions can influence the behaviour, reasoning, and output of AI systems. The challenge goes beyond simply asking questions. Participants will need to understand how intelligent systems interpret context, constraints, ambiguity, structure, and intent, and use that understanding to guide them toward meaningful outcomes. Unexpected responses, misleading inputs, limitations, and unpredictable behaviour can all stand between a prompt and its desired result. Success depends on precision, experimentation, logical thinking, and the ability to continuously refine an approach. In PromptX, words become tools, instructions become systems, and the right prompt can shift the entire outcome.",
+      "eligibility": [
+        "Students pursuing PG programmes in Computer Science, Information Technology, AI & ML, Data Science, and other relevant fields from any college or university are eligible to participate."
+      ],
+      "max_slots": 40,
+      "rules": [
+        "Detailed Rules & Guidelines: https://docs.google.com/document/d/1IEpiMRbgjr9f2OoUFNln7CR1U1X2HXJ6cyhRPbuajr4/edit?usp=sharing"
+      ],
+      "rules_pdf_url": "https://docs.google.com/document/d/1IEpiMRbgjr9f2OoUFNln7CR1U1X2HXJ6cyhRPbuajr4/edit?usp=sharing",
+      "prizes": {
+        "pool": "₹10,000",
+        "winner": "₹5,000",
+        "runner_up": "₹3,000",
+        "second_runner_up": "₹2,000",
+        "description": "Winner, 1st Runner-up, and 2nd Runner-up"
+      },
+      "event_heads": []
+    },
+    {
+      "id": "renderrush",
+      "title": "⁠RenderRush",
+      "subtitle": "3D Modelling",
+      "category": "Technical",
+      "type": "Technical",
+      "participation_type": "Team of 2 Members",
+      "date": "8th & 9th October 2026",
+      "from_time": "TBA",
+      "end_time": "TBA",
+      "venue": "Offline on-campus",
+      "description": "What if an idea could be given a physical form without ever physically existing? RenderRush explores the space where imagination becomes digital reality, challenging participants to transform a given concept into a detailed and visually compelling 3D creation. Participants will work with form, geometry, proportion, composition, materials, and spatial relationships to construct a digital representation that can be viewed from every perspective. The challenge is not simply to model an object or environment, but to communicate an idea through the digital world they create. Technical precision must work alongside creativity, while every detail contributes to the final result. Whether recreating something familiar or building something entirely new, participants will experience the process of turning an abstract concept into a tangible digital counterpart. In RenderRush, the imagination is the blueprint, and the model is where it comes to life.a",
+      "eligibility": [
+        "Students pursuing PG programmes in Computer Science, Information Technology, AI & ML, Data Science, and other relevant fields, along with final-year B.Tech, and B.Sc, M.Sc. Electronics students, from any college or university are eligible to participate."
+      ],
+      "max_slots": 20,
+      "rules": [
+        "Detailed Rules & Guidelines: https://docs.google.com/document/d/1spaDAdwrGFX-jculqUFEKS00wxd3xg9oHo0_1tMI_kk/edit?usp=sharing"
+      ],
+      "rules_pdf_url": "https://docs.google.com/document/d/1spaDAdwrGFX-jculqUFEKS00wxd3xg9oHo0_1tMI_kk/edit?usp=sharing",
+      "prizes": {
+        "pool": "₹20,000",
+        "winner": "₹9,000",
+        "runner_up": "₹6,000",
+        "second_runner_up": "₹5,000",
+        "description": "Winners, 1st Runner-ups, and 2nd Runner-ups"
+      },
+      "event_heads": []
+    },
+    {
+      "id": "alternate-thesis",
+      "title": "Alternate Thesis",
+      "subtitle": "Paper Presentation",
+      "category": "Technical",
+      "type": "Technical",
+      "participation_type": "Team of 2 members",
+      "date": "8th & 9th October 2026",
+      "from_time": "TBA",
+      "end_time": "TBA",
+      "venue": "Offline on-campus",
+      "description": "Innovation begins when someone is willing to ask a different question. Alternate Thesis provides a platform for researchers, innovators, and technology enthusiasts to bring forward legitimate academic work and emerging ideas that challenge existing perspectives. Participants can present research papers, draft papers, preprints, or developing research ideas and engage with an audience that is ready to question, discuss, and explore. The focus extends beyond presentation—it is an opportunity to communicate the motivation behind the work, explain its significance, defend its methodology, and demonstrate where the research could lead. From artificial intelligence and emerging technologies to computing, data, systems, and beyond, every perspective contributes to a larger conversation about the future of technology. Alternate Thesis is where ideas move from documents and datasets into discussion, where questions become catalysts, and where a different perspective could become the beginning of something significant.",
+      "eligibility": [
+        "Students pursuing PG programmes in Computer Science, Information Technology, AI & ML, Data Science, and other relevant fields from any college or university are eligible to participate."
+      ],
+      "max_slots": 20,
+      "rules": [
+        "Detailed Rules & Guidelines: https://docs.google.com/document/d/1zsI1TyWFzXNG_Q99S-ewaExhK1XW0MBvqsGfC_JwOsw/edit?usp=sharing"
+      ],
+      "rules_pdf_url": "https://docs.google.com/document/d/1zsI1TyWFzXNG_Q99S-ewaExhK1XW0MBvqsGfC_JwOsw/edit?usp=sharing",
+      "prizes": {
+        "pool": "₹2,500",
+        "winner": "₹2,500",
+        "description": "Winners"
+      },
+      "event_heads": []
+    },
+    {
+      "id": "in-perspective",
+      "title": "In Perspective",
+      "subtitle": "Poster Presentation",
+      "category": "Technical",
+      "type": "Technical",
+      "participation_type": "Team of 2 members",
+      "date": "8th & 9th October 2026",
+      "from_time": "TBA",
+      "end_time": "TBA",
+      "venue": "Offline on-campus",
+      "description": "A complex idea can take pages to explain, but the right perspective can make it understood in seconds. In Perspective challenges participants to transform technical knowledge, research, concepts, and ideas into compelling visual narratives through the medium of a poster. The challenge lies in deciding what deserves attention, what can be simplified, and how information can be arranged so that a viewer immediately understands both the problem and the idea behind it. Design becomes more than decoration—it becomes a tool for communication. Participants will need to combine research, visual hierarchy, creativity, clarity, and storytelling to create a poster that attracts attention while carrying meaningful information. In Perspective invites participants to step away from conventional explanations and look at communication differently, proving that sometimes changing the way an idea is presented can completely change the way it is understood.",
+      "eligibility": [
+        "Students pursuing PG programmes in Computer Science, Information Technology, AI & ML, Data Science, and other relevant fields from any college or university are eligible to participate."
+      ],
+      "max_slots": 20,
+      "rules": [
+        "Detailed Rules & Guidelines: https://docs.google.com/document/d/1wfGGeDVwkTsQvI5n4dApa9itqVB26PUsAuFksGfUe0w/edit?usp=sharing"
+      ],
+      "rules_pdf_url": "https://docs.google.com/document/d/1wfGGeDVwkTsQvI5n4dApa9itqVB26PUsAuFksGfUe0w/edit?usp=sharing",
+      "prizes": {
+        "pool": "₹2,500",
+        "winner": "₹2,500",
+        "description": "Winners"
+      },
+      "event_heads": []
+    },
+    {
+      "id": "the-twin-directive",
+      "title": "The Twin Directive",
+      "subtitle": "IT Manager",
+      "category": "Non-Technical",
+      "type": "Non-Technical",
+      "participation_type": "Individual",
+      "date": "8th & 9th October 2026",
+      "from_time": "TBA",
+      "end_time": "TBA",
+      "venue": "Offline on-campus",
+      "description": "Technology does not operate in isolation. Behind every system are people, resources, objectives, risks, and decisions that determine whether it succeeds or fails. The Twin Directive places participants in a simulated environment where they must think like an IT leader and navigate situations that demand strategic judgement. They will encounter competing priorities, evolving circumstances, technological challenges, and decisions where every choice can create a new consequence. The challenge is not about finding a single textbook answer it is about understanding the larger system and deciding what should happen next. Participants will have to balance technical feasibility with organizational needs, respond to changing conditions, manage priorities, and make decisions under pressure. The Twin Directive explores what happens when technology becomes a living system of interconnected decisions, and participants are placed at the centre of it.",
+      "eligibility": [
+        "Students pursuing PG programmes in Computer Science, Information Technology, AI & ML, Data Science, and other relevant fields from any college or university are eligible to participate."
+      ],
+      "max_slots": 40,
+      "rules": [
+        "Detailed Rules & Guidelines: https://docs.google.com/document/d/1HgCl8e4SZH38Ca1-ed5rJ7vqCnFKvS2fU-1lBZmAgQw/edit?usp=sharing"
+      ],
+      "rules_pdf_url": "https://docs.google.com/document/d/1HgCl8e4SZH38Ca1-ed5rJ7vqCnFKvS2fU-1lBZmAgQw/edit?usp=sharing",
+      "prizes": {
+        "pool": "₹12,000",
+        "winner": "₹6,000",
+        "runner_up": "₹3,600",
+        "second_runner_up": "₹2,400",
+        "description": "Winner, 1st Runner-up, and 2nd Runner-up"
+      },
+      "event_heads": []
+    },
+    {
+      "id": "twin-protocol",
+      "title": "⁠Twin Protocol",
+      "subtitle": "Treasure Hunt",
+      "category": "Non Technical",
+      "type": "Non Technical",
+      "participation_type": "Team of  2 - 4 Members",
+      "date": "8th & 9th October 2026",
+      "from_time": "TBA",
+      "end_time": "TBA",
+      "venue": "Offline on-campus",
+      "description": "The world around us is filled with information, but finding the right connection is what turns information into discovery. Twin Protocol takes participants on a trail where physical spaces and digital clues come together to create an interconnected hunt. Every clue may reveal only part of the bigger picture, requiring teams to observe carefully, think laterally, decode information, and connect discoveries that may initially appear unrelated. The path may shift as new information is uncovered, forcing participants to reconsider earlier assumptions and approach familiar surroundings from a different perspective. Collaboration becomes essential as teams piece together fragments of a larger system and work towards the final destination. Twin Protocol is more than a search for clues, it is a journey through interconnected layers where every discovery changes the way you see what came before.",
+      "eligibility": [
+        "Students pursuing PG programmes in Computer Science, Information Technology, AI & ML, Data Science, and other relevant fields from any college or university are eligible to participate."
+      ],
+      "max_slots": 20,
+      "rules": [
+        "Detailed Rules & Guidelines: https://docs.google.com/document/d/1u-BLiQApwGBniGpkfPP3OKziQmqzX1CLGptQV6XjOBk/edit?usp=sharing"
+      ],
+      "rules_pdf_url": "https://docs.google.com/document/d/1u-BLiQApwGBniGpkfPP3OKziQmqzX1CLGptQV6XjOBk/edit?usp=sharing",
+      "prizes": {
+        "pool": "₹20,000",
+        "winner": "₹9,000",
+        "runner_up": "₹6,000",
+        "second_runner_up": "₹5,000",
+        "description": "Winners, 1st Runner-ups, and 2nd Runner-ups"
+      },
+      "event_heads": []
+    },
+    {
+      "id": "pixel-quest",
+      "title": "Pixel Quest",
+      "subtitle": "Photography",
+      "category": "Non Technical",
+      "type": "Non Technical",
+      "participation_type": "Individual",
+      "date": "8th October 2026",
+      "from_time": "11:00 AM",
+      "end_time": "6:00 PM",
+      "venue": "Offline on-campus",
+      "description": "The world does not change when you look at it differently, but what you notice certainly does. Pixel Quest invites participants to step beyond conventional frames and capture the world through their own perspective. A fleeting expression, an unexpected reflection, an overlooked detail, a dramatic composition, or an ordinary moment seen from an extraordinary angle can all tell a story. Participants will be challenged to observe their surroundings with greater attention and use photography to communicate something beyond what initially meets the eye. The photograph becomes a perspective a way of freezing a moment and presenting it through a particular interpretation. Pixel Quest celebrates the ability to find meaning in the unexpected and encourages participants to explore how framing, timing, light, depth, and perspective can transform the familiar into something entirely new.",
+      "eligibility": [
+        "Students pursuing PG programmes in Computer Science, Information Technology, AI & ML, Data Science, and other relevant fields from any college or university are eligible to participate."
+      ],
+      "max_slots": 40,
+      "rules": [
+        "Detailed Rules & Guidelines: https://docs.google.com/document/d/1DepT640V7mRrxl7Nvevl7kbSiVWsMuMHKqKm_V6QpLg/edit?usp=sharing"
+      ],
+      "rules_pdf_url": "https://docs.google.com/document/d/1DepT640V7mRrxl7Nvevl7kbSiVWsMuMHKqKm_V6QpLg/edit?usp=sharing",
+      "prizes": {
+        "pool": "₹9,000",
+        "winner": "₹4,500",
+        "runner_up": "₹2,700",
+        "second_runner_up": "₹1,800",
+        "description": "Winner, 1st Runner-up, and 2nd Runner-up"
+      },
+      "event_heads": []
+    },
+    {
+      "id": "mystery-block",
+      "title": "Mystery Block",
+      "subtitle": "Surprise Event",
+      "category": "Non Technical",
+      "type": "Non Technical",
+      "participation_type": "Team of 2 - 4 Members",
+      "date": "8th & 9th October 2026",
+      "from_time": "TBA",
+      "end_time": "TBA",
+      "venue": "Offline on-campus",
+      "description": "Some challenges are meant to be understood. Others are meant to be discovered. Mystery Block keeps its cards close, revealing the nature of the challenge only when participants step into the experience. With no opportunity to prepare for exactly what lies ahead, participants will have to rely on their ability to adapt, observe, communicate, and think on their feet. The challenge may shift expectations, introduce unfamiliar rules, or demand an approach that cannot be predicted in advance. What matters is not how well you prepared for a specific problem, but how effectively you respond when the problem changes. Mystery Block is designed to test spontaneity, problem-solving, teamwork, and adaptability in an environment where uncertainty becomes part of the game. Enter without assumptions, expect the unexpected, and discover what happens when the rules of the challenge are revealed only when you are already inside it.",
+      "eligibility": [
+        "Students pursuing PG programmes in Computer Science, Information Technology, AI & ML, Data Science, and other relevant fields from any college or university are eligible to participate."
+      ],
+      "max_slots": 20,
+      "rules": [
+        "Detailed Rules & Guidelines: https://docs.google.com/document/d/1_vLLKsGzxKbf8QW4pxQKF-rfDzeq9r9Cw-QnnngyHXM/edit?usp=sharing"
+      ],
+      "rules_pdf_url": "https://docs.google.com/document/d/1_vLLKsGzxKbf8QW4pxQKF-rfDzeq9r9Cw-QnnngyHXM/edit?usp=sharing",
+      "prizes": {
+        "pool": "₹15,000",
+        "winner": "₹6,750",
+        "runner_up": "₹4,500",
+        "second_runner_up": "₹3,750",
+        "description": "Winners, 1st Runner-ups, and 2nd Runner-ups"
+      },
+      "event_heads": []
+    },
+    {
+      "id": "arcadia-x",
+      "title": "Arcadia X",
+      "subtitle": "Gaming",
+      "category": "Non Technical",
+      "type": "Non Technical",
+      "participation_type": "Team of 2 - 4 Members",
+      "date": "8th & 9th October 2026",
+      "from_time": "TBA",
+      "end_time": "TBA",
+      "venue": "Offline on-campus",
+      "description": "Step beyond the boundaries of the physical world and enter environments where entirely different rules govern every decision. Arcadia X brings together two distinct gaming experiences BGMI and Minecraft each offering participants a different digital world in which strategy, awareness, adaptability, and decision-making determine the outcome. Whether navigating intense competitive situations or exploring a world built from imagination and possibility, participants will need to understand their environment, respond to changing circumstances, and make decisions that can alter the course of the game. The challenges within each game remain part of the experience waiting to be discovered, ensuring that adaptability is as important as skill. Arcadia X celebrates gaming as more than entertainment: it is an exploration of simulated worlds where players interact with systems, make choices, create possibilities, and experience the consequences of every move.",
+      "eligibility": [
+        "Students pursuing PG programmes in Computer Science, Information Technology, AI & ML, Data Science, and other relevant fields from any college or university are eligible to participate."
+      ],
+      "max_slots": 50,
+      "rules": [
+        "Detailed Rules & Guidelines: https://docs.google.com/document/d/1m96IQtNmCcix-Hff3U_gDesVyc3yGVvkBBiQmWUbdbg/edit?usp=sharing"
+      ],
+      "rules_pdf_url": "https://docs.google.com/document/d/1m96IQtNmCcix-Hff3U_gDesVyc3yGVvkBBiQmWUbdbg/edit?usp=sharing",
+      "prizes": {
+        "pool": "₹25,000",
+        "winner": "₹11,250",
+        "runner_up": "₹7,500",
+        "second_runner_up": "₹6,250",
+        "description": "Winners, 1st Runner-ups, and 2nd Runner-ups"
+      },
+      "event_heads": []
+    }
+  ],
+  "schedule": {
+    "days": [
+      {
+        "day_number": 1,
+        "date": "2026-10-08",
+        "display_date": "Day 1 - Oct 08",
+        "timeline": [
+          {
+            "id": "inauguration",
+            "title": "Inauguration Ceremony",
+            "subtitle": "Gateways 2026 Grand Opening",
+            "date": "8th October 2026",
+            "from_time": "9:00 AM",
+            "end_time": "10:00 AM",
+            "venue": "Main Auditorium",
+            "category": "General",
+            "is_competition": false
+          },
+          {
+            "id": "24-shift",
+            "title": "24° Shift",
+            "subtitle": "24 Hour Hackathon",
+            "date": "30th September - 01st October, 2026",
+            "from_time": "10:00 AM",
+            "end_time": "10:00 AM",
+            "venue": "Online",
+            "category": "Technical",
+            "is_competition": true
+          },
+          {
+            "id": "deviation",
+            "title": "Deviation",
+            "subtitle": "IT Quiz",
+            "date": "8th & 9th October 2026",
+            "from_time": "TBA",
+            "end_time": "TBA",
+            "venue": "Offline on-campus",
+            "category": "Technical",
+            "is_competition": true
+          },
+          {
+            "id": "pixel-paradox",
+            "title": "Pixel Paradox",
+            "subtitle": "UI/UX",
+            "date": "8th & 9th October 2026",
+            "from_time": "TBA",
+            "end_time": "TBA",
+            "venue": "Offline on-campus",
+            "category": "Technical",
+            "is_competition": true
+          },
+          {
+            "id": "the-last-commit",
+            "title": "The Last Commit",
+            "subtitle": "Coding/Debugging",
+            "date": "8th & 9th October 2026",
+            "from_time": "TBA",
+            "end_time": "TBA",
+            "venue": "Offline on-campus",
+            "category": "Technical",
+            "is_competition": true
+          },
+          {
+            "id": "promptx",
+            "title": "PromptX",
+            "subtitle": "Prompt Engineering",
+            "date": "8th & 9th October 2026",
+            "from_time": "TBA",
+            "end_time": "TBA",
+            "venue": "Offline on-campus",
+            "category": "Technical",
+            "is_competition": true
+          },
+          {
+            "id": "renderrush",
+            "title": "⁠RenderRush",
+            "subtitle": "3D Modelling",
+            "date": "8th & 9th October 2026",
+            "from_time": "TBA",
+            "end_time": "TBA",
+            "venue": "Offline on-campus",
+            "category": "Technical",
+            "is_competition": true
+          },
+          {
+            "id": "alternate-thesis",
+            "title": "Alternate Thesis",
+            "subtitle": "Paper Presentation",
+            "date": "8th & 9th October 2026",
+            "from_time": "TBA",
+            "end_time": "TBA",
+            "venue": "Offline on-campus",
+            "category": "Technical",
+            "is_competition": true
+          },
+          {
+            "id": "in-perspective",
+            "title": "In Perspective",
+            "subtitle": "Poster Presentation",
+            "date": "8th & 9th October 2026",
+            "from_time": "TBA",
+            "end_time": "TBA",
+            "venue": "Offline on-campus",
+            "category": "Technical",
+            "is_competition": true
+          },
+          {
+            "id": "the-twin-directive",
+            "title": "The Twin Directive",
+            "subtitle": "IT Manager",
+            "date": "8th & 9th October 2026",
+            "from_time": "TBA",
+            "end_time": "TBA",
+            "venue": "Offline on-campus",
+            "category": "Non-Technical",
+            "is_competition": true
+          },
+          {
+            "id": "twin-protocol",
+            "title": "⁠Twin Protocol",
+            "subtitle": "Treasure Hunt",
+            "date": "8th & 9th October 2026",
+            "from_time": "TBA",
+            "end_time": "TBA",
+            "venue": "Offline on-campus",
+            "category": "Non Technical",
+            "is_competition": true
+          },
+          {
+            "id": "pixel-quest",
+            "title": "Pixel Quest",
+            "subtitle": "Photography",
+            "date": "8th October 2026",
+            "from_time": "11:00 AM",
+            "end_time": "6:00 PM",
+            "venue": "Offline on-campus",
+            "category": "Non Technical",
+            "is_competition": true
+          },
+          {
+            "id": "mystery-block",
+            "title": "Mystery Block",
+            "subtitle": "Surprise Event",
+            "date": "8th & 9th October 2026",
+            "from_time": "TBA",
+            "end_time": "TBA",
+            "venue": "Offline on-campus",
+            "category": "Non Technical",
+            "is_competition": true
+          },
+          {
+            "id": "arcadia-x",
+            "title": "Arcadia X",
+            "subtitle": "Gaming",
+            "date": "8th & 9th October 2026",
+            "from_time": "TBA",
+            "end_time": "TBA",
+            "venue": "Offline on-campus",
+            "category": "Non Technical",
+            "is_competition": true
+          }
+        ]
+      },
+      {
+        "day_number": 2,
+        "date": "2026-10-09",
+        "display_date": "Day 2 - Oct 09",
+        "timeline": [
+          {
+            "id": "valedictory",
+            "title": "Valedictory & Prize Distribution",
+            "subtitle": "Closing Ceremony",
+            "date": "9th October 2026",
+            "from_time": "4:30 PM",
+            "end_time": "6:00 PM",
+            "venue": "Main Auditorium",
+            "category": "General",
+            "is_competition": false
+          }
+        ]
+      }
+    ]
+  },
+  "announcements": []
+}

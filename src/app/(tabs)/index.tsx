@@ -38,8 +38,9 @@ import { px } from "@/theme/scale";
 import { fonts, typography } from "@/theme/tokens";
 import { useAuth } from "@/modules/auth";
 import { useM3Theme, M3ShapeDefinition } from "@/theme/M3ThemeContext";
-import { EventItem, MOCK_EVENTS } from "@/services/api";
+import { EventItem } from "@/services/api";
 import { useAppData } from "@/modules/core/DataProvider";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { MINECRAFT_SKINS } from "./profile";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
@@ -160,7 +161,7 @@ export default function ModernHomeTab() {
   const { role } = useAuth();
   const { activeShape, setShapeById, shapes, theme, isDark, toggleColorMode } = useM3Theme();
 
-  const { events: allEvents } = useAppData();
+  const { events: allEvents, eventsSource, eventsSavedAt } = useAppData();
   const [myEventIds, setMyEventIds] = useState<string[]>([]);
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [userProfile, setUserProfile] = useState<{
@@ -527,6 +528,8 @@ export default function ModernHomeTab() {
       >
         {/* Generous top padding to clear status bar and notch */}
         <View style={{ height: Math.max(insets.top, px(16)) + px(10) }} />
+
+        <OfflineBanner source={eventsSource} savedAt={eventsSavedAt} />
 
         {/* Massive Bold Header (Participant Name) */}
         <Animated.View style={[styles.heroHeaderRow, animatedHeroTextStyle, { paddingHorizontal: px(16), flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }]}>

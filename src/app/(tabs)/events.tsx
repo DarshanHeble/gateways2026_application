@@ -33,6 +33,7 @@ import { useM3Theme } from "@/theme/M3ThemeContext";
 import { EventItem } from "@/services/api";
 import { EventDetailSheet } from "@/components/EventDetailSheet";
 import { useAppData } from "@/modules/core/DataProvider";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { getEventImage } from "@/services/EventAssets";
 
 const { height: SCREEN_H } = Dimensions.get("window");
@@ -42,7 +43,7 @@ export default function EventsTab() {
   const insets = useSafeAreaInsets();
   const { theme, isDark, toggleColorMode } = useM3Theme();
 
-  const { events, eventsSource: dataSource, eventsLoading: loading, refreshData } = useAppData();
+  const { events, eventsSource: dataSource, eventsSavedAt, eventsLoading: loading, refreshData } = useAppData();
   const [filterType, setFilterType] = useState<EventFilterType>("all");
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [myEvents, setMyEvents] = useState<string[]>([]);
@@ -322,29 +323,7 @@ export default function EventsTab() {
         </ScrollView>
       </View>
 
-      {/* Offline Backup Banner if Live Server fails */}
-      {dataSource === "fallback" && (
-        <View style={styles.fallbackNotice}>
-          <View style={styles.fallbackNoticeHeader}>
-            <Text style={styles.fallbackNoticeIcon}>⚠️</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.fallbackNoticeTitle}>OFFLINE DEMO BACKUP</Text>
-              <Text style={styles.fallbackNoticeText}>
-                Could not connect to live event servers. Showing placeholder events.
-              </Text>
-            </View>
-          </View>
-          <TouchableOpacity
-            style={styles.fallbackRetryBtn}
-            onPress={() => {
-              
-              refreshData();
-            }}
-          >
-            <Text style={styles.fallbackRetryText}>TAP TO RETRY SYNC</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <OfflineBanner source={dataSource} savedAt={eventsSavedAt} />
 
       {/* Minimal, Decluttered Events List */}
       <Animated.FlatList
@@ -783,45 +762,4 @@ const styles = StyleSheet.create({
   },
 
   // Fallback Notice
-  fallbackNotice: {
-    backgroundColor: "rgba(239, 68, 68, 0.12)",
-    borderColor: "rgba(239, 68, 68, 0.35)",
-    padding: px(12),
-    marginBottom: px(14),
-    gap: px(8),
-  },
-  fallbackNoticeHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: px(10),
-  },
-  fallbackNoticeIcon: {
-    fontSize: px(22),
-  },
-  fallbackNoticeTitle: {
-    fontFamily: fonts.pixelMedium,
-    fontSize: px(15),
-    color: "#f87171",
-    letterSpacing: px(0.8),
-  },
-  fallbackNoticeText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: px(15),
-    color: "#cbd5e1",
-    marginTop: px(2),
-  },
-  fallbackRetryBtn: {
-    backgroundColor: "rgba(239, 68, 68, 0.2)",
-    borderColor: "rgba(239, 68, 68, 0.5)",
-    paddingVertical: px(6),
-    paddingHorizontal: px(12),
-    alignSelf: "flex-start",
-    marginTop: px(2),
-  },
-  fallbackRetryText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(13),
-    color: "#fca5a5",
-    letterSpacing: px(0.5),
-  },
 });
