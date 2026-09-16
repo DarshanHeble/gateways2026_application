@@ -111,6 +111,27 @@ function backoffFor(attempts: number): number {
   return Math.min(BASE_BACKOFF_MS * 2 ** attempts, MAX_BACKOFF_MS);
 }
 
+/**
+ * How to treat a failed delivery.
+ *
+ * Not every failure deserves the same response, and getting this wrong loses
+ * data. A 401 means "no valid session yet" — retrying on a timer can't fix that
+ * and burning the attempt budget would dead-letter a perfectly good write, so
+ * those entries wait indefinitely without ageing. A 400 or 422 means the server
+ * will never accept this payload, so retrying is pure noise. Everything else
+ * (5xx, timeouts, offline) is genuinely transient.
+ */
+type FailureKind = "transient" | "awaiting-auth" | "permanent";
+
+function classify(status: number | undefined): FailureKind {
+  if (status === 401 || status === 403) return "awaiting-auth";
+  // 408 and 429 are 4xx but explicitly mean "try again".
+  if (status && status >= 400 && status < 500 && status !== 408 && status !== 429) {
+    return "permanent";
+  }
+  return "transient";
+}
+
 let flushing = false;
 
 /**
@@ -147,17 +168,36 @@ export async function flush(): Promise<number> {
         delivered += 1;
         // Success: drop it by not carrying it into `remaining`.
       } catch (err: any) {
+        const kind = classify(err?.status);
+        const lastError = err?.message || "unknown error";
+
+        if (kind === "awaiting-auth") {
+          // Hold the write without ageing it. It'll go out on the first flush
+          // after a real session exists, however long that takes.
+          remaining.push({
+            ...entry,
+            nextAttemptAt: Date.now() + backoffFor(1),
+            lastError,
+            dead: false,
+          });
+          continue;
+        }
+
         const attempts = entry.attempts + 1;
-        const isDead = attempts >= MAX_ATTEMPTS;
+        const isDead = kind === "permanent" || attempts >= MAX_ATTEMPTS;
         remaining.push({
           ...entry,
           attempts,
           nextAttemptAt: Date.now() + backoffFor(attempts),
-          lastError: err?.message || "unknown error",
+          lastError,
           dead: isDead,
         });
         if (isDead) {
-          console.warn(`[outbox] "${entry.label}" gave up after ${attempts} attempts.`);
+          console.warn(
+            kind === "permanent"
+              ? `[outbox] "${entry.label}" rejected by the server (${err?.status}); not retrying.`
+              : `[outbox] "${entry.label}" gave up after ${attempts} attempts.`,
+          );
         }
         // Stop on the first offline error — the rest will fail identically.
         if (err?.isOffline) {
