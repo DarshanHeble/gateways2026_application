@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import {
   View,
-  StyleSheet,
   ImageBackground,
   Text,
   TouchableOpacity,
@@ -14,21 +13,20 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import * as Linking from "expo-linking";
 import { useAuth } from "@/modules/auth";
-import { colors, fonts } from "@/theme/tokens";
 import { px } from "@/theme/scale";
-import { PixelInput } from "@/components/pixel/PixelInput";
-import { PixelCard } from "@/components/pixel/PixelCard";
-import { useLoginForm } from "./hooks/useLoginForm";
+import { Bevel } from "@/components/pixel/Primitives";
+import { DitherFill } from "@/components/pixel/Fills";
 import { API_BASE_URL, apiClient } from "@/services/api";
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { MinecraftButton } from "@/components/MaterialCraft/MinecraftButton";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
+import { coverScreen, revealScreen } from "@/modules/splash";
+
+import { GlassInput } from "./components/GlassInput";
+import { CreeperFaceIcon, GoogleGIcon } from "./components/PixelIcons";
+import { useLoginForm } from "./hooks/useLoginForm";
+import { styles } from "./login.styles";
 
 WebBrowser.maybeCompleteAuthSession();
-
-import { coverScreen, revealScreen } from "@/modules/splash";
-import { styles } from "./login.styles";
 
 GoogleSignin.configure({
   webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
@@ -73,17 +71,17 @@ export function LoginScreen() {
     }
   }, [params.handoffCode, login, form]);
 
+  // Wired up and ready, but the backend has no POST /auth/signin/google/native
+  // yet, so the button below deliberately doesn't call this. Swap the onPress
+  // back to `handleGoogleSignIn` once that endpoint exists.
   const handleGoogleSignIn = async () => {
     try {
-      // 1. Check play services
       await GoogleSignin.hasPlayServices();
-      // 2. Sign in and get idToken
       const userInfo = await GoogleSignin.signIn();
       const idToken = userInfo.data?.idToken;
 
       if (!idToken) throw new Error("No idToken received");
 
-      // 3. Send idToken to our custom backend
       const res = await apiClient<{ requiresVerification?: boolean; user?: { email: string } }>(
         `${API_BASE_URL}/auth/signin/google/native`,
         {
@@ -91,12 +89,9 @@ export function LoginScreen() {
           body: JSON.stringify({ idToken }),
         }
       );
-      
-      // 4. Handle response (usually requires OTP verification in our system)
+
       if (res.data.requiresVerification) {
         form.say("CHECK EMAIL FOR OTP");
-        // router.push({ pathname: '/verify', params: { email: res.data.user.email } });
-        // Assuming OTP screen is implemented or handled
       } else {
         coverScreen(() => {
           login("participant");
@@ -112,7 +107,7 @@ export function LoginScreen() {
 
   return (
     <ImageBackground
-      source={require("../../../../../assets/images/minecraft_bg.webp")}
+      source={require("../../../../../assets/images/login-parallax-bg.webp")}
       style={styles.background}
       resizeMode="cover"
     >
@@ -126,66 +121,94 @@ export function LoginScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* Positioned nicely over the vertical background image */}
+            {/* Positioned over the empty band the background reserves between the
+                #PARALLEX title and the campus scene below — a plain light
+                glass card this time, matching this brighter daytime poster. */}
             <View style={styles.cardWrapper}>
-              <PixelCard headerTitle="GATEWAYS 2026" badge="PARALLAX">
-                <Text style={styles.welcomeSubtitle}>ENTER THE DIGITAL MIRROR</Text>
+              <View style={styles.card}>
+                <GlassInput
+                  icon="mail-outline"
+                  value={form.email}
+                  onChangeText={form.setEmail}
+                  placeholder="College Email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!form.busy}
+                  returnKeyType="next"
+                  onSubmitEditing={() => form.passwordRef.current?.focus()}
+                />
 
-                <View style={styles.formGroup}>
-                  <PixelInput
-                    label="EMAIL ADDRESS"
-                    value={form.email}
-                    onChangeText={form.setEmail}
-                    placeholder="adventurer@christuniversity.in"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    editable={!form.busy}
-                    onSubmitEditing={() => form.passwordRef.current?.focus()}
+                <GlassInput
+                  ref={form.passwordRef}
+                  icon="lock-closed-outline"
+                  value={form.password}
+                  onChangeText={form.setPassword}
+                  placeholder="Password"
+                  secureTextEntry={!showPassword}
+                  editable={!form.busy}
+                  returnKeyType="done"
+                  onSubmitEditing={form.submit}
+                  rightAccessory={
+                    <TouchableOpacity onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
+                      <Ionicons
+                        name={showPassword ? "eye-off-outline" : "eye-outline"}
+                        size={px(15)}
+                        color="#8d93ab"
+                      />
+                    </TouchableOpacity>
+                  }
+                />
+
+                {/* Primary Sign In — a grass-block-textured Minecraft button:
+                    dither noise for the grainy grass look, a light top/left
+                    bevel and dark bottom/right one for the chunky 3D-pixel edge. */}
+                <TouchableOpacity
+                  style={[styles.signInBtn, form.busy && styles.btnDisabled]}
+                  onPress={form.submit}
+                  disabled={form.busy}
+                  activeOpacity={0.85}
+                >
+                  <DitherFill style={styles.signInDither} light={0.14} dark={0.16} size={3} />
+                  <Bevel
+                    top={{ color: "rgba(255,255,255,0.4)", size: 3 }}
+                    left={{ color: "rgba(255,255,255,0.25)", size: 3 }}
+                    bottom={{ color: "rgba(6,40,20,0.55)", size: 4 }}
+                    right={{ color: "rgba(6,40,20,0.4)", size: 4 }}
                   />
+                  <CreeperFaceIcon size={17} />
+                  {form.busy ? (
+                    <ActivityIndicator color="#ffffff" style={styles.signInText} />
+                  ) : (
+                    <Text style={styles.signInText}>SIGN IN</Text>
+                  )}
+                  <Ionicons name="arrow-forward" size={px(15)} color="#ffffff" />
+                </TouchableOpacity>
 
-                  <View style={{ height: px(12) }} />
-
-                  <PixelInput
-                    ref={form.passwordRef}
-                    label="PASSWORD"
-                    value={form.password}
-                    onChangeText={form.setPassword}
-                    placeholder="••••••••••••"
-                    secureTextEntry={!showPassword}
-                    editable={!form.busy}
-                    onSubmitEditing={form.submit}
-                    rightAccessory={
-                      <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: px(4) }}>
-                        <Ionicons name={showPassword ? "eye-off" : "eye"} size={px(20)} color={colors.gold.muted} />
-                      </TouchableOpacity>
-                    }
-                  />
-
-                  <TouchableOpacity style={styles.forgotBtn} onPress={() => form.say("RAVEN SENT · CHECK YOUR INBOX")}>
-                    <Text style={styles.forgotText}>FORGOT PASSWORD?</Text>
-                  </TouchableOpacity>
-
-                  {/* Primary Sign In Button */}
-                  <MinecraftButton
-                    mode="contained"
-                    onPress={form.submit}
-                    disabled={form.busy}
-                    loading={form.busy}
-                  >
-                    ENTER FEST
-                  </MinecraftButton>
-
-                  {/* Google OAuth Button */}
-                  <MinecraftButton
-                    mode="outlined"
-                    onPress={handleGoogleSignIn}
-                    disabled={form.busy}
-                  >
-                    CONTINUE WITH GOOGLE
-                  </MinecraftButton>
+                <View style={styles.dividerRow}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>OR</Text>
+                  <View style={styles.dividerLine} />
                 </View>
-              </PixelCard>
+
+                {/* See handleGoogleSignIn above — kept as a "coming soon" stub
+                    until the backend endpoint lands. */}
+                <TouchableOpacity
+                  style={[styles.googleBtn, form.busy && styles.btnDisabled]}
+                  onPress={() => form.say("GOOGLE SIGN-IN — COMING SOON")}
+                  disabled={form.busy}
+                  activeOpacity={0.85}
+                >
+                  <GoogleGIcon size={15} />
+                  <Text style={styles.googleText}>Continue with Google</Text>
+                </TouchableOpacity>
+
+                {form.toast ? (
+                  <View style={styles.toast}>
+                    <Text style={styles.toastText}>{form.toast}</Text>
+                  </View>
+                ) : null}
+              </View>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -193,5 +216,3 @@ export function LoginScreen() {
     </ImageBackground>
   );
 }
-
-

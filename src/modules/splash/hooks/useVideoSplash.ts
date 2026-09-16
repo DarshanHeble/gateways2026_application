@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useEventListener } from "expo";
 import { useVideoPlayer } from "expo-video";
 
-import { useReducedMotion } from "@/modules/login/pages/login/components/scene/useAmbient";
+import { useReducedMotion } from "react-native-reanimated";
 import { coverScreen, revealScreen } from "../utils/chunkTransition";
 
 const SOURCE = require("../../../../assets/videos/minecraft-splash.mp4");

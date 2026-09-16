@@ -1,6 +1,6 @@
 import { StyleSheet } from "react-native";
-import { colors, fonts } from "@/theme/tokens";
-import { px } from "@/theme/scale";
+import { fonts } from "@/theme/tokens";
+import { px, SCREEN_HEIGHT } from "@/theme/scale";
 
 export const styles = StyleSheet.create({
   background: {
@@ -16,75 +16,120 @@ export const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: px(16),
-    paddingVertical: px(24),
+    paddingHorizontal: px(24),
+    paddingBottom: px(32),
   },
   cardWrapper: {
     width: "100%",
-    maxWidth: px(350),
-    marginTop: px(80), // Lifted up to show full card over the background
+    maxWidth: px(252),
+    alignItems: "center",
+    // Clears the "GATEWAYS 2026 / #PARALLEX" title that's baked into the
+    // background art, landing the card in the empty sky gap above the
+    // campus scene below — proportional to screen height so it tracks the
+    // same spot on the source poster across device sizes.
+    marginTop: SCREEN_HEIGHT * 0.335,
   },
-  welcomeSubtitle: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(12), // Larger subtitle
-    color: colors.gold.bright,
-    textAlign: "center",
-    marginBottom: px(18),
-    letterSpacing: px(1.5),
+  // Light frosted-glass card — this background is a bright daytime shot, so
+  // (unlike the dark stone-framed version built for an earlier night-time
+  // background) a light, minimal panel reads correctly against it instead of
+  // fighting the sky for contrast. Toned down from a near-white first pass
+  // to a deeper, warmer stone-cream so it doesn't glow against the sky —
+  // then pulled back toward white on request, keeping just enough warmth
+  // to read as glass rather than a flat white card.
+  card: {
+    width: "100%",
+    backgroundColor: "rgba(242,240,232,0.90)",
+    borderRadius: px(16),
+    borderWidth: px(1.5),
+    borderColor: "rgba(255,255,255,0.75)",
+    paddingHorizontal: px(13),
+    paddingVertical: px(14),
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: px(10) },
+    shadowOpacity: 0.3,
+    shadowRadius: px(20),
+    elevation: 12,
   },
-  formGroup: {
-    marginTop: px(6),
-  },
-  forgotBtn: {
-    alignSelf: "flex-end",
-    marginTop: px(10),
-    marginBottom: px(20),
-  },
-  forgotText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(11), // Larger, readable link
-    color: colors.gold.title,
-    textDecorationLine: "underline",
-  },
-  submitBtn: {
-    backgroundColor: colors.cta.lit,
-    paddingVertical: px(14), // Taller button
-    borderRadius: px(4),
-    borderWidth: px(2),
-    borderColor: colors.cta.glow,
+  signInBtn: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: colors.cta.deep,
-    shadowOffset: { width: 0, height: px(4) },
-    shadowOpacity: 0.8,
-    shadowRadius: 0,
+    gap: px(6),
+    backgroundColor: "#4caf50",
+    borderRadius: px(9),
+    height: px(40),
+    paddingHorizontal: px(12),
+    marginTop: px(2),
+    overflow: "hidden",
+    shadowColor: "#0b3d1f",
+    shadowOffset: { width: 0, height: px(3) },
+    shadowOpacity: 0.35,
+    shadowRadius: px(5),
     elevation: 4,
+  },
+  signInDither: {
+    borderRadius: px(9),
   },
   btnDisabled: {
     opacity: 0.6,
   },
-  submitBtnText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(16), // Large punchy text
-    color: colors.cta.ink,
-    letterSpacing: px(1.5),
+  signInText: {
+    flex: 1,
+    textAlign: "center",
+    fontFamily: fonts.bodyBold,
+    fontSize: px(12.5),
+    color: "#ffffff",
+    letterSpacing: px(0.8),
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: px(10),
+  },
+  dividerLine: {
+    flex: 1,
+    height: px(1),
+    backgroundColor: "rgba(60,55,40,0.18)",
+  },
+  dividerText: {
+    marginHorizontal: px(8),
+    fontFamily: fonts.bodyMedium,
+    fontSize: px(9.5),
+    letterSpacing: px(1),
+    color: "#6b6a63",
   },
   googleBtn: {
-    backgroundColor: colors.google.lit,
-    paddingVertical: px(14), // Taller button
-    borderRadius: px(4),
-    borderWidth: px(1),
-    borderColor: colors.google.base,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: px(12),
+    gap: px(6),
+    backgroundColor: "#ffffff",
+    borderRadius: px(9),
+    height: px(40),
+    borderWidth: px(1),
+    borderColor: "rgba(0,0,0,0.08)",
   },
-  googleBtnText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(13), // Larger Google button text
-    color: colors.google.ink,
-    letterSpacing: px(1),
+  googleText: {
+    fontFamily: fonts.bodySemi,
+    fontSize: px(12),
+    color: "#1f1f1f",
+  },
+  toast: {
+    marginTop: px(16),
+    alignSelf: "center",
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: px(10),
+    paddingVertical: px(8),
+    paddingHorizontal: px(14),
+  },
+  toastText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: px(12),
+    color: "#ffe9b8",
+    textAlign: "center",
   },
 });

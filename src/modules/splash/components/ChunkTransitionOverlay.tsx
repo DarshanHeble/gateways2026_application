@@ -13,7 +13,7 @@ import Animated, {
 
 import { colors } from "@/theme/tokens";
 import { FILL, SCREEN_WIDTH, SCREEN_HEIGHT } from "@/theme/scale";
-import { rand } from "@/modules/login/pages/login/components/scene/useAmbient";
+import { rand } from "@/modules/core/motion";
 import { registerChunkTransitionHandlers } from "../utils/chunkTransition";
 
 /**
