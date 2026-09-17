@@ -13,6 +13,7 @@ import {
 import { colors } from "@/theme/tokens";
 import { MobConvergenceOverlay } from "@/modules/splash";
 import { AuthProvider, useAuth } from "@/modules/auth";
+import { AssetsProvider } from "@/modules/assets";
 import { NotificationsProvider } from "@/modules/notifications";
 import { DataProvider } from "@/modules/core/DataProvider";
 import { NetworkProvider } from "@/modules/core/NetworkProvider";
@@ -69,13 +70,20 @@ export default function RootLayout() {
         <StatusBar style="light" />
         <M3ThemeProvider>
           <NetworkProvider>
-            <AuthProvider>
-              <NotificationsProvider>
-                <DataProvider>
-                  <RootLayoutNav />
-                </DataProvider>
-              </NotificationsProvider>
-            </AuthProvider>
+            {/*
+              Above the router so `resolveAsset` is primed before any screen
+              renders, and outside AuthProvider because artwork has nothing to do
+              with who is signed in.
+            */}
+            <AssetsProvider>
+              <AuthProvider>
+                <NotificationsProvider>
+                  <DataProvider>
+                    <RootLayoutNav />
+                  </DataProvider>
+                </NotificationsProvider>
+              </AuthProvider>
+            </AssetsProvider>
           </NetworkProvider>
         </M3ThemeProvider>
       </SafeAreaProvider>

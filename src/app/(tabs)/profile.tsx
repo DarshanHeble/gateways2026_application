@@ -39,6 +39,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { fonts, typography } from "@/theme/tokens";
 import { px } from "@/theme/scale";
+import { resolveAsset } from "@/services/assets";
 import { useAuth } from "@/modules/auth";
 import { useM3Theme, M3ShapeDefinition } from "@/theme/M3ThemeContext";
 import { coverScreen, revealScreen } from "@/modules/splash";
@@ -55,7 +56,11 @@ export interface MinecraftSkin {
   element: string;
   badge: string;
   themeColor: string;
-  source: any;
+  /**
+   * CDN asset key, not a `require()`. This array is module-level, so it is built
+   * before `AssetsProvider` primes the registry — resolve at render time.
+   */
+  assetKey: string;
   perk: string;
 }
 
@@ -67,7 +72,7 @@ export const MINECRAFT_SKINS: MinecraftSkin[] = [
     element: "Fire & Gold",
     badge: "🏹 RANGED",
     themeColor: "#ffd25e",
-    source: require("../../../assets/images/characters/archer_gold.png"),
+    assetKey: "character/archer_gold",
     perk: "+20% Precision in Coding Competitions",
   },
   {
@@ -77,7 +82,7 @@ export const MINECRAFT_SKINS: MinecraftSkin[] = [
     element: "Storm Blue",
     badge: "⚡ LIGHTNING",
     themeColor: "#63d9e8",
-    source: require("../../../assets/images/characters/archer_blue.png"),
+    assetKey: "character/archer_blue",
     perk: "+15% Velocity in Hackathons",
   },
   {
@@ -87,7 +92,7 @@ export const MINECRAFT_SKINS: MinecraftSkin[] = [
     element: "Emerald Earth",
     badge: "🧭 PATHFINDER",
     themeColor: "#3ee89a",
-    source: require("../../../assets/images/characters/adventurer.png"),
+    assetKey: "character/adventurer",
     perk: "+25% Synergy in Team Events",
   },
   {
@@ -97,7 +102,7 @@ export const MINECRAFT_SKINS: MinecraftSkin[] = [
     element: "Diamond Core",
     badge: "⛏️ MINER",
     themeColor: "#52a3c4",
-    source: require("../../../assets/images/characters/runner_pickaxe.png"),
+    assetKey: "character/runner_pickaxe",
     perk: "+30% Resourcefulness in Debugging",
   },
 ];
@@ -797,7 +802,7 @@ export default function ProfileTab() {
 
                     <View style={styles.skinCardImageWrap}>
                       <Image
-                        source={skin.source}
+                        source={resolveAsset(skin.assetKey)}
                         style={styles.skinCardImage}
                         contentFit="contain"
                       />

@@ -21,6 +21,12 @@ export const CACHE_KEYS = {
   ANNOUNCEMENTS: "@gateways_cache_announcements",
   /** Set by `sync.ts` after any successful refresh — drives "synced Xm ago". */
   LAST_SYNC: "@gateways_last_sync_at",
+  /**
+   * Last CDN asset manifest we successfully fetched. Reading this on boot is
+   * what lets the second and every later launch resolve artwork with no
+   * network at all — see `services/assets/manifest.ts`.
+   */
+  ASSET_MANIFEST: "@gateways_cache_asset_manifest",
 } as const;
 
 /**

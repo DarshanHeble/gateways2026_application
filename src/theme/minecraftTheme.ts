@@ -56,7 +56,9 @@ export const minecraftTheme: ThemeProp = {
     ...MD3DarkTheme.fonts,
     labelLarge: {
       ...MD3DarkTheme.fonts.labelLarge,
-      fontFamily: 'Rubik-Black', 
+      // Must be a face registered in _layout.tsx's useFonts call — this was
+      // 'Rubik-Black', which was never loaded and silently fell back to system.
+      fontFamily: 'SpaceGrotesk_700Bold',
       letterSpacing: 1,
     }
   },

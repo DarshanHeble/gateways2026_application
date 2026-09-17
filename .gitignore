@@ -46,3 +46,6 @@ example
 .env
 *.mp4
 *.log
+
+# Generated CDN asset bundle staging dir
+dist-assets/

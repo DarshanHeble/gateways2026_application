@@ -15,6 +15,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useAuth } from "@/modules/auth";
 import { px } from "@/theme/scale";
+import { resolveAsset } from "@/services/assets";
 import { Bevel } from "@/components/pixel/Primitives";
 import { DitherFill } from "@/components/pixel/Fills";
 import { API_BASE_URL, apiClient } from "@/services/api";
@@ -107,7 +108,7 @@ export function LoginScreen() {
 
   return (
     <ImageBackground
-      source={require("../../../../../assets/images/login-parallax-bg.webp")}
+      source={resolveAsset("ui/login-bg") ?? undefined}
       style={styles.background}
       resizeMode="cover"
     >

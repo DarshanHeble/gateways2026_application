@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { StyleSheet, View, Text, Dimensions } from "react-native";
+import { StyleSheet, Text, Dimensions } from "react-native";
 import { Image } from "expo-image";
 import Animated, {
   Easing,
@@ -12,7 +12,7 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 
 import { registerChunkTransitionHandlers } from "../utils/chunkTransition";
-import { colors, fonts } from "@/theme/tokens";
+import { resolveAsset } from "@/services/assets";
 import { px } from "@/theme/scale";
 import { styles } from "./MobConvergenceOverlay.styles";
 
@@ -25,7 +25,12 @@ const MOB_SIZE = Math.min(SCREEN_W * 0.65, px(260));
 
 interface DynamicMob {
   id: string;
-  source: any;
+  /**
+   * CDN asset key rather than a `require()`. This list is built at module scope,
+   * which runs before `AssetsProvider` primes the registry, so resolution has to
+   * be deferred to render time.
+   */
+  assetKey: string;
   targetX: number;
   targetY: number;
   startOffsetX: number;
@@ -38,7 +43,7 @@ const MOBS: DynamicMob[] = [
   // 1. Archer Gold - Upper Left
   {
     id: "archer_gold",
-    source: require("../../../../assets/images/characters/archer_gold.png"),
+    assetKey: "character/archer_gold",
     targetX: px(10),
     targetY: SCREEN_H * 0.08,
     startOffsetX: -SCREEN_W * 0.85,
@@ -49,7 +54,7 @@ const MOBS: DynamicMob[] = [
   // 2. Archer Blue - Upper Right
   {
     id: "archer_blue",
-    source: require("../../../../assets/images/characters/archer_blue.png"),
+    assetKey: "character/archer_blue",
     targetX: SCREEN_W - MOB_SIZE - px(10),
     targetY: SCREEN_H * 0.10,
     startOffsetX: SCREEN_W * 0.85,
@@ -60,7 +65,7 @@ const MOBS: DynamicMob[] = [
   // 3. Runner Pickaxe - Mid Left
   {
     id: "runner_pickaxe",
-    source: require("../../../../assets/images/characters/runner_pickaxe.png"),
+    assetKey: "character/runner_pickaxe",
     targetX: px(15),
     targetY: (SCREEN_H - MOB_SIZE) * 0.44,
     startOffsetX: -SCREEN_W * 0.95,
@@ -71,7 +76,7 @@ const MOBS: DynamicMob[] = [
   // 4. Adventurer - Mid Right
   {
     id: "adventurer",
-    source: require("../../../../assets/images/characters/adventurer.png"),
+    assetKey: "character/adventurer",
     targetX: SCREEN_W - MOB_SIZE - px(15),
     targetY: (SCREEN_H - MOB_SIZE) * 0.48,
     startOffsetX: SCREEN_W * 0.95,
@@ -82,7 +87,7 @@ const MOBS: DynamicMob[] = [
   // 5. Archer Gold (Lower Flank) - Bottom Left
   {
     id: "archer_gold_lower",
-    source: require("../../../../assets/images/characters/archer_gold.png"),
+    assetKey: "character/archer_gold",
     targetX: px(20),
     targetY: SCREEN_H - MOB_SIZE - SCREEN_H * 0.10,
     startOffsetX: -SCREEN_W * 0.85,
@@ -93,7 +98,7 @@ const MOBS: DynamicMob[] = [
   // 6. Runner Pickaxe (Lower Flank) - Bottom Right
   {
     id: "runner_pickaxe_lower",
-    source: require("../../../../assets/images/characters/runner_pickaxe.png"),
+    assetKey: "character/runner_pickaxe",
     targetX: SCREEN_W - MOB_SIZE - px(20),
     targetY: SCREEN_H - MOB_SIZE - SCREEN_H * 0.08,
     startOffsetX: SCREEN_W * 0.85,
@@ -143,7 +148,7 @@ function SwarmMobItem({
       ]}
     >
       <Image
-        source={mob.source}
+        source={resolveAsset(mob.assetKey)}
         style={styles.mobImage}
         contentFit="contain"
         cachePolicy="memory-disk"
@@ -165,7 +170,7 @@ export function MobConvergenceOverlay() {
       cover: (onCovered) => {
         try {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-        } catch (_) {}
+        } catch {}
 
         // Center badge pops in smoothly
         badgeScale.value = withTiming(1, {
@@ -191,7 +196,7 @@ export function MobConvergenceOverlay() {
       reveal: () => {
         try {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-        } catch (_) {}
+        } catch {}
 
         badgeScale.value = withTiming(0, { duration: 300 });
 

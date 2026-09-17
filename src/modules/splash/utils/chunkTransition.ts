@@ -1,5 +1,5 @@
 /**
- * Imperative bridge to the root-mounted `ChunkTransitionOverlay`.
+ * Imperative bridge to the root-mounted `MobConvergenceOverlay`.
  *
  * The overlay has to live above the `<Stack />` in `_layout.tsx` so it
  * survives the route swap from `/` to `/login` — anything mounted inside the

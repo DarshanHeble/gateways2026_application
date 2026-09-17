@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "generatedAt": "2026-09-17T17:19:48+00:00",
+  "baseUrl": "https://cdn.jsdelivr.net/gh/vishalbg02/gateways2026-assets@main/",
+  "assets": [
+    {
+      "key": "character/adventurer",
+      "path": "images/characters/adventurer.e8f5ff9e.webp",
+      "bytes": 32006,
+      "sha256": "e8f5ff9effaa33150d888e29c619642ba5c05c2a2e752dbf47718915d3219d91"
+    },
+    {
+      "key": "character/archer_blue",
+      "path": "images/characters/archer-blue.afb7c8c4.webp",
+      "bytes": 45086,
+      "sha256": "afb7c8c421a02ba2cb41770633cc63bf3d2454cbc4bf4be90e234b312db4f219"
+    },
+    {
+      "key": "character/archer_gold",
+      "path": "images/characters/archer-gold.0e695c4b.webp",
+      "bytes": 37680,
+      "sha256": "0e695c4be7e134c9ebbd4591e3bb428d9136817892a31fa871fd26c26114f24e"
+    },
+    {
+      "key": "character/runner_pickaxe",
+      "path": "images/characters/runner-pickaxe.00abba1b.webp",
+      "bytes": 48196,
+      "sha256": "00abba1b03f28530382553d9788e36b9f9e13ccf11aa1f3df02af4e500af13c8"
+    },
+    {
+      "key": "event/24-shift",
+      "path": "images/events/24-shift.db993826.webp",
+      "bytes": 14822,
+      "sha256": "db993826cafbb9b78a6f2ad1980490e414c98e68ec8aef2888ba40776be5a4e7"
+    },
+    {
+      "key": "event/alternate-thesis",
+      "path": "images/events/alternate-thesis.73c56b35.webp",
+      "bytes": 64618,
+      "sha256": "73c56b356b9b7993ce291e09f6aee1161b5e85b590f5c4b36aafe792573285e2"
+    },
+    {
+      "key": "event/arcadia-x",
+      "path": "images/events/arcadia-x.4b97b6d3.webp",
+      "bytes": 14054,
+      "sha256": "4b97b6d3a83f1c8947dd6c2b3986bc3fe877bc1cf0c96954fd13709d8da00ac5"
+    },
+    {
+      "key": "event/deviation",
+      "path": "images/events/deviation.b6af3ef1.webp",
+      "bytes": 15046,
+      "sha256": "b6af3ef1e5c7dd8bf5d556170a29914cc21387bfe469bbd7d78ea52f7a4a09d9"
+    },
+    {
+      "key": "event/in-perspective",
+      "path": "images/events/in-perspective.dbb5ddbd.webp",
+      "bytes": 60690,
+      "sha256": "dbb5ddbd99356d87ac56acb4a9c38d4701eb19a9a6a23556ec7be09311e53d97"
+    },
+    {
+      "key": "event/mystery-block",
+      "path": "images/events/in-perspective.dbb5ddbd.webp",
+      "bytes": 60690,
+      "sha256": "dbb5ddbd99356d87ac56acb4a9c38d4701eb19a9a6a23556ec7be09311e53d97"
+    },
+    {
+      "key": "event/pixel-paradox",
+      "path": "images/events/in-perspective.dbb5ddbd.webp",
+      "bytes": 60690,
+      "sha256": "dbb5ddbd99356d87ac56acb4a9c38d4701eb19a9a6a23556ec7be09311e53d97"
+    },
+    {
+      "key": "event/pixel-quest",
+      "path": "images/events/deviation.b6af3ef1.webp",
+      "bytes": 15046,
+      "sha256": "b6af3ef1e5c7dd8bf5d556170a29914cc21387bfe469bbd7d78ea52f7a4a09d9"
+    },
+    {
+      "key": "event/promptx",
+      "path": "images/events/alternate-thesis.73c56b35.webp",
+      "bytes": 64618,
+      "sha256": "73c56b356b9b7993ce291e09f6aee1161b5e85b590f5c4b36aafe792573285e2"
+    },
+    {
+      "key": "event/render-rush",
+      "path": "images/events/render-rush.7219ad5c.webp",
+      "bytes": 72766,
+      "sha256": "7219ad5c847b34b05c4c4a34be3246228a4169759fe148c650559286f98b7713"
+    },
+    {
+      "key": "event/the-last-commit",
+      "path": "images/events/arcadia-x.4b97b6d3.webp",
+      "bytes": 14054,
+      "sha256": "4b97b6d3a83f1c8947dd6c2b3986bc3fe877bc1cf0c96954fd13709d8da00ac5"
+    },
+    {
+      "key": "event/the-twin-directive",
+      "path": "images/events/alternate-thesis.73c56b35.webp",
+      "bytes": 64618,
+      "sha256": "73c56b356b9b7993ce291e09f6aee1161b5e85b590f5c4b36aafe792573285e2"
+    },
+    {
+      "key": "event/twin-protocol",
+      "path": "images/events/24-shift.db993826.webp",
+      "bytes": 14822,
+      "sha256": "db993826cafbb9b78a6f2ad1980490e414c98e68ec8aef2888ba40776be5a4e7"
+    },
+    {
+      "key": "ui/login-bg",
+      "path": "images/login-parallax-bg.795b270f.webp",
+      "bytes": 233198,
+      "sha256": "795b270fdf9031f3c8c7e54293f1904f1527f4fc1b2452b02fa77ca0eabf9abd"
+    },
+    {
+      "key": "video/splash",
+      "path": "videos/minecraft-splash.eff4addf.mp4",
+      "bytes": 2751038,
+      "sha256": "eff4addf5954c2fd18bab3c6fda69b5f0cc1088939ca030a8f47e9d34ba353da"
+    }
+  ]
+}

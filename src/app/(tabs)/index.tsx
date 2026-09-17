@@ -35,6 +35,7 @@ import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 
 import { px } from "@/theme/scale";
+import { resolveAsset } from "@/services/assets";
 import { fonts, typography } from "@/theme/tokens";
 import { useAuth } from "@/modules/auth";
 import { useM3Theme, M3ShapeDefinition } from "@/theme/M3ThemeContext";
@@ -628,7 +629,7 @@ export default function ModernHomeTab() {
               {/* Character Avatar (Counter-Rotated so character stays strictly upright) */}
               <Animated.View style={[styles.avatarCounterWrap, counterRotateAvatarStyle]}>
                 <Image
-                  source={userSkin.source}
+                  source={resolveAsset(userSkin.assetKey)}
                   style={styles.capsuleAvatarImage}
                   contentFit="contain"
                   priority="high"
