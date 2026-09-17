@@ -30,20 +30,35 @@ export function OfflineBanner({ source, savedAt }: { source: DataSource; savedAt
     return null;
   }
 
+  /**
+   * Which copy we fell back to. This is *what* is on screen, never *why* — the
+   * reason is always a connectivity fact.
+   */
+  const showing = isSeed
+    ? `the programme bundled with the app (${formatAge(savedAt)})`
+    : `saved data from ${formatAge(savedAt)}`;
+
   let tone: "warn" | "info" = "info";
   let title: string;
   let detail: string;
 
-  if (isSeed) {
+  // Order matters, and it used to be wrong: `isSeed` was checked first and
+  // hard-coded the headline to "OFFLINE SNAPSHOT", so a user with perfectly good
+  // internet whose backend was simply unreachable was told they were offline.
+  // Connectivity decides the headline; `showing` supplies the detail.
+  if (!isOnline) {
     tone = "warn";
-    title = "OFFLINE SNAPSHOT";
-    detail = `Showing the programme bundled with the app (${formatAge(savedAt)}). Connect once to load the latest.`;
-  } else if (!isOnline) {
     title = "OFFLINE";
-    detail = `Showing saved data from ${formatAge(savedAt)}. It'll refresh automatically when you're back online.`;
+    detail = `Showing ${showing}. It'll refresh automatically when you're back online.`;
   } else if (isBackendReachable === false) {
+    tone = "warn";
     title = "CAN'T REACH SERVER";
-    detail = `You're online but the fest server isn't responding. Showing saved data from ${formatAge(savedAt)}.`;
+    detail = `You're online, but the fest server isn't responding. Showing ${showing}.`;
+  } else if (isSeed) {
+    // Online and the server is fine (or not yet probed) — this is the brief
+    // window before the first sync lands, not a failure.
+    title = "LOADING LATEST";
+    detail = `Showing ${showing} while the latest programme loads.`;
   } else if (isCache) {
     title = "SAVED DATA";
     detail = `Last synced ${formatAge(savedAt)}.`;
