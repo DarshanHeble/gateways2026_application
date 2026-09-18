@@ -21,7 +21,7 @@ import { CHUNKS, styles } from "./asset-loading.styles";
  * URL and streams on first view. The download is an optimisation, not a gate.
  */
 export function AssetLoadingScreen({ onDone }: { onDone: () => void }) {
-  const { status, progress, isSettled, failedCount, skip, retry } = useAssets();
+  const { status, progress, isSettled, skip } = useAssets();
   const { isOnline } = useNetwork();
 
   // The handoff must happen exactly once. `isSettled` can briefly re-assert (a
@@ -44,21 +44,13 @@ export function AssetLoadingScreen({ onDone }: { onDone: () => void }) {
   // nothing at all until we know there is real work to show.
   if (status === "checking") return null;
 
-  const failing = status === "failed";
-
   return (
     <View style={styles.root}>
       <Text style={styles.wordmark}>GATEWAYS</Text>
       <Text style={styles.year}>2026</Text>
 
-      <Text style={styles.headline}>
-        {failing ? "COULDN'T LOAD EVERYTHING" : "GENERATING WORLD"}
-      </Text>
-      <Text style={styles.subline}>
-        {failing
-          ? `${failedCount} file${failedCount === 1 ? "" : "s"} didn't make it. You can retry, or continue — anything missing will load as you go.`
-          : "Downloading fest artwork. This happens once."}
-      </Text>
+      <Text style={styles.headline}>GENERATING WORLD</Text>
+      <Text style={styles.subline}>Downloading fest artwork. This happens once.</Text>
 
       <View style={styles.barFrame}>
         {Array.from({ length: CHUNKS }, (_, i) => (
@@ -66,11 +58,7 @@ export function AssetLoadingScreen({ onDone }: { onDone: () => void }) {
             key={i}
             style={[
               styles.chunk,
-              i < filled
-                ? failing
-                  ? styles.chunkFailed
-                  : styles.chunkFilled
-                : styles.chunkEmpty,
+              i < filled ? styles.chunkFilled : styles.chunkEmpty,
             ]}
           />
         ))}
@@ -84,28 +72,13 @@ export function AssetLoadingScreen({ onDone }: { onDone: () => void }) {
       </View>
 
       <View style={styles.actions}>
-        {failing && (
-          <Pressable
-            onPress={retry}
-            accessibilityRole="button"
-            accessibilityLabel="Retry the asset download"
-            style={({ pressed }) => [
-              styles.button,
-              styles.buttonPrimary,
-              pressed && styles.buttonPressed,
-            ]}
-          >
-            <Text style={[styles.buttonText, styles.buttonTextPrimary]}>RETRY</Text>
-          </Pressable>
-        )}
-
         <Pressable
           onPress={skip}
           accessibilityRole="button"
-          accessibilityLabel={failing ? "Continue without downloading" : "Skip the download"}
+          accessibilityLabel="Skip the download"
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
         >
-          <Text style={styles.buttonText}>{failing ? "CONTINUE" : "SKIP"}</Text>
+          <Text style={styles.buttonText}>SKIP</Text>
         </Pressable>
       </View>
 

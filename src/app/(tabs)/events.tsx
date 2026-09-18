@@ -29,6 +29,7 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fonts, typography } from "@/theme/tokens";
 import { px } from "@/theme/scale";
+import { useAssetsVersion } from "@/modules/assets";
 import { useM3Theme } from "@/theme/M3ThemeContext";
 import { EventItem } from "@/services/api";
 import { EventDetailSheet } from "@/components/EventDetailSheet";
@@ -40,6 +41,10 @@ const { height: SCREEN_H } = Dimensions.get("window");
 type EventFilterType = "all" | "technical" | "non-technical";
 
 export default function EventsTab() {
+  // Subscribe to the asset registry: `getEventImage`/`resolveAsset` are plain
+  // synchronous reads, so without this the screen would keep whatever was
+  // resolvable on first render and never pick up a completed download.
+  useAssetsVersion();
   const insets = useSafeAreaInsets();
   const { theme, isDark, toggleColorMode } = useM3Theme();
 

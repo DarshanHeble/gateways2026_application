@@ -42,27 +42,29 @@ import {
 interface AssetsContextType {
   status: AssetStatus;
   progress: AssetProgress;
-  /** True once the loading page has nothing left to do and should hand off. */
+  /**
+   * True once the loading page has nothing left to do and should hand off.
+   *
+   * Note `"failed"` counts as settled, deliberately. A participant on bad fest
+   * Wi-Fi must never be held at a loading screen: a failed download drops
+   * straight through to the app, where anything missing resolves to its CDN URL
+   * and streams on first view. The files that failed are simply still missing
+   * next launch, so `missingFiles` picks them up again with no explicit retry.
+   */
   isSettled: boolean;
-  /** Number of files that failed this run; drives the retry affordance. */
-  failedCount: number;
   skip: () => void;
-  retry: () => void;
 }
 
 const AssetsContext = createContext<AssetsContextType>({
   status: "checking",
   progress: EMPTY_PROGRESS,
   isSettled: false,
-  failedCount: 0,
   skip: () => {},
-  retry: () => {},
 });
 
 export function AssetsProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AssetStatus>("checking");
   const [progress, setProgress] = useState<AssetProgress>(EMPTY_PROGRESS);
-  const [failedCount, setFailedCount] = useState(0);
 
   const mounted = useRef(true);
   // One download at a time. Mount, retry and the background refresh can all fire
@@ -115,7 +117,6 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
         primeLocal(outcome.localUris);
 
         if (!mounted.current) return;
-        setFailedCount(outcome.failed.length);
 
         if (outcome.failed.length > 0) {
           console.warn(
@@ -208,24 +209,14 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
     setStatus("skipped");
   }, []);
 
-  const retry = useCallback(() => {
-    const manifest = manifestRef.current;
-    if (!manifest) return;
-    setFailedCount(0);
-    setProgress(EMPTY_PROGRESS);
-    install(manifest, { background: false });
-  }, [install]);
-
   const value = useMemo<AssetsContextType>(
     () => ({
       status,
       progress,
       isSettled: status === "ready" || status === "skipped" || status === "failed",
-      failedCount,
       skip,
-      retry,
     }),
-    [status, progress, failedCount, skip, retry],
+    [status, progress, skip],
   );
 
   return <AssetsContext.Provider value={value}>{children}</AssetsContext.Provider>;

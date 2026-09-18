@@ -20,6 +20,37 @@ let localUris: Record<string, string> = {};
 /** key -> absolute CDN URL. Known as soon as *any* manifest is available. */
 let remoteUrls: Record<string, string> = {};
 
+/**
+ * Bumped whenever the tables above change, so React can be told to look again.
+ *
+ * Without this, anything that rendered before the provider finished priming
+ * would resolve to `null` and stay blank *forever*, because module-level state
+ * can't trigger a re-render. `MobConvergenceOverlay` is the sharp edge: it is
+ * root-mounted and its items take no changing props, so a single early render
+ * would leave the transition characters permanently invisible. Priming and auth
+ * hydration are independent async AsyncStorage reads, so which lands first is a
+ * race — and a race is not something to leave load-bearing.
+ */
+let version = 0;
+const listeners = new Set<() => void>();
+
+function publish(): void {
+  version += 1;
+  for (const listener of listeners) listener();
+}
+
+/** Subscribe to registry changes. Pairs with `getAssetsVersion` for `useSyncExternalStore`. */
+export function subscribeToAssets(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+export function getAssetsVersion(): number {
+  return version;
+}
+
 function joinUrl(baseUrl: string, path: string): string {
   return `${baseUrl.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
 }
@@ -32,15 +63,18 @@ export function primeRemote(manifest: AssetManifest | null): void {
     next[entry.key] = joinUrl(manifest.baseUrl, entry.path);
   }
   remoteUrls = next;
+  publish();
 }
 
 /** Record which assets are confirmed present on disk. */
 export function primeLocal(map: Record<string, string>): void {
   localUris = map;
+  publish();
 }
 
 export function markLocal(key: string, uri: string): void {
   localUris = { ...localUris, [key]: uri };
+  publish();
 }
 
 /**
@@ -83,4 +117,5 @@ export function remoteUrlFor(manifest: AssetManifest, entry: AssetEntry): string
 export function resetRegistry(): void {
   localUris = {};
   remoteUrls = {};
+  publish();
 }

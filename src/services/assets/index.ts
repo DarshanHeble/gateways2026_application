@@ -27,6 +27,7 @@ export {
 } from "./downloader";
 
 export {
+  getAssetsVersion,
   isLocal,
   markLocal,
   primeLocal,
@@ -35,6 +36,7 @@ export {
   resetRegistry,
   resolveAsset,
   resolveAssetUri,
+  subscribeToAssets,
 } from "./registry";
 
 export {

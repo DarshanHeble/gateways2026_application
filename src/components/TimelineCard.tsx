@@ -8,6 +8,7 @@ import { fonts, typography } from "@/theme/tokens";
 import { px } from "@/theme/scale";
 import { EventItem } from "@/services/api";
 import { getEventImage } from "@/services/EventAssets";
+import { useAssetsVersion } from "@/modules/assets";
 
 export interface TimelineCardProps {
   item: any;
@@ -26,6 +27,10 @@ export function TimelineCard({
   badgeOverride,
   theme,
 }: TimelineCardProps) {
+  // Subscribe to the asset registry: `getEventImage` is a plain synchronous
+  // read, so without this the card would keep whatever was resolvable on first
+  // render and never pick up a completed download.
+  useAssetsVersion();
   const isCompetition = Boolean((item as any).is_competition);
   const badgeText = badgeOverride || ((item as any).category ? (item as any).category.toUpperCase() : "");
 

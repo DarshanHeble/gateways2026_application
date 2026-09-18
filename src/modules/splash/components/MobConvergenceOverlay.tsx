@@ -12,7 +12,7 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 
 import { registerChunkTransitionHandlers } from "../utils/chunkTransition";
-import { resolveAsset } from "@/services/assets";
+import { useAssetSource } from "@/modules/assets";
 import { px } from "@/theme/scale";
 import { styles } from "./MobConvergenceOverlay.styles";
 
@@ -115,6 +115,10 @@ function SwarmMobItem({
   mob: DynamicMob;
   progress: SharedValue<number>;
 }) {
+  // Reactive: this overlay mounts at the root and its props never change, so a
+  // plain `resolveAsset` read would freeze at whatever was known on frame one.
+  const source = useAssetSource(mob.assetKey);
+
   const animStyle = useAnimatedStyle(() => {
     "worklet";
     const p = progress.value;
@@ -148,7 +152,7 @@ function SwarmMobItem({
       ]}
     >
       <Image
-        source={resolveAsset(mob.assetKey)}
+        source={source}
         style={styles.mobImage}
         contentFit="contain"
         cachePolicy="memory-disk"

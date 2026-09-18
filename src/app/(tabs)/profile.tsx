@@ -40,6 +40,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fonts, typography } from "@/theme/tokens";
 import { px } from "@/theme/scale";
 import { resolveAsset } from "@/services/assets";
+import { useAssetsVersion } from "@/modules/assets";
 import { useAuth } from "@/modules/auth";
 import { useM3Theme, M3ShapeDefinition } from "@/theme/M3ThemeContext";
 import { coverScreen, revealScreen } from "@/modules/splash";
@@ -140,6 +141,10 @@ const STORAGE_PROFILE_KEY = "@gateways_user_profile_v1";
 // Floating satellite pod component
 
 export default function ProfileTab() {
+  // Subscribe to the asset registry: `getEventImage`/`resolveAsset` are plain
+  // synchronous reads, so without this the screen would keep whatever was
+  // resolvable on first render and never pick up a completed download.
+  useAssetsVersion();
   const insets = useSafeAreaInsets();
   const { role, logout } = useAuth();
   const { activeShape, setShapeById, shapes, theme, isDark, toggleColorMode } = useM3Theme();

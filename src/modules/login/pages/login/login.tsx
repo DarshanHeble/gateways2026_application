@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import {
   View,
-  ImageBackground,
   Text,
   TouchableOpacity,
   KeyboardAvoidingView,
@@ -15,7 +14,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useAuth } from "@/modules/auth";
 import { px } from "@/theme/scale";
-import { resolveAsset } from "@/services/assets";
+import { ImageBackground } from "expo-image";
+import { useAssetSource } from "@/modules/assets";
 import { Bevel } from "@/components/pixel/Primitives";
 import { DitherFill } from "@/components/pixel/Fills";
 import { API_BASE_URL, apiClient } from "@/services/api";
@@ -34,6 +34,7 @@ GoogleSignin.configure({
 });
 
 export function LoginScreen() {
+  const loginBackground = useAssetSource("ui/login-bg");
   const { login, role, isReady } = useAuth();
   const params = useLocalSearchParams<{ handoffCode?: string }>();
   const form = useLoginForm((newRole) => {
@@ -108,9 +109,12 @@ export function LoginScreen() {
 
   return (
     <ImageBackground
-      source={resolveAsset("ui/login-bg") ?? undefined}
+      // expo-image, not react-native: when this asset hasn't been downloaded yet
+      // it resolves to a CDN URL, and only expo-image actually fetches (and disk
+      // caches) a remote source here. RN's ImageBackground left it blank.
+      source={loginBackground}
       style={styles.background}
-      resizeMode="cover"
+      contentFit="cover"
     >
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView

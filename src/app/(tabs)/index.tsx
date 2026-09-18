@@ -36,6 +36,7 @@ import * as Haptics from "expo-haptics";
 
 import { px } from "@/theme/scale";
 import { resolveAsset } from "@/services/assets";
+import { useAssetsVersion } from "@/modules/assets";
 import { fonts, typography } from "@/theme/tokens";
 import { useAuth } from "@/modules/auth";
 import { useM3Theme, M3ShapeDefinition } from "@/theme/M3ThemeContext";
@@ -158,6 +159,10 @@ const FloatingSatellite = React.memo(function FloatingSatellite({
 });
 
 export default function ModernHomeTab() {
+  // Subscribe to the asset registry: `getEventImage`/`resolveAsset` are plain
+  // synchronous reads, so without this the screen would keep whatever was
+  // resolvable on first render and never pick up a completed download.
+  useAssetsVersion();
   const insets = useSafeAreaInsets();
   const { role } = useAuth();
   const { activeShape, setShapeById, shapes, theme, isDark, toggleColorMode } = useM3Theme();
