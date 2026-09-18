@@ -140,6 +140,39 @@ const STORAGE_PROFILE_KEY = "@gateways_user_profile_v1";
 
 // Floating satellite pod component
 
+/**
+ * One "label + control" row inside a settings card.
+ *
+ * Each of these used to be written inline as a `space-between` row whose text
+ * column had no `flex`. The description ("Toggle between light and dark mode")
+ * therefore claimed its full intrinsic width and pushed the control past the
+ * card's padding — which is why CHANGE SKIN was visibly clipped at the screen
+ * edge. The text has to be the flexible side; the control keeps its natural size.
+ */
+function SettingRow({
+  title,
+  description,
+  theme,
+  children,
+}: {
+  title: string;
+  description: string;
+  theme: any;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={styles.settingRow}>
+      <View style={styles.settingRowText}>
+        <Text style={[styles.fieldValue, { color: theme.text }]}>{title}</Text>
+        <Text style={[styles.fieldLabel, { color: theme.textDim, marginTop: px(4) }]}>
+          {description}
+        </Text>
+      </View>
+      <View style={styles.settingRowControl}>{children}</View>
+    </View>
+  );
+}
+
 export default function ProfileTab() {
   // Subscribe to the asset registry: `getEventImage`/`resolveAsset` are plain
   // synchronous reads, so without this the screen would keep whatever was
@@ -445,25 +478,29 @@ export default function ProfileTab() {
         <View style={{ height: Math.max(insets.top, px(24)) + px(22) }} />
 
         {/* Hero Massive Bold Header */}
-        <View style={[styles.heroHeaderRow, { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }]}>
+        <View style={styles.heroHeaderRow}>
           <View style={styles.titleColumn}>
             <Text style={[styles.heroSupTitle, { color: theme.textDim }]}>STAGE IDENTITY,</Text>
-            <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
-              <Text style={[styles.heroFirstNameTitle, { color: theme.text }]} numberOfLines={1}>
+            {/*
+              `wrap` + shrinkable children: a long name used to run straight off
+              the right edge, because two `numberOfLines={1}` Texts in a row with
+              no `flexShrink` will happily overflow their parent rather than
+              truncate.
+            */}
+            <View style={styles.heroNameRow}>
+              <Text style={[styles.heroFirstNameTitle, styles.heroNamePart, { color: theme.text }]} numberOfLines={1}>
                 {firstName}
               </Text>
               {lastName ? (
-                <Text style={[styles.heroLastNameTitle, { color: theme.primary }]} numberOfLines={1}>
+                <Text style={[styles.heroLastNameTitle, styles.heroNamePart, { color: theme.primary }]} numberOfLines={1}>
                   {lastName}
                 </Text>
               ) : null}
             </View>
-            <Text style={[styles.heroSubtitle, { color: theme.textDim }]}>
+            <Text style={[styles.heroSubtitle, { color: theme.textDim }]} numberOfLines={2}>
               {profile.participantId} • {activeSkin.title}
             </Text>
           </View>
-
-          
         </View>
 
         
@@ -473,42 +510,37 @@ export default function ProfileTab() {
           <Text style={{ fontFamily: fonts.pixelBold, fontSize: px(18), color: theme.text, marginBottom: px(16) }}>APP PREFERENCES</Text>
           
           <View style={[styles.credentialsCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, marginBottom: px(16) }]}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <View>
-                <Text style={[styles.fieldValue, { color: theme.text }]}>Color Theme</Text>
-                <Text style={[styles.fieldLabel, { color: theme.textDim, marginTop: px(4) }]}>Toggle between light and dark mode</Text>
-              </View>
-              {/* Dark / Light Mode Switcher */}
-          <Pressable
-            style={{
-              width: 38,
-              height: 38,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: theme.surfaceElevated,
-              borderColor: theme.border,
-            }}
-            onPress={toggleColorMode}
-          >
-            <Ionicons
-              name={isDark ? "sunny-outline" : "moon-outline"}
-              size={18}
-              color={theme.primary}
-            />
-          </Pressable>
-            </View>
+            <SettingRow
+              title="Color Theme"
+              description="Toggle between light and dark mode"
+              theme={theme}
+            >
+              <Pressable
+                style={[styles.iconToggle, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                onPress={toggleColorMode}
+                accessibilityRole="button"
+                accessibilityLabel={isDark ? "Switch to light mode" : "Switch to dark mode"}
+                hitSlop={px(8)}
+              >
+                <Ionicons
+                  name={isDark ? "sunny-outline" : "moon-outline"}
+                  size={px(18)}
+                  color={theme.primary}
+                />
+              </Pressable>
+            </SettingRow>
           </View>
           
           <View style={[styles.credentialsCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <View>
-                <Text style={[styles.fieldValue, { color: theme.text }]}>Minecraft Skin</Text>
-                <Text style={[styles.fieldLabel, { color: theme.textDim, marginTop: px(4) }]}>Choose your stage identity</Text>
-              </View>
+            <SettingRow
+              title="Minecraft Skin"
+              description="Choose your stage identity"
+              theme={theme}
+            >
               <MinecraftButton mode="outlined" onPress={() => setSkinModalVisible(true)}>
                 CHANGE SKIN
               </MinecraftButton>
-            </View>
+            </SettingRow>
           </View>
         </View>
     
@@ -530,19 +562,22 @@ export default function ProfileTab() {
         {/* Player Credentials Spotlight Card */}
         <View style={[styles.credentialsCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
           <View style={styles.credentialsHeader}>
-            <View style={{ flex: 1 }}>
+            <View style={styles.settingRowText}>
               <Text style={[styles.credentialsSectionTitle, { color: theme.text }]}>PLAYER CREDENTIALS</Text>
               <Text style={[styles.credentialsSubtitle, { color: theme.textDim }]}>Registered festival details & preferences</Text>
             </View>
             <Pressable
               style={[
                 styles.editToggleBtn,
+                styles.settingRowControl,
                 {
                   backgroundColor: theme.primaryContainer,
                   borderColor: theme.rimBorder,
                 },
               ]}
               onPress={() => setIsEditing(!isEditing)}
+              accessibilityRole="button"
+              accessibilityLabel={isEditing ? "Stop editing profile" : "Edit profile"}
             >
               <Ionicons
                 name={isEditing ? "close-circle-outline" : "create-outline"}
@@ -863,11 +898,23 @@ const styles = StyleSheet.create({
   titleColumn: {
     width: "100%",
   },
+  heroNameRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    // Wrap rather than overflow when both names can't share a line.
+    flexWrap: "wrap",
+    gap: px(6),
+  },
+  heroNamePart: {
+    // Lets a long single name truncate inside the row instead of running past
+    // the screen edge.
+    flexShrink: 1,
+  },
   heroSupTitle: {
     fontFamily: fonts.bodyBold,
     fontSize: px(19),
     fontWeight: "700",
-    letterSpacing: 2.2,
+    letterSpacing: px(2.2),
     color: "#d6c8aa",
     marginBottom: px(4),
   },
@@ -1054,6 +1101,30 @@ const styles = StyleSheet.create({
     fontSize: px(15),
     letterSpacing: 0.5,
   },
+  settingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: px(12),
+  },
+  settingRowText: {
+    // Takes the slack and, crucially, is allowed to shrink: without `minWidth: 0`
+    // a flex child in a row refuses to go below its content's intrinsic width.
+    flex: 1,
+    minWidth: 0,
+  },
+  settingRowControl: {
+    flexShrink: 0,
+  },
+  iconToggle: {
+    width: px(38),
+    height: px(38),
+    alignItems: "center",
+    justifyContent: "center",
+    // The previous inline style set `borderColor` with no `borderWidth`, so the
+    // border it was asking for never rendered.
+    borderWidth: px(1),
+  },
   credentialsCard: {
     backgroundColor: "rgba(17, 24, 39, 0.55)",
     padding: px(16),
@@ -1064,7 +1135,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderBottomWidth: 1,
+    // Without a gap the subtitle butts straight up against the EDIT control.
+    gap: px(12),
+    borderBottomWidth: px(1),
     borderBottomColor: "rgba(255, 255, 255, 0.08)",
     paddingBottom: px(10),
   },
