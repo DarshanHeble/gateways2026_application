@@ -14,6 +14,14 @@ import type { AssetEntry, AssetManifest, AssetProgress } from "./types";
  * to re-download the whole bundle. The document directory survives relaunches,
  * reboots and app updates, and is cleared only on uninstall.
  *
+ * Known trade-off on iOS: `Documents/` is included in iCloud backups, so this
+ * ~3.3 MB of re-downloadable data is backed up with the app. Apple would rather
+ * regenerable data were excluded, but expo-file-system (SDK 57) exposes no
+ * `isExcludedFromBackup` equivalent, and the only alternative — `Paths.cache` —
+ * trades a guarantee the product actually needs (download once, then work
+ * offline) for a few megabytes of backup. Revisit if the bundle grows much
+ * beyond this, or if the SDK gains an exclusion API.
+ *
  * **A flat layout keyed by the content-hashed basename.** Manifest paths are
  * nested (`images/events/promptx.a1b2c3d4.webp`) but the basename already
  * contains a SHA-256 prefix, so it is globally unique. Flattening removes all

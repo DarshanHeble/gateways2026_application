@@ -29,9 +29,30 @@ import { styles } from "./login.styles";
 
 WebBrowser.maybeCompleteAuthSession();
 
-GoogleSignin.configure({
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-});
+/**
+ * Google Sign-In is configured only where it can actually succeed.
+ *
+ * On iOS the native `configure()` rejects unless a `GoogleService-Info.plist` is
+ * bundled or an `iosClientId` is supplied, and this project has neither. The
+ * rejection is raised on a promise the library never returns to us, so it cannot
+ * be caught at the call site — it surfaced as a full-screen redbox on *every*
+ * iOS launch, for a provider whose button is still a "coming soon" stub (see
+ * `handleGoogleSignIn` below). Skipping the call is the only way to avoid it.
+ *
+ * Set `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` (or add the plist) and iOS configures
+ * itself normally.
+ */
+const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+if (Platform.OS !== "ios" || googleIosClientId) {
+  GoogleSignin.configure({
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    iosClientId: googleIosClientId,
+  });
+} else if (__DEV__) {
+  console.warn(
+    "[auth] Google Sign-In not configured on iOS: set EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID.",
+  );
+}
 
 export function LoginScreen() {
   const loginBackground = useAssetSource("ui/login-bg");
