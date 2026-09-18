@@ -21,6 +21,7 @@ export {
   downloadManifest,
   installedBytes,
   missingFiles,
+  pruneOrphans,
   scanInstalled,
   type DownloadOptions,
   type DownloadOutcome,

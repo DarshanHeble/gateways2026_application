@@ -23,6 +23,28 @@ export const MANIFEST_URL =
   `${BUNDLED_MANIFEST.baseUrl.replace(/\/+$/, "")}/manifest.json`;
 
 /**
+ * How coarsely the manifest URL is cache-busted.
+ *
+ * The manifest is the one mutable file in the bundle, and jsDelivr serves it with
+ * `cache-control: public, max-age=604800` — a **week** of client-side caching. On
+ * device that means `fetch` answers from its own HTTP cache without ever going to
+ * the network, so newly published artwork cannot reach users for seven days. That
+ * silently defeats the whole reason for shipping art out-of-band, and it is not
+ * something a CDN purge can fix: the stale copy lives on the phone.
+ *
+ * Bucketing by five minutes gives a URL that is stable enough for many launches
+ * to share one cached response, while guaranteeing an update is seen within
+ * minutes. The asset files themselves are content-hashed and immutable, so they
+ * still enjoy permanent caching — only this 4 KB document revalidates.
+ */
+const CACHE_BUCKET_MS = 5 * 60 * 1000;
+
+function bustedManifestUrl(): string {
+  const bucket = Math.floor(Date.now() / CACHE_BUCKET_MS);
+  return `${MANIFEST_URL}${MANIFEST_URL.includes("?") ? "&" : "?"}v=${bucket}`;
+}
+
+/**
  * Structural guard. A CDN can return an error page, a truncated body or a stale
  * half-written file with a 200, and feeding that to the downloader would either
  * crash a render or wipe a perfectly good install record.
@@ -67,10 +89,9 @@ export async function fetchRemoteManifest(timeoutMs = 8000): Promise<AssetManife
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(MANIFEST_URL, {
+    const response = await fetch(bustedManifestUrl(), {
       method: "GET",
       signal: controller.signal,
-      // Let the CDN's own validators work; jsDelivr caches branch URLs ~12h.
       headers: { Accept: "application/json" },
     });
     if (!response.ok) {

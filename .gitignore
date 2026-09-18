@@ -50,3 +50,7 @@ example
 
 # Generated CDN asset bundle staging dir
 dist-assets/
+
+# Python bytecode from scripts/
+__pycache__/
+*.pyc

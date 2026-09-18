@@ -16,6 +16,7 @@ import {
   loadLocalManifest,
   missingFiles,
   primeLocal,
+  pruneOrphans,
   primeRemote,
   scanInstalled,
   writeCachedManifest,
@@ -92,7 +93,16 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
       if (running.current) return;
 
       const outstanding = missingFiles(manifest);
+      console.info(
+        `[assets] install(background=${background}): ${outstanding.length} file(s) missing`,
+      );
       if (outstanding.length === 0) {
+        // Fully installed — a good moment to drop anything a previous manifest
+        // referenced and this one doesn't.
+        const pruned = pruneOrphans(manifest);
+        if (pruned.length > 0) {
+          console.info(`[assets] pruned ${pruned.length} superseded file(s)`, pruned);
+        }
         republish(manifest);
         if (mounted.current && !background) setStatus("ready");
         return;
@@ -117,6 +127,13 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
         primeLocal(outcome.localUris);
 
         if (!mounted.current) return;
+
+        if (outcome.failed.length === 0) {
+          const pruned = pruneOrphans(manifest);
+          if (pruned.length > 0) {
+            console.info(`[assets] pruned ${pruned.length} superseded file(s)`, pruned);
+          }
+        }
 
         if (outcome.failed.length > 0) {
           console.warn(
@@ -172,6 +189,10 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
       try {
         const remote = await fetchRemoteManifest();
         if (cancelled) return;
+        console.info(
+          `[assets] manifest check: remote generatedAt=${remote.generatedAt}, ` +
+            `local generatedAt=${manifestRef.current?.generatedAt ?? "none"}`,
+        );
 
         const current = manifestRef.current;
         const changed =
@@ -184,15 +205,19 @@ export function AssetsProvider({ children }: { children: ReactNode }) {
         await writeCachedManifest(remote);
         manifestRef.current = remote;
 
+        console.info(`[assets] manifest changed=${changed}`);
         if (changed && !cancelled) {
           console.info("[assets] Newer bundle published — topping up in background.");
           await install(remote, { background: true });
         } else {
           republish(remote);
         }
-      } catch {
-        // Offline or CDN down. The cached manifest we booted from is still
-        // valid, so there is nothing to report and nothing to recover from.
+      } catch (error) {
+        // Offline or CDN down is expected and harmless — the cached manifest we
+        // booted from is still valid. Logged rather than swallowed so a genuine
+        // misconfiguration (bad URL, malformed manifest) is diagnosable instead
+        // of silently disabling artwork updates forever.
+        console.info("[assets] manifest refresh skipped:", (error as Error)?.message ?? error);
       }
     }, 2_000);
 

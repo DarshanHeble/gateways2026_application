@@ -197,6 +197,39 @@ export async function downloadManifest(
   };
 }
 
+/**
+ * Delete downloaded files the current manifest no longer references.
+ *
+ * Content-hashed names mean a re-exported asset arrives as a *new* file and the
+ * old one is simply orphaned — nothing overwrites it. Without this, every
+ * artwork update leaks its predecessor and the directory grows without bound
+ * (observed: three stale badges after a single re-encode). Safe by construction:
+ * it only ever removes names absent from the manifest we just installed, inside
+ * our own directory.
+ */
+export function pruneOrphans(manifest: AssetManifest): string[] {
+  const keep = new Set(manifest.assets.map(basenameOf));
+  const removed: string[] = [];
+
+  try {
+    for (const item of assetDirectory().list()) {
+      // The layout is deliberately flat, so anything that isn't a file we wrote
+      // is left well alone.
+      if (item instanceof Directory) continue;
+      if (keep.has(item.name)) continue;
+      try {
+        item.delete();
+        removed.push(item.name);
+      } catch {
+        // A file we can't delete is wasted space, not a failure worth raising.
+      }
+    }
+  } catch {
+    // Directory unreadable — nothing to prune.
+  }
+  return removed;
+}
+
 /** Wipe every downloaded asset. Used by a "clear cache" action and by tests. */
 export function clearDownloadedAssets(): void {
   const dir = new Directory(Paths.document, ASSET_DIR);

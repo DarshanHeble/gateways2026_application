@@ -209,6 +209,11 @@ def main() -> int:
     parser.add_argument("--out", default=str(DEFAULT_OUT),
                         help="asset repo working copy to write the bundle into")
     parser.add_argument("--base-url", default=DEFAULT_BASE_URL)
+    parser.add_argument(
+        "--skip-bundled",
+        action="store_true",
+        help="don't refresh src/services/assets/manifest.bundled.json (used by tests)",
+    )
     args = parser.parse_args()
 
     global ASSETS
@@ -272,7 +277,7 @@ def main() -> int:
     # stream in the moment a network appears instead of sitting on placeholders
     # until a manifest fetch succeeds.
     bundled = REPO_ROOT / "src" / "services" / "assets" / "manifest.bundled.json"
-    if bundled.parent.is_dir():
+    if not args.skip_bundled and bundled.parent.is_dir():
         bundled.write_text(manifest_json)
         print(f"  bundled snapshot -> {bundled.relative_to(REPO_ROOT)}")
 
