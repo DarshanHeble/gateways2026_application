@@ -1,29 +1,11 @@
 import { StyleSheet } from "react-native";
 import { colors, fonts, typography } from "@/theme/tokens";
+import { material, mojang } from "@/theme/minecraft";
 import { px } from "@/theme/scale";
 
 export const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#070b12",
-  },
-  ambientAuraTop: {
-    position: "absolute",
-    top: -px(160),
-    left: -px(100),
-    width: px(450),
-    height: px(450),
-    borderRadius: px(225),
-    opacity: 0.65,
-  },
-  ambientAuraBottom: {
-    position: "absolute",
-    bottom: px(10),
-    right: -px(100),
-    width: px(380),
-    height: px(380),
-    borderRadius: px(190),
-    opacity: 0.45,
   },
   contentWrapper: {
     flex: 1,
@@ -34,7 +16,7 @@ export const styles = StyleSheet.create({
   },
   heroSupTitle: {
     fontFamily: fonts.bodyBold,
-    fontSize: px(19),
+    fontSize: px(16),
     fontWeight: "700",
     letterSpacing: 2.2,
     color: "#d6c8aa",
@@ -52,20 +34,29 @@ export const styles = StyleSheet.create({
     color: "#ffffff",
     letterSpacing: typography.pageTitle.letterSpacing,
   },
+  /*
+   * Body copy, in the body face.
+   *
+   * This was set in the Minecraft pixel font at body size, which is the classic
+   * way to ruin a pixel-font design: the face is a *display* face — one weight
+   * of texture, no small-size legibility — so a wrapping sentence in it reads as
+   * a novelty and is genuinely harder to scan. The pixel face is for mastheads,
+   * eyebrows and labels; sentences are Space Grotesk.
+   */
   heroSubtitle: {
-    fontFamily: fonts.pixelMedium,
-    fontSize: px(19),
-    color: "#8e9ea8",
-    marginTop: px(4),
+    fontFamily: fonts.body,
+    fontSize: px(15),
+    lineHeight: px(21),
+    marginTop: px(6),
   },
   markAllPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: px(5),
+    gap: px(6),
     paddingHorizontal: px(12),
-    paddingVertical: px(6),
-    borderRadius: px(12),
-    borderWidth: 1,
+    paddingVertical: px(8),
+    borderRadius: 0,
+    overflow: "hidden",
   },
   markAllText: {
     fontFamily: fonts.bodyBold,
@@ -80,28 +71,29 @@ export const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingTop: px(80),
-    gap: px(8),
+    paddingTop: px(48),
+    gap: px(4),
   },
   emptyTitle: {
-    fontFamily: fonts.pixelMedium,
-    fontSize: px(20),
-    color: "#ffffff",
-    marginTop: px(8),
+    fontFamily: typography.kicker.fontFamily,
+    fontSize: px(typography.kicker.fontSize),
+    letterSpacing: typography.kicker.letterSpacing,
+    marginTop: px(16),
   },
   emptySub: {
     fontFamily: fonts.body,
-    fontSize: px(16),
-    color: "#64748b",
+    fontSize: px(14),
+    lineHeight: px(20),
     textAlign: "center",
+    maxWidth: px(260),
   },
   card: {
-    backgroundColor: "rgba(17, 24, 39, 0.55)",
-    borderRadius: px(16),
-    borderWidth: 1,
+    borderRadius: 0,
+    overflow: "hidden",
     marginBottom: px(12),
-    padding: px(16),
+    padding: px(18),
   },
+
   cardHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -120,13 +112,13 @@ export const styles = StyleSheet.create({
   dot: {
     width: px(8),
     height: px(8),
-    borderRadius: px(4),
-    marginTop: px(4),
+    borderRadius: 0,
+    marginTop: px(6),
   },
   body: {
     fontFamily: fonts.body,
-    fontSize: px(17),
-    color: "#94a3b8",
+    fontSize: px(15),
+    color: mojang.greySoft,
     lineHeight: px(23),
     marginTop: px(6),
   },
@@ -140,9 +132,10 @@ export const styles = StyleSheet.create({
     borderTopColor: "rgba(255, 255, 255, 0.06)",
   },
   targetBadge: {
-    paddingVertical: px(3),
-    paddingHorizontal: px(8),
-    borderRadius: px(6),
+    paddingVertical: px(4),
+    paddingHorizontal: px(9),
+    borderRadius: 0,
+    overflow: "hidden",
   },
   targetBadgeText: {
     fontFamily: fonts.bodyBold,
@@ -157,6 +150,6 @@ export const styles = StyleSheet.create({
   time: {
     fontFamily: fonts.bodyMedium,
     fontSize: px(15),
-    color: "#64748b",
+    color: mojang.greySoft,
   },
 });

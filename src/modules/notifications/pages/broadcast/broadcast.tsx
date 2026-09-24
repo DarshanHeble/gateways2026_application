@@ -1,19 +1,20 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 import { Redirect } from "expo-router";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { fonts } from "@/theme/tokens";
+import { space } from "@/theme/tokens";
+import { mcTextShadow } from "@/theme/minecraft";
 import { px } from "@/theme/scale";
 import { PixelInput } from "@/components/pixel/PixelInput";
-import { PixelCard } from "@/components/pixel/PixelCard";
+
 import { PixelToast } from "@/components/pixel/PixelToast";
-import { MinecraftButton } from "@/components/MaterialCraft/MinecraftButton";
+import { DirtBackground, Frame, Grain, McButton, McCard, useSurface } from "@/components/mc";
 import { useAuth } from "@/modules/auth";
 import { useNotifications } from "../../stores/NotificationsContext";
 import { fetchNotifications } from "@/services/notifications";
 import { AppNotification, NotificationTarget, targetLabel } from "@/services/notificationTypes";
-import { useM3Theme } from "@/theme/M3ThemeContext";
+import { useBlockTheme } from "@/theme/BlockThemeContext";
 import { styles } from "./broadcast.styles";
 
 type TargetOption = "all" | "participant" | "team" | "email";
@@ -27,7 +28,8 @@ const TARGET_OPTIONS: { key: TargetOption; label: string }[] = [
 
 export function BroadcastScreen() {
   const insets = useSafeAreaInsets();
-  const { theme } = useM3Theme();
+  const { theme } = useBlockTheme();
+  const surface = useSurface();
   const { role } = useAuth();
   const { sendNotification } = useNotifications();
   const [title, setTitle] = useState("");
@@ -87,95 +89,140 @@ export function BroadcastScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <ScrollView
-        style={[styles.root, { backgroundColor: theme.background }]}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: Math.max(insets.top, px(16)) + px(8) },
-        ]}
-        keyboardShouldPersistTaps="handled"
-      >
-        <PixelCard headerTitle="BROADCAST" badge="TEAM ONLY">
-          <Text style={[styles.demoNotice, { color: theme.primary }]}>
-            DEMO MODE — sends land on this device only until the backend is connected.
+      <View style={[styles.flex, { backgroundColor: theme.background }]}>
+        {/* Dirt behind, as on every menu screen. */}
+        <DirtBackground brightness={0.085} />
+
+        <ScrollView
+          style={styles.root}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: insets.top + px(52) },
+          ]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={[styles.pageTitle, { color: theme.text }]}>BROADCAST</Text>
+          <Text style={[styles.pageSub, { color: theme.textDim }]}>
+            Send a push notification to the fest.
           </Text>
 
-          <PixelInput label="TITLE" value={title} onChangeText={setTitle} placeholder="Schedule Update" />
+          {/* The composer, as a container panel. */}
+          <View style={[styles.panel, { backgroundColor: theme.surfaceElevated }]}>
+            <Grain />
+            <Frame depth="raised" />
 
-          <View style={{ height: px(12) }} />
+            <View style={styles.panelTitleBar}>
+              <Text style={[styles.eyebrow, { color: theme.textDim }]}>NEW MESSAGE</Text>
+              <View style={[styles.teamTag, { backgroundColor: surface.slot }]}>
+                <Frame depth="sunken" />
+                <Text style={[styles.teamTagText, { color: theme.primary }]}>TEAM ONLY</Text>
+              </View>
+            </View>
 
-          <PixelInput
-            label="MESSAGE"
-            value={body}
-            onChangeText={setBody}
-            placeholder="The hackathon venue has changed to..."
-            multiline
-            style={styles.multiline}
-          />
+            <Text style={[styles.demoNotice, { color: theme.primary }]}>
+              Demo mode — sends land on this device only until the backend is connected.
+            </Text>
 
-          <View style={{ height: px(14) }} />
+            <PixelInput label="TITLE" value={title} onChangeText={setTitle} placeholder="Schedule update" />
 
-          <Text style={[styles.fieldLabel, { color: theme.text }]}>SEND TO</Text>
-          <View style={styles.targetRow}>
-            {TARGET_OPTIONS.map((opt) => {
-              const active = targetOption === opt.key;
-              return (
-                <TouchableOpacity
-                  key={opt.key}
-                  style={[styles.targetChip, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }, active && { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}
-                  onPress={() => setTargetOption(opt.key)}
-                >
-                  <Text style={[styles.targetChipText, { color: theme.textDim }, active && { color: theme.primary }]}>{opt.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
+            <View style={{ height: px(space.md) }} />
+
+            <PixelInput
+              label="MESSAGE"
+              value={body}
+              onChangeText={setBody}
+              placeholder="The hackathon venue has changed to..."
+              multiline
+              style={styles.multiline}
+            />
+
+            <View style={{ height: px(space.lg) }} />
+
+            <Text style={[styles.eyebrow, { color: theme.textDim }]}>SEND TO</Text>
+            <View style={styles.targetRow}>
+              {TARGET_OPTIONS.map((opt) => {
+                const active = targetOption === opt.key;
+                return (
+                  <McCard
+                    key={opt.key}
+                    onPress={() => setTargetOption(opt.key)}
+                    depth={active ? "gold" : "raised"}
+                    fill={active ? surface.slotActive : surface.stone}
+                    style={styles.targetChip}
+                    accessibilityLabel={opt.label}
+                  >
+                    <Text
+                      style={[
+                        styles.targetChipText,
+                        { color: active ? theme.primary : theme.textDim },
+                        mcTextShadow(active ? theme.primary : theme.textDim, 13),
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </McCard>
+                );
+              })}
+            </View>
+
+            {targetOption === "email" ? (
+              <>
+                <View style={{ height: px(space.md) }} />
+                <PixelInput
+                  label="RECIPIENT EMAIL"
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="someone@christuniversity.in"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </>
+            ) : null}
+
+            <McButton
+              label={busy ? "Sending…" : "Send notification"}
+              tone="confirm"
+              block
+              disabled={!canSend}
+              onPress={handleSend}
+              style={styles.sendBtn}
+            />
           </View>
 
-          {targetOption === "email" ? (
-            <>
-              <View style={{ height: px(12) }} />
-              <PixelInput
-                label="RECIPIENT EMAIL"
-                value={email}
-                onChangeText={setEmail}
-                placeholder="someone@christuniversity.in"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </>
-          ) : null}
+          <Text style={[styles.eyebrow, styles.historyHeader, { color: theme.textDim }]}>
+            SENT HISTORY
+          </Text>
 
-          <View style={{ height: px(16) }} />
-
-          <MinecraftButton mode="contained" onPress={handleSend} disabled={!canSend} loading={busy}>
-            SEND NOTIFICATION
-          </MinecraftButton>
-        </PixelCard>
-
-        <Text style={[styles.historyHeader, { color: theme.text }]}>SENT HISTORY</Text>
-        {history.length === 0 ? (
-          <Text style={[styles.emptyText, { color: theme.textDim }]}>Nothing sent yet.</Text>
-        ) : (
-          history.map((item) => (
-            <View key={item.id} style={[styles.historyCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-              <View style={styles.historyHeaderRow}>
-                <Text style={[styles.historyTitle, { color: theme.text }]} numberOfLines={1}>
-                  {item.title}
-                </Text>
-                <View style={[styles.targetBadge, { backgroundColor: theme.surface }]}>
-                  <Text style={[styles.targetBadgeText, { color: theme.textDim }]}>{targetLabel(item.target)}</Text>
+          {history.length === 0 ? (
+            <Text style={[styles.emptyText, { color: theme.textDim }]}>Nothing sent yet.</Text>
+          ) : (
+            history.map((item) => (
+              <View
+                key={item.id}
+                style={[styles.historyCard, { backgroundColor: theme.surfaceElevated }]}
+              >
+                <Grain />
+                <Frame depth="raised" />
+                <View style={styles.historyHeaderRow}>
+                  <Text style={[styles.historyTitle, { color: theme.text }]} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  <View style={[styles.targetBadge, { backgroundColor: surface.slot }]}>
+                    <Frame depth="sunken" />
+                    <Text style={[styles.targetBadgeText, { color: theme.textDim }]}>
+                      {targetLabel(item.target)}
+                    </Text>
+                  </View>
                 </View>
+                <Text style={[styles.historyBody, { color: theme.textDim }]} numberOfLines={2}>
+                  {item.body}
+                </Text>
               </View>
-              <Text style={[styles.historyBody, { color: theme.textDim }]} numberOfLines={2}>
-                {item.body}
-              </Text>
-            </View>
-          ))
-        )}
-      </ScrollView>
+            ))
+          )}
+        </ScrollView>
+      </View>
       <PixelToast message={toast} bottom={24} />
     </KeyboardAvoidingView>
   );
 }
-
-

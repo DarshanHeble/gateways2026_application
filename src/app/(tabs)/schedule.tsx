@@ -1,39 +1,37 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ActivityIndicator,
-  TouchableOpacity,
   RefreshControl,
 } from "react-native";
 import Animated, {
-  FadeInDown,
-  Layout,
-  ZoomIn,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
-import { colors, fonts, typography } from "@/theme/tokens";
+import { fonts, typography } from "@/theme/tokens";
 import { px } from "@/theme/scale";
-import { useM3Theme } from "@/theme/M3ThemeContext";
+import { DirtBackground, McCard, useSurface } from "@/components/mc";
+import { mcTextShadow } from "@/theme/minecraft";
+import { useBlockTheme } from "@/theme/BlockThemeContext";
 import { ScheduleResponse } from "@/services/api";
 import { SEED_SCHEDULE } from "@/services/offline/seed";
 import { useAppData } from "@/modules/core/DataProvider";
-import { OfflineBanner } from "@/components/OfflineBanner";
 import { getEventImage } from "@/services/EventAssets";
 import { EventDetailSheet } from "@/components/EventDetailSheet";
 import { TimelineCard } from "@/components/TimelineCard";
 import { EventItem } from "@/services/api";
 import { PixelToast } from "@/components/pixel/PixelToast";
+import { McGlyph } from "@/components/mc/PixelIcon";
 
 export default function ScheduleTab() {
   const insets = useSafeAreaInsets();
-  const { theme } = useM3Theme();
+  const { theme } = useBlockTheme();
+  const surface = useSurface();
 
-  const { schedule: scheduleData, scheduleSource: dataSource, scheduleSavedAt, scheduleLoading: loading, refreshData } = useAppData();
+  const { schedule: scheduleData, scheduleLoading: loading, refreshData } = useAppData();
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -60,10 +58,28 @@ export default function ScheduleTab() {
   const activeDay = daysList[safeDayIndex] || SEED_SCHEDULE.days[0];
 
   return (
-    <View style={[styles.root, { paddingTop: Math.max(insets.top, px(16)) + px(8), backgroundColor: theme.background }]}>
+    <View style={[styles.root, { paddingTop: insets.top + px(52), backgroundColor: theme.background }]}>
+      {/*
+        The dirt menu background.
+
+        Minecraft splits its backdrops: the title screen gets the panning
+        panorama, and every menu behind it — options, inventory, controls — gets
+        the dirt block tiled and darkened. Home is this app's title screen and
+        carries the panorama; the list screens get the dirt, which is what makes
+        them read as *inside* the same game rather than as a different app's
+        settings page.
+      */}
+      <DirtBackground brightness={0.085} />
       {/* Top Header */}
       <View style={styles.topHeader}>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>EVENT TIMELINE</Text>
+        <Text
+          style={[
+            styles.headerTitle,
+            { color: theme.text },
+          ]}
+        >
+          EVENT TIMELINE
+        </Text>
         
       </View>
 
@@ -72,45 +88,32 @@ export default function ScheduleTab() {
         {(scheduleData?.days || SEED_SCHEDULE.days).map((day, idx) => {
           const isSelected = idx === selectedDayIndex;
           return (
-            <TouchableOpacity
+            <McCard
               key={idx}
-              activeOpacity={0.7}
-              style={[
-                styles.dayTab,
-                { backgroundColor: theme.surfaceElevated, borderColor: theme.border },
-                isSelected && [
-                  styles.dayTabActive,
-                  {
-                    backgroundColor: theme.primaryContainer,
-                    borderColor: theme.primary,
-                  },
-                ],
-              ]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setSelectedDayIndex(idx);
-              }}
+              onPress={() => setSelectedDayIndex(idx)}
+              depth={isSelected ? "gold" : "raised"}
+              fill={isSelected ? surface.slotActive : surface.stone}
+              style={styles.dayTab}
+              accessibilityLabel={day.display_date}
             >
-              <Ionicons
-                name="calendar"
-                size={12}
-                color={isSelected ? theme.primary : theme.textDim}
-              />
+              <McGlyph name="clock" size={px(12)} color={isSelected ? theme.primary : theme.textDim} />
               <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
                 style={[
                   styles.dayTabText,
-                  { color: theme.textDim },
-                  isSelected && [styles.dayTabTextActive, { color: theme.primary }],
+                  { color: isSelected ? theme.primary : theme.textDim },
+                  mcTextShadow(isSelected ? theme.primary : theme.textDim, 14),
                 ]}
               >
                 {day.display_date.toUpperCase()}
               </Text>
-            </TouchableOpacity>
+            </McCard>
           );
         })}
       </View>
 
-      <OfflineBanner source={dataSource} savedAt={scheduleSavedAt} />
 
       {/* Timeline Animated List */}
       <Animated.FlatList
@@ -195,17 +198,22 @@ const styles = StyleSheet.create({
     marginBottom: px(14),
     gap: px(8),
   },
+  /*
+   * `flex: 1` so the days share the row.
+   *
+   * They were intrinsically sized and laid out left to right, so with two days
+   * the second ran off the right edge of the screen and was half-unreachable.
+   */
   dayTab: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: px(6),
-    paddingVertical: px(8),
-    paddingHorizontal: px(14),
-    backgroundColor: "rgba(22, 28, 40, 0.75)",
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    paddingVertical: px(10),
+    paddingHorizontal: px(10),
   },
-  dayTabActive: {
-  },
+
   dayTabText: {
     fontFamily: fonts.pixelBold,
     fontSize: px(14),

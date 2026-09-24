@@ -5,40 +5,76 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
-  Linking,
   RefreshControl,
   ScrollView,
-  Dimensions,
-  Modal,
-  PanResponder,
-  Pressable,
 } from "react-native";
 import { Image } from "expo-image";
-import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import Animated, {
   FadeInDown,
   Layout,
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
-  runOnJS,
 } from "react-native-reanimated";
+import { duration, stepped } from "@/theme/motion";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, fonts, typography } from "@/theme/tokens";
+import { fonts, space, typography } from "@/theme/tokens";
+import { mcTextShadow, mojang } from "@/theme/minecraft";
 import { px } from "@/theme/scale";
+import { DirtBackground, Frame, Grain, McCard, useSurface } from "@/components/mc";
 import { useAssetsVersion } from "@/modules/assets";
-import { useM3Theme } from "@/theme/M3ThemeContext";
+import { useBlockTheme } from "@/theme/BlockThemeContext";
 import { EventItem } from "@/services/api";
 import { EventDetailSheet } from "@/components/EventDetailSheet";
 import { useAppData } from "@/modules/core/DataProvider";
-import { OfflineBanner } from "@/components/OfflineBanner";
 import { getEventImage } from "@/services/EventAssets";
+import { McGlyph, type GlyphName } from "@/components/mc/PixelIcon";
 
-const { height: SCREEN_H } = Dimensions.get("window");
 type EventFilterType = "all" | "technical" | "non-technical";
+
+
+/**
+ * A filter, as a widget button.
+ *
+ * Selected sinks and lights gold; unselected is a plain raised stone button.
+ * The three chips were previously three near-identical 20-line blocks that only
+ * differed by icon and label, so folding them into one component is what made
+ * adding the press state tractable at all.
+ */
+function FilterChip({
+  icon,
+  label,
+  active,
+  activeColor,
+  idleColor,
+  onPress,
+}: {
+  icon: GlyphName;
+  label: string;
+  active: boolean;
+  activeColor: string;
+  idleColor: string;
+  onPress: () => void;
+}) {
+  const color = active ? activeColor : idleColor;
+  const surface = useSurface();
+  return (
+    <TouchableOpacity
+      style={[
+        styles.filterChip,
+        { backgroundColor: active ? surface.slotActive : surface.stone },
+      ]}
+      onPress={onPress}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+    >
+      <Grain />
+      <Frame depth={active ? "gold" : "raised"} />
+      <McGlyph name={icon} size={px(13)} color={color} />
+      <Text style={[styles.filterChipText, { color }, mcTextShadow(color, 13.5)]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
 
 export default function EventsTab() {
   // Subscribe to the asset registry: `getEventImage`/`resolveAsset` are plain
@@ -46,62 +82,18 @@ export default function EventsTab() {
   // resolvable on first render and never pick up a completed download.
   useAssetsVersion();
   const insets = useSafeAreaInsets();
-  const { theme, isDark, toggleColorMode } = useM3Theme();
+  const { theme } = useBlockTheme();
+  const surface = useSurface();
 
-  const { events, eventsSource: dataSource, eventsSavedAt, eventsLoading: loading, refreshData } = useAppData();
+  const { events, eventsLoading: loading, refreshData } = useAppData();
   const [filterType, setFilterType] = useState<EventFilterType>("all");
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [myEvents, setMyEvents] = useState<string[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
 
-  // Bottom Sheet Gesture & Animation Shared Values
-  const sheetY = useSharedValue(0);
-
-  const closeBottomSheet = useCallback(() => {
-    setSelectedEvent(null);
-    sheetY.value = 0;
-  }, [sheetY]);
-
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => false,
-        onMoveShouldSetPanResponder: (_, gestureState) =>
-          gestureState.dy > 6 && Math.abs(gestureState.dx) < Math.abs(gestureState.dy),
-        onPanResponderMove: (_, gestureState) => {
-          if (gestureState.dy > 0) {
-            sheetY.value = gestureState.dy;
-          }
-        },
-        onPanResponderRelease: (_, gestureState) => {
-          if (gestureState.dy > 110 || gestureState.vy > 0.7) {
-            try {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            } catch (_) {}
-            sheetY.value = withTiming(SCREEN_H * 0.85, { duration: 220 }, (done) => {
-              if (done) {
-                runOnJS(closeBottomSheet)();
-              }
-            });
-          } else {
-            sheetY.value = withSpring(0, { damping: 18, stiffness: 220 });
-          }
-        },
-      }),
-    [closeBottomSheet, sheetY]
-  );
-
-  const animatedSheetStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateY: sheetY.value }],
-    };
-  });
-
-  useEffect(() => {
-    if (selectedEvent) {
-      sheetY.value = 0;
-    }
-  }, [selectedEvent, sheetY]);
+  // The sheet owns its own gesture and animation; this screen only says which
+  // event is open.
+  const closeBottomSheet = useCallback(() => setSelectedEvent(null), []);
 
   // Load user bookmarks / registered events
   useEffect(() => {
@@ -114,18 +106,6 @@ export default function EventsTab() {
     });
   }, []);
 
-  const toggleParticipate = async (id: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    let updated: string[];
-    if (myEvents.includes(id)) {
-      updated = myEvents.filter((item) => item !== id);
-    } else {
-      updated = [...myEvents, id];
-      await AsyncStorage.setItem("@gateways_active_event_id", id);
-    }
-    setMyEvents(updated);
-    await AsyncStorage.setItem("@gateways_my_events", JSON.stringify(updated));
-  };
 
 
 
@@ -175,16 +155,9 @@ export default function EventsTab() {
 
   // Color tokens depending on Dark/Light mode
   const bgRoot = theme.background;
-  const bgCard = theme.surfaceElevated;
   const textPrimary = theme.text;
   const textSecondary = theme.textDim;
-  const textMuted = isDark ? "#637084" : "#94a3b8";
-  const borderSubtle = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)";
-  const sheetBg = isDark ? "#0e1420" : "#ffffff";
-  const sheetBorder = isDark ? theme.rimBorder : "rgba(0, 0, 0, 0.12)";
-  const chipBg = isDark ? "rgba(22, 28, 40, 0.75)" : "#e9eef5";
-  const chipBorder = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)";
-  const shadowColor = isDark ? "#000000" : "#0f172a";
+  const textMuted = mojang.greySoft;
 
   if (loading) {
     return (
@@ -195,35 +168,34 @@ export default function EventsTab() {
     );
   }
 
-  return (
-    <View style={[styles.root, { backgroundColor: bgRoot, paddingTop: Math.max(insets.top, px(16)) + px(8) }]}>
-      {/* Top Header Row with Title & Dark/Light Mode Toggle */}
-      <View style={styles.topHeader}>
-        <View style={styles.headerTitleRow}>
-          <View>
-            <Text style={[styles.headerTitle, { color: textPrimary }]}>GATEWAYS EVENTS</Text>
-            
-          </View>
+  const FILTERS = [
+    { key: "all" as const, icon: "star" as const, label: "ALL", count: counts.all },
+    { key: "technical" as const, icon: "filter" as const, label: "TECHNICAL", count: counts.tech },
+    {
+      key: "non-technical" as const,
+      icon: "plus" as const,
+      label: "NON-TECHNICAL",
+      count: counts.nonTech,
+    },
+  ];
 
-          {/* Dark / Light Mode Switcher */}
-          <TouchableOpacity
-            style={[
-              styles.themeToggleBtn,
-              {
-                backgroundColor: theme.surfaceElevated,
-                borderColor: borderSubtle,
-              },
-            ]}
-            activeOpacity={0.7}
-            onPress={toggleColorMode}
-          >
-            <Ionicons
-              name={isDark ? "sunny-outline" : "moon-outline"}
-              size={18}
-              color={theme.primary}
-            />
-          </TouchableOpacity>
-        </View>
+  return (
+    <View style={[styles.root, { backgroundColor: bgRoot, paddingTop: insets.top + px(52) }]}>
+      {/*
+        The dirt menu background.
+
+        Minecraft splits its backdrops: the title screen gets the panning
+        panorama, and every menu behind it — options, inventory, controls — gets
+        the dirt block tiled and darkened. Home is this app's title screen and
+        carries the panorama; the list screens get the dirt, which is what makes
+        them read as *inside* the same game rather than as a different app's
+        settings page.
+      */}
+      <DirtBackground brightness={0.085} />
+      {/* Title only. The day/night toggle that sat here duplicated the one in
+          Settings, and its corner now belongs to the floating server status. */}
+      <View style={styles.topHeader}>
+        <Text style={[styles.headerTitle, { color: textPrimary }]}>EVENTS</Text>
       </View>
 
       {/* Top Filter Bar */}
@@ -233,102 +205,23 @@ export default function EventsTab() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterBar}
         >
-          <TouchableOpacity
-            style={[
-              styles.filterChip,
-              { backgroundColor: chipBg, borderColor: chipBorder },
-              filterType === "all" && [
-                styles.filterChipActive,
-                { backgroundColor: theme.primaryContainer, borderColor: theme.primary },
-              ],
-            ]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setFilterType("all");
-            }}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="sparkles"
-              size={12}
-              color={filterType === "all" ? theme.primary : textSecondary}
+          {FILTERS.map(({ key, icon, label, count }) => (
+            <FilterChip
+              key={key}
+              icon={icon}
+              label={`${label} (${count})`}
+              active={filterType === key}
+              activeColor={theme.primary}
+              idleColor={textSecondary}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setFilterType(key);
+              }}
             />
-            <Text
-              style={[
-                styles.filterChipText,
-                { color: textSecondary },
-                filterType === "all" && [styles.filterChipTextActive, { color: theme.primary }],
-              ]}
-            >
-              ALL ({counts.all})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.filterChip,
-              { backgroundColor: chipBg, borderColor: chipBorder },
-              filterType === "technical" && [
-                styles.filterChipActive,
-                { backgroundColor: theme.primaryContainer, borderColor: theme.primary },
-              ],
-            ]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setFilterType("technical");
-            }}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="code-slash"
-              size={12}
-              color={filterType === "technical" ? theme.primary : textSecondary}
-            />
-            <Text
-              style={[
-                styles.filterChipText,
-                { color: textSecondary },
-                filterType === "technical" && [styles.filterChipTextActive, { color: theme.primary }],
-              ]}
-            >
-              TECHNICAL ({counts.tech})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.filterChip,
-              { backgroundColor: chipBg, borderColor: chipBorder },
-              filterType === "non-technical" && [
-                styles.filterChipActive,
-                { backgroundColor: theme.primaryContainer, borderColor: theme.primary },
-              ],
-            ]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setFilterType("non-technical");
-            }}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="game-controller"
-              size={12}
-              color={filterType === "non-technical" ? theme.primary : textSecondary}
-            />
-            <Text
-              style={[
-                styles.filterChipText,
-                { color: textSecondary },
-                filterType === "non-technical" && [styles.filterChipTextActive, { color: theme.primary }],
-              ]}
-            >
-              NON-TECHNICAL ({counts.nonTech})
-            </Text>
-          </TouchableOpacity>
+          ))}
         </ScrollView>
       </View>
 
-      <OfflineBanner source={dataSource} savedAt={eventsSavedAt} />
 
       {/* Minimal, Decluttered Events List */}
       <Animated.FlatList
@@ -351,53 +244,49 @@ export default function EventsTab() {
 
           return (
             <Animated.View
-              entering={FadeInDown.delay(index * 45).duration(300)}
-              layout={Layout.springify().damping(16)}
+              entering={FadeInDown.delay(index * 45).duration(duration.screen).easing(stepped(5))}
+              layout={Layout.duration(duration.quick)}
             >
-              <TouchableOpacity
-                activeOpacity={0.85}
+              {/*
+                Artwork in a slot beside the text, not a full-width banner above
+                it.
+
+                The badges are circular renders on a transparent ground, so a
+                banner the width of the card could only ever be `contain`ed —
+                every card led with a wide strip of empty background and you
+                could fit two on a screen. Side-by-side is the same composition
+                the lineup picker and the Up Next card use, it has no dead space,
+                and it doubles the number of events you can scan at once.
+              */}
+              <McCard
                 onPress={() => openEventDetails(item)}
-                style={[
-                  styles.eventCard,
-                  {
-                    backgroundColor: isRegistered ? theme.primaryContainer : theme.surfaceElevated,
-                    borderColor: isRegistered ? theme.primary : theme.border,
-                  },
-                ]}
+                depth={isRegistered ? "gold" : "raised"}
+                fill={isRegistered ? surface.slotActive : theme.surfaceElevated}
+                style={styles.eventCard}
+                accessibilityLabel={item.title}
               >
-                {/* Large Hero Banner */}
-                {hasImage && (
-                  <View style={[styles.cardBannerWrap, { backgroundColor: theme.surface }]}>
+                {hasImage ? (
+                  <View style={[styles.cardArt, { backgroundColor: surface.slot }]}>
+                    <Frame depth="sunken" />
                     <Image
                       source={getEventImage(item.title) || { uri: item.image_url }}
-                      style={styles.cardBannerImage}
+                      style={styles.cardArtImage}
                       contentFit="contain"
                     />
-                    {isRegistered && (
-                      <View style={[styles.registeredPill, { backgroundColor: theme.primary }]}>
-                        <Ionicons name="checkmark-circle" size={12} color="#000" />
-                        <Text style={styles.registeredPillText}>REGISTERED</Text>
-                      </View>
-                    )}
                   </View>
-                )}
+                ) : null}
 
-                {/* Content Section */}
-                <View style={styles.cardContent}>
+                <View style={styles.cardBody}>
                   <View style={styles.cardHeader}>
-                    <Text style={[styles.itemTitle, { color: textPrimary, flex: 1 }]} numberOfLines={2}>
+                    <Text style={[styles.itemTitle, { color: textPrimary }]} numberOfLines={2}>
                       {item.title}
                     </Text>
-                    <View
-                      style={[
-                        styles.tagBadge,
-                        { backgroundColor: isRegistered ? "rgba(0,0,0,0.1)" : theme.surface },
-                      ]}
-                    >
+                    <View style={[styles.tagBadge, { backgroundColor: surface.slot }]}>
+                      <Frame depth="sunken" />
                       <Text
                         style={[
                           styles.tagText,
-                          isRegistered ? { color: theme.primary } : { color: textMuted },
+                          { color: isRegistered ? theme.primary : textMuted },
                         ]}
                       >
                         {(item.type || "GENERAL").toUpperCase()}
@@ -413,22 +302,33 @@ export default function EventsTab() {
 
                   <View style={styles.metaRow}>
                     <View style={styles.metaItem}>
-                      <Ionicons name="time-outline" size={14} color={isRegistered ? theme.primary : textSecondary} />
-                      <Text style={[styles.metaText, { color: isRegistered ? theme.primary : textSecondary }]}>
-                        {item.from_time ? `${item.from_time}${item.end_time ? ` - ${item.end_time}` : ""}` : "Time TBA"}
+                      <McGlyph name="clock" size={px(13)} color={textSecondary} />
+                      <Text style={[styles.metaText, { color: textSecondary }]}>
+                        {item.from_time
+                          ? `${item.from_time}${item.end_time ? ` – ${item.end_time}` : ""}`
+                          : "Time TBA"}
                       </Text>
                     </View>
                     {item.venue ? (
                       <View style={styles.metaItem}>
-                        <Ionicons name="location-outline" size={14} color={isRegistered ? theme.primary : textSecondary} />
-                        <Text style={[styles.metaText, { color: isRegistered ? theme.primary : textSecondary }]} numberOfLines={1}>
+                        <McGlyph name="pin" size={px(13)} color={textSecondary} />
+                        <Text
+                          style={[styles.metaText, { color: textSecondary }]}
+                          numberOfLines={1}
+                        >
                           {item.venue}
                         </Text>
                       </View>
                     ) : null}
+                    {isRegistered ? (
+                      <View style={styles.metaItem}>
+                        <McGlyph name="check" size={px(13)} color={theme.primary} />
+                        <Text style={[styles.metaText, { color: theme.primary }]}>TRACKING</Text>
+                      </View>
+                    ) : null}
                   </View>
                 </View>
-              </TouchableOpacity>
+              </McCard>
             </Animated.View>
           );
         }}
@@ -463,27 +363,11 @@ const styles = StyleSheet.create({
   topHeader: {
     marginBottom: px(12),
   },
-  headerTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
   headerTitle: {
     fontFamily: typography.pageTitle.fontFamily,
     fontSize: px(typography.pageTitle.fontSize),
     lineHeight: px(typography.pageTitle.lineHeight),
     letterSpacing: typography.pageTitle.letterSpacing,
-  },
-  subtitle: {
-    fontFamily: fonts.body,
-    fontSize: px(16),
-    marginTop: px(2),
-  },
-  themeToggleBtn: {
-    width: px(38),
-    height: px(38),
-    alignItems: "center",
-    justifyContent: "center",
   },
 
   // Filter Bar Styles
@@ -498,11 +382,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: px(6),
-    paddingHorizontal: px(13),
-    paddingVertical: px(7),
+    paddingHorizontal: px(14),
+    paddingVertical: px(8),
+    borderRadius: 0,
+    overflow: "hidden",
   },
-  filterChipActive: {
-  },
+
   filterChipText: {
     fontFamily: fonts.pixelBold,
     fontSize: px(13.5),
@@ -515,40 +400,23 @@ const styles = StyleSheet.create({
   },
 
   eventCard: {
-    marginBottom: px(16),
-    borderRadius: px(8),
-    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: px(space.md),
+    marginBottom: px(space.md),
+    padding: px(space.md),
+  },
+  cardArt: {
+    width: px(64),
+    height: px(64),
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 0,
     overflow: "hidden",
   },
-  cardBannerWrap: {
-    width: "100%",
-    height: px(180),
-    position: "relative",
-    paddingVertical: px(8),
-  },
-  cardBannerImage: {
-    width: "100%",
-    height: "100%",
-  },
-  registeredPill: {
-    position: "absolute",
-    top: px(10),
-    right: px(10),
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: px(8),
-    paddingVertical: px(4),
-    borderRadius: px(4),
-    gap: px(4),
-  },
-  registeredPillText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(14),
-    color: "#000",
-  },
-  cardContent: {
-    padding: px(14),
-  },
+  cardArtImage: { width: "88%", height: "88%" },
+  cardBody: { flex: 1, minWidth: 0 },
+
   itemSubtitle: {
     fontFamily: typography.subtitle.fontFamily,
     fontSize: px(typography.subtitle.fontSize),
@@ -587,8 +455,11 @@ const styles = StyleSheet.create({
     paddingRight: px(8),
   },
   tagBadge: {
-    paddingVertical: px(4),
-    paddingHorizontal: px(8),
+    paddingVertical: px(3),
+    paddingHorizontal: px(7),
+    marginLeft: px(space.sm),
+    borderRadius: 0,
+    overflow: "hidden",
   },
   tagText: {
     fontFamily: typography.tag.fontFamily,
@@ -597,174 +468,7 @@ const styles = StyleSheet.create({
   },
 
   // Modal Bottom Sheet Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
-    justifyContent: "flex-end",
-  },
-  modalSheet: {
-    paddingHorizontal: px(18),
-    paddingTop: px(10),
-    paddingBottom: px(24),
-    maxHeight: "84%",
-  },
-  modalDragHandleZone: {
-    paddingTop: px(2),
-    paddingBottom: px(8),
-  },
-  modalDragBar: {
-    width: px(40),
-    height: px(4),
-    alignSelf: "center",
-    marginBottom: px(10),
-  },
-  modalHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  modalCloseBtn: {
-    padding: px(6),
-  },
-  modalBadgePill: {
-    paddingHorizontal: px(8),
-    paddingVertical: px(3),
-  },
-  modalBadgeText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(13.5),
-    letterSpacing: 0.8,
-  },
-  sheetScrollContent: {
-    paddingTop: px(8),
-  },
-  sheetBannerWrap: {
-    width: "100%",
-    height: px(150),
-    overflow: "hidden",
-    marginBottom: px(14),
-  },
-  sheetBannerImage: {
-    width: "100%",
-    height: "100%",
-  },
-  modalMainTitle: {
-    fontFamily: fonts.pixelMedium,
-    fontSize: px(23),
-    letterSpacing: 0.3,
-  },
-  modalSubTitle: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: px(17),
-    marginTop: px(3),
-  },
-  modalMetaRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: px(6),
-    marginVertical: px(12),
-  },
-  modalMetaChip: {
-    paddingHorizontal: px(9),
-    paddingVertical: px(5),
-  },
-  modalMetaChipText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: px(15),
-  },
-  participateActionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: px(8),
-    paddingVertical: px(11),
-    marginBottom: px(14),
-  },
   participateActionBtnActive: {},
-  participateActionBtnText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(14),
-    letterSpacing: px(0.6),
-  },
-  sheetSection: {
-    marginTop: px(14),
-  },
-  modalHeading: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(15),
-    letterSpacing: px(0.8),
-    marginBottom: px(6),
-    marginTop: px(10),
-  },
-  modalParagraph: {
-    fontFamily: fonts.body,
-    fontSize: px(17),
-    lineHeight: px(23),
-  },
-  prizeBox: {
-    padding: px(12),
-    gap: px(3),
-  },
-  prizeRank: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(16),
-  },
-  prizeRankVal: {
-    fontFamily: fonts.bodyMedium,
-  },
-  prizeLit: {
-    color: "#10b981",
-  },
-  prizeDesc: {
-    fontFamily: fonts.body,
-    fontSize: px(15.5),
-    fontStyle: "italic",
-    marginTop: px(4),
-  },
-  ruleItem: {
-    fontFamily: fonts.body,
-    fontSize: px(16.5),
-    lineHeight: px(22),
-    marginBottom: px(4),
-  },
-  headsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: px(8),
-  },
-  headCard: {
-    padding: px(10),
-    flex: 1,
-    minWidth: px(130),
-  },
-  headName: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(16),
-  },
-  headRole: {
-    fontFamily: fonts.body,
-    fontSize: px(14.5),
-    marginTop: px(1),
-  },
-  headPhone: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: px(15),
-    color: "#38bdf8",
-    marginTop: px(4),
-  },
-  pdfDownloadBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: px(6),
-    paddingVertical: px(10),
-    marginTop: px(16),
-  },
-  pdfDownloadBtnText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(13.5),
-    letterSpacing: px(0.5),
-  },
 
   // Fallback Notice
 });

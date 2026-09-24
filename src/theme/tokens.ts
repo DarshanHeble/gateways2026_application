@@ -134,9 +134,15 @@ export const colors = {
 } as const;
 
 export const fonts = {
-  pixel: "PixelifySans_400Regular",
-  pixelMedium: "PixelifySans_500Medium",
-  pixelBold: "PixelifySans_700Bold",
+  /*
+   * The Minecraft UI typeface (OFL 1.1, IdreesInc/minecraft-font), not a
+   * generic pixel face. It has only two weights because the game's font has
+   * only two, so `pixelMedium` maps to regular rather than inventing a weight
+   * the typeface does not have.
+   */
+  pixel: "Minecraft",
+  pixelMedium: "Minecraft",
+  pixelBold: "MinecraftBold",
   // DM Sans for normal text
   body: "SpaceGrotesk_400Regular",
   bodyMedium: "SpaceGrotesk_500Medium",
@@ -168,6 +174,24 @@ export const type = {
   toast: { size: 9, tracking: 1.5, color: colors.gold.text },
 } as const;
 
+/**
+ * The spacing rhythm — Mojang's 8-step scale.
+ *
+ * Every gap and pad in the app should land on one of these. Ad-hoc values
+ * (px(14), px(18), px(22)) are what make a layout feel hand-placed rather than
+ * composed, because nothing lines up with anything a screen away.
+ */
+export const space = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  "2xl": 32,
+  "3xl": 48,
+  "4xl": 64,
+} as const;
+
 /** Durations (ms) for the ambient loops, matching the CSS keyframes. */
 export const motion = {
   driftFast: 46_000,
@@ -187,58 +211,97 @@ export const motion = {
  */
 export const typography = {
   // Massive screen headers
+  /**
+   * Display type — in the *sans*, not the pixel face.
+   *
+   * This is the correction that separates a fan project from a product. Mojang
+   * ships the bitmap face in exactly two places: the Minecraft logo, and small
+   * in-game-flavoured labels. Everything else on minecraft.net, in the Launcher,
+   * in Dungeons and in Legends is a clean modern sans. Setting a person's name
+   * at 46px in a bitmap font is the single loudest "made by a fan" signal a
+   * Minecraft-themed interface can send, however faithful the font itself is.
+   *
+   * The Minecraft-ness lives in the materials, the palette, the sprite edges,
+   * the iconography and the motion — not in the headlines. So the headlines get
+   * weight and tight tracking instead, and the pixel face is reserved for
+   * eyebrows, tab labels, badges and the XP level, where its texture reads as
+   * deliberate rather than as a costume.
+   */
   hero: {
-    fontFamily: fonts.pixelBold,
-    fontSize: 48,
-    lineHeight: 50,
-    letterSpacing: 0,
+    fontFamily: fonts.bodyBold,
+    fontSize: 44,
+    lineHeight: 42,
+    letterSpacing: -1.6,
   },
   // Sub-headers or Kickers (WELCOME BACK)
   // Main page headers (Events, Schedule, Alerts)
   pageTitle: {
-    fontFamily: fonts.pixelBold,
-    fontSize: 48,
-    lineHeight: 50,
-    letterSpacing: 0,
-  },
-  kicker: {
     fontFamily: fonts.bodyBold,
-    fontSize: 18,
-    letterSpacing: 1,
+    fontSize: 40,
+    lineHeight: 40,
+    letterSpacing: -1.4,
+  },
+  /**
+   * Eyebrow labels, in the pixel face at Mojang's tracking (16px / 0.96px).
+   * These are the small all-caps lines above a heading or over a tile.
+   */
+  kicker: {
+    fontFamily: fonts.pixelBold,
+    fontSize: 16,
+    letterSpacing: 0.96,
+  },
+  /** The smaller eyebrow: 14px / 0.56px. */
+  eyebrow: {
+    fontFamily: fonts.pixelBold,
+    fontSize: 14,
+    letterSpacing: 0.56,
   },
   // Large modal or page headers
   h1: {
-    fontFamily: fonts.pixelMedium,
+    fontFamily: fonts.bodyBold,
     fontSize: 26,
-    letterSpacing: 0.5,
+    letterSpacing: -0.4,
   },
   // Medium section headers
   h2: {
-    fontFamily: fonts.pixelMedium,
-    fontSize: 23,
-    letterSpacing: 0.3,
+    fontFamily: fonts.bodyBold,
+    fontSize: 22,
+    letterSpacing: -0.3,
   },
-  // Card titles (Events, Schedule items)
+  /*
+   * Card titles.
+   *
+   * Also the sans. In the pixel face these were both unprofessional *and*
+   * broken — real event names ran out of column and split mid-word
+   * ("Inauguratio / n Ceremony"), because the bitmap face sets very wide and
+   * has no hyphenation to fall back on.
+   */
   h3: {
-    fontFamily: fonts.pixelMedium,
-    fontSize: 22, 
-    letterSpacing: 0.3,
+    fontFamily: fonts.bodyBold,
+    fontSize: 18,
+    letterSpacing: -0.2,
   },
-  // Standard card subtitles
+  /*
+   * Body sits at 15/16, not 17/19.
+   *
+   * Mojang's own scale puts body and CTAs at 14–16px and reserves size for the
+   * display face. Running body at 17–19 next to a 46px pixel masthead flattens
+   * the hierarchy — everything ends up "quite big" and nothing leads — and it is
+   * a large part of why the screens read as loose rather than composed.
+   */
   subtitle: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 17,
+    fontSize: 15,
   },
-  // Body text
   body: {
     fontFamily: fonts.body,
-    fontSize: 17,
-    lineHeight: 23,
+    fontSize: 15,
+    lineHeight: 21,
   },
-  // Smaller metadata (Times, venues)
+  // Smaller metadata (times, venues)
   caption: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 15,
+    fontSize: 13.5,
   },
   // Labels, tags, badges
   tag: {

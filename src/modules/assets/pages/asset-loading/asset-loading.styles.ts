@@ -1,50 +1,53 @@
 import { StyleSheet } from "react-native";
 
-import { colors, fonts } from "@/theme/tokens";
+import { colors, fonts, typography } from "@/theme/tokens";
 import { px } from "@/theme/scale";
+import { mojang } from "@/theme/minecraft";
 
 export const CHUNKS = 20;
 
 export const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.stage,
+    backgroundColor: mojang.offBlack,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: px(28),
   },
 
+  /** Display type at Mojang's metrics: large, tight, interlocking. */
   wordmark: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(26),
-    letterSpacing: px(1),
-    color: colors.gold.title,
+    fontFamily: typography.hero.fontFamily,
+    fontSize: px(44),
+    lineHeight: px(37),
+    letterSpacing: -1.4,
+    color: mojang.offWhite,
     textAlign: "center",
   },
   year: {
-    fontFamily: fonts.pixel,
-    fontSize: px(12),
-    letterSpacing: px(5),
-    color: colors.cyan,
-    marginTop: px(4),
+    fontFamily: typography.hero.fontFamily,
+    fontSize: px(44),
+    lineHeight: px(40),
+    letterSpacing: -1.4,
+    color: mojang.goldDeep,
     textAlign: "center",
   },
 
   headline: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(12),
-    letterSpacing: px(2),
-    color: colors.gold.bright,
-    marginTop: px(40),
+    fontFamily: typography.eyebrow.fontFamily,
+    fontSize: px(typography.eyebrow.fontSize),
+    letterSpacing: typography.eyebrow.letterSpacing,
+    color: mojang.green3,
+    marginTop: px(44),
     textAlign: "center",
   },
   subline: {
     fontFamily: fonts.body,
-    fontSize: px(12),
-    color: colors.gold.label,
+    fontSize: px(14),
+    color: mojang.greySoft,
     marginTop: px(8),
     textAlign: "center",
-    lineHeight: px(18),
+    lineHeight: px(20),
   },
 
   // ── Chunky segmented bar: discrete blocks rather than a smooth fill, which
@@ -52,23 +55,25 @@ export const styles = StyleSheet.create({
   // a time instead of creeping imperceptibly.
   barFrame: {
     flexDirection: "row",
-    marginTop: px(26),
+    marginTop: px(30),
     padding: px(3),
-    borderWidth: px(2),
-    borderColor: colors.dirt.light,
-    backgroundColor: colors.dirt.shadow,
+    borderWidth: px(1),
+    borderColor: "#000000",
+    backgroundColor: "#141313",
     gap: px(2),
     alignSelf: "stretch",
   },
   chunk: {
     flex: 1,
-    height: px(18),
+    height: px(16),
   },
   chunkEmpty: {
-    backgroundColor: "#1c2230",
+    backgroundColor: mojang.surfaceMid,
   },
+  /** The brand ramp, so progress reads as Minecraft green rather than as a
+      generic success colour. */
   chunkFilled: {
-    backgroundColor: colors.cta.lit,
+    backgroundColor: mojang.green3,
   },
   chunkFailed: {
     backgroundColor: colors.rule,
@@ -81,14 +86,15 @@ export const styles = StyleSheet.create({
     marginTop: px(10),
   },
   percent: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(13),
-    color: colors.gold.text,
+    fontFamily: typography.eyebrow.fontFamily,
+    fontSize: px(typography.eyebrow.fontSize),
+    letterSpacing: typography.eyebrow.letterSpacing,
+    color: mojang.offWhite,
   },
   bytes: {
-    fontFamily: fonts.body,
-    fontSize: px(12),
-    color: colors.gold.label,
+    fontFamily: fonts.bodyMedium,
+    fontSize: px(13),
+    color: mojang.greySoft,
   },
 
   actions: {
@@ -97,24 +103,24 @@ export const styles = StyleSheet.create({
     marginTop: px(34),
   },
   button: {
-    paddingVertical: px(11),
-    paddingHorizontal: px(22),
-    borderWidth: px(2),
-    borderColor: colors.gold.muted,
-    backgroundColor: colors.dirt.mid,
+    paddingVertical: px(12),
+    paddingHorizontal: px(26),
+    borderWidth: px(1),
+    borderColor: "#000000",
+    backgroundColor: mojang.surfaceSoft,
   },
   buttonPressed: {
-    backgroundColor: colors.dirt.light,
+    backgroundColor: mojang.canvas,
   },
   buttonPrimary: {
     borderColor: colors.cta.glow,
     backgroundColor: colors.cta.base,
   },
   buttonText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(12),
-    letterSpacing: px(1.5),
-    color: colors.gold.title,
+    fontFamily: typography.kicker.fontFamily,
+    fontSize: px(typography.kicker.fontSize),
+    letterSpacing: typography.kicker.letterSpacing,
+    color: mojang.greyWarm,
   },
   buttonTextPrimary: {
     color: colors.gold.text,
@@ -122,13 +128,13 @@ export const styles = StyleSheet.create({
 
   note: {
     fontFamily: fonts.body,
-    fontSize: px(11),
-    color: colors.gold.label,
+    fontSize: px(13),
+    color: mojang.greySoft,
     marginTop: px(22),
     textAlign: "center",
     lineHeight: px(16),
   },
   noteWarn: {
-    color: colors.rule,
+    color: mojang.warning,
   },
 });

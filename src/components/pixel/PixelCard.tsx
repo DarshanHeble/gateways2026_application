@@ -10,9 +10,9 @@ interface PixelCardProps {
   badge?: string;
 }
 
-import { useM3Theme } from "@/theme/M3ThemeContext";
+import { useBlockTheme } from "@/theme/BlockThemeContext";
 export function PixelCard({ children, style, headerTitle, badge }: PixelCardProps) {
-  const { theme } = useM3Theme();
+  const { theme } = useBlockTheme();
   return (
     <View style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }, style]}>
       {/* Top Pixel Border Frame */}
@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dirt.mid,
     borderWidth: px(2),
     borderColor: colors.gold.muted,
-    borderRadius: px(4),
+    borderRadius: 0,
     marginVertical: px(8),
     overflow: "hidden",
   },
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cta.base,
     paddingHorizontal: px(6),
     paddingVertical: px(2),
-    borderRadius: px(2),
+    borderRadius: 0,
     borderWidth: px(1),
     borderColor: colors.cta.glow,
   },

@@ -1,14 +1,18 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { mojang } from "@/theme/minecraft";
+import { View, Text, StyleSheet } from "react-native";
 import { Image } from "expo-image";
 import Animated, { FadeInDown, Layout, ZoomIn } from "react-native-reanimated";
+
+import { duration, stepped } from "@/theme/motion";
 
 import { fonts, typography } from "@/theme/tokens";
 import { px } from "@/theme/scale";
 import { EventItem } from "@/services/api";
 import { getEventImage } from "@/services/EventAssets";
 import { useAssetsVersion } from "@/modules/assets";
+import { Frame, McCard, useSurface } from "@/components/mc";
+import { McGlyph } from "@/components/mc/PixelIcon";
 
 export interface TimelineCardProps {
   item: any;
@@ -16,6 +20,15 @@ export interface TimelineCardProps {
   isLast: boolean;
   onPress?: () => void;
   badgeOverride?: string;
+  /**
+   * Whether this card gets the gold edge.
+   *
+   * Was derived from `is_competition`, which on the schedule is true for nearly
+   * every row — so every card was gold, and a highlight that applies to
+   * everything highlights nothing. The caller now says what is special *in this
+   * list*: the next thing up in your lineup, and nothing on the full programme.
+   */
+  emphasis?: boolean;
   theme: any;
 }
 
@@ -25,19 +38,21 @@ export function TimelineCard({
   isLast,
   onPress,
   badgeOverride,
+  emphasis = false,
   theme,
 }: TimelineCardProps) {
   // Subscribe to the asset registry: `getEventImage` is a plain synchronous
   // read, so without this the card would keep whatever was resolvable on first
   // render and never pick up a completed download.
   useAssetsVersion();
+  const surface = useSurface();
   const isCompetition = Boolean((item as any).is_competition);
   const badgeText = badgeOverride || ((item as any).category ? (item as any).category.toUpperCase() : "");
 
   return (
     <Animated.View
-      entering={FadeInDown.delay(index * 60).duration(320)}
-      layout={Layout.springify().damping(16)}
+      entering={FadeInDown.delay(index * 60).duration(duration.screen).easing(stepped(5))}
+      layout={Layout.duration(duration.quick)}
       style={styles.timelineCard}
     >
       {/* Vertical Line Divider with Animated Node */}
@@ -47,7 +62,7 @@ export function TimelineCard({
           style={[
             styles.nodeDot,
             {
-              backgroundColor: isCompetition ? theme.primary : "#52a3c4",
+              backgroundColor: isCompetition ? theme.primary : mojang.greySoft,
               borderColor: "#0a0e17",
             },
           ]}
@@ -56,31 +71,22 @@ export function TimelineCard({
       </View>
 
       {/* Card Body */}
-      <TouchableOpacity
-        activeOpacity={0.8}
+      {/* `McCard`, not `TouchableOpacity`: a widget sinks under your finger, it
+          does not fade to 80%. Gold edge for a competition, plain stone
+          otherwise — the same distinction the 1px border used to make, in the
+          game's language. */}
+      <McCard
         onPress={onPress}
-        disabled={!onPress}
-        style={[
-          styles.cardContent,
-          { backgroundColor: theme.surfaceElevated },
-          {
-            borderColor: isCompetition ? theme.primary : theme.border,
-            borderWidth: 1, // Added explicit border width so borderColor works
-          },
-        ]}
+        depth={emphasis ? "gold" : "raised"}
+        fill={emphasis ? surface.slotActive : theme.surfaceElevated}
+        style={styles.cardContent}
+        accessibilityLabel={item.title}
       >
         <View style={styles.cardHeader}>
           <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: px(10) }}>
             {getEventImage(item.title) ? (
-              <View
-                style={{
-                  width: px(32),
-                  height: px(32),
-                  borderRadius: px(4),
-                  overflow: "hidden",
-                  backgroundColor: theme.surfaceTint,
-                }}
-              >
+              <View style={[styles.artSlot, { backgroundColor: surface.slot }]}>
+                <Frame depth="sunken" />
                 <Image
                   source={getEventImage(item.title)}
                   style={{ width: "100%", height: "100%" }}
@@ -88,7 +94,13 @@ export function TimelineCard({
                 />
               </View>
             ) : null}
-            <Text style={[styles.itemTitle, { color: theme.text }]} numberOfLines={2}>
+            <Text
+              style={[
+                styles.itemTitle,
+                { color: theme.text },
+              ]}
+              numberOfLines={2}
+            >
               {item.title}
             </Text>
           </View>
@@ -104,7 +116,7 @@ export function TimelineCard({
               <Text
                 style={[
                   styles.tagText,
-                  isCompetition ? { color: theme.primary } : { color: "#94a3b8" },
+                  isCompetition ? { color: theme.primary } : { color: mojang.greySoft },
                 ]}
               >
                 {badgeText}
@@ -121,7 +133,7 @@ export function TimelineCard({
 
         <View style={styles.metaRow}>
           <View style={styles.metaItem}>
-            <Ionicons name="time-outline" size={13} color={theme.textDim} />
+            <McGlyph name="clock" size={px(13)} color={theme.textDim} />
             <Text style={[styles.metaText, { color: theme.textDim }]}>
               {item.from_time || "TBA"}
               {item.end_time ? ` - ${item.end_time}` : ""}
@@ -129,14 +141,14 @@ export function TimelineCard({
           </View>
           {item.venue ? (
             <View style={styles.metaItem}>
-              <Ionicons name="location-outline" size={13} color={theme.textDim} />
+              <McGlyph name="pin" size={px(13)} color={theme.textDim} />
               <Text style={[styles.metaText, { color: theme.textDim }]} numberOfLines={1}>
                 {item.venue}
               </Text>
             </View>
           ) : null}
         </View>
-      </TouchableOpacity>
+      </McCard>
     </Animated.View>
   );
 }
@@ -163,15 +175,17 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     flex: 1,
-    backgroundColor: "#131824",
-    padding: px(12),
-    // Removed border radius to keep it boxy and consistent
+    padding: px(14),
     borderRadius: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
+    overflow: "hidden",
+    // No soft drop shadow: depth here comes from the bevel, and a blurred
+    // shadow under a hard-edged block is the giveaway that it isn't one.
+  },
+  artSlot: {
+    width: px(34),
+    height: px(34),
+    borderRadius: 0,
+    overflow: "hidden",
   },
   cardHeader: {
     flexDirection: "row",

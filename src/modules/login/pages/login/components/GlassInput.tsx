@@ -1,11 +1,11 @@
 import { forwardRef, useState } from "react";
 import { View, TextInput, StyleSheet, type TextInputProps } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { McGlyph, type GlyphName } from "@/components/mc/PixelIcon";
 import { fonts } from "@/theme/tokens";
 import { px } from "@/theme/scale";
 
 type Props = TextInputProps & {
-  icon: React.ComponentProps<typeof Ionicons>["name"];
+  icon: GlyphName;
   rightAccessory?: React.ReactNode;
 };
 
@@ -22,7 +22,7 @@ export const GlassInput = forwardRef<TextInput, Props>(function GlassInput(
 
   return (
     <View style={[styles.wrap, focused && styles.wrapFocused]}>
-      <Ionicons name={icon} size={px(15)} color={focused ? "#3b3220" : "#6b6a63"} style={styles.icon} />
+      <McGlyph name={icon} size={px(15)} color={focused ? "#3b3220" : "#6b6a63"} style={styles.icon} />
       <TextInput
         ref={ref}
         placeholderTextColor="#8b897e"
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.55)",
     borderWidth: px(1),
     borderColor: "rgba(60,55,40,0.22)",
-    borderRadius: px(10),
+    borderRadius: 0,
     paddingHorizontal: px(10),
     height: px(38),
     marginBottom: px(8),

@@ -1,4 +1,7 @@
 import { StyleSheet, Dimensions } from "react-native";
+// Glows removed: Minecraft's UI has no bloom. Depth here is the bevel and the
+// 1px outline, and a cyan halo around a pixel panel is the loudest possible
+// contradiction of that.
 import { colors, fonts } from "@/theme/tokens";
 import { px } from "@/theme/scale";
 
@@ -14,12 +17,7 @@ export const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     left: 0,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.8,
-    shadowRadius: 16,
-    elevation: 16,
+    borderRadius: 0,
   },
   mobImage: {
     width: "100%",
@@ -29,7 +27,7 @@ export const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     borderWidth: 3,
     borderColor: "rgba(0, 0, 0, 0.6)",
-    borderRadius: 8,
+    borderRadius: 0,
   },
   centerEmblem: {
     position: "absolute",
@@ -43,11 +41,6 @@ export const styles = StyleSheet.create({
     borderColor: colors.gold.bright,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: colors.cyan,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 20,
   },
   emblemTitle: {
     fontFamily: fonts.pixelBold,

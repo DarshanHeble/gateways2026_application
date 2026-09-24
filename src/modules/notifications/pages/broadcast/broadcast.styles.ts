@@ -1,109 +1,127 @@
 import { StyleSheet } from "react-native";
-import { colors, fonts } from "@/theme/tokens";
+
+import { fonts, space, typography } from "@/theme/tokens";
 import { px } from "@/theme/scale";
 
 export const styles = StyleSheet.create({
   flex: { flex: 1 },
-  root: {
-    flex: 1,
-    backgroundColor: "#0d1018",
-  },
+  root: { flex: 1 },
   scrollContent: {
-    padding: px(14),
-    paddingBottom: px(40),
+    paddingHorizontal: px(space.lg),
+    paddingBottom: px(space["4xl"]),
   },
+
+  pageTitle: {
+    fontFamily: typography.pageTitle.fontFamily,
+    fontSize: px(typography.pageTitle.fontSize),
+    lineHeight: px(typography.pageTitle.lineHeight),
+    letterSpacing: typography.pageTitle.letterSpacing,
+  },
+  pageSub: {
+    fontFamily: typography.body.fontFamily,
+    fontSize: px(typography.body.fontSize),
+    lineHeight: px(typography.body.lineHeight),
+    marginTop: px(space.xs),
+    marginBottom: px(space.xl),
+  },
+
+  /** The composer, as a container panel. */
+  panel: {
+    padding: px(space.lg),
+    borderRadius: 0,
+    overflow: "hidden",
+  },
+  panelTitleBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: px(space.md),
+  },
+  eyebrow: {
+    fontFamily: typography.eyebrow.fontFamily,
+    fontSize: px(typography.eyebrow.fontSize),
+    letterSpacing: typography.eyebrow.letterSpacing,
+  },
+  teamTag: {
+    paddingHorizontal: px(space.sm),
+    paddingVertical: px(space.xs),
+    borderRadius: 0,
+    overflow: "hidden",
+  },
+  teamTagText: {
+    fontFamily: typography.eyebrow.fontFamily,
+    fontSize: px(12),
+    letterSpacing: typography.eyebrow.letterSpacing,
+  },
+
   demoNotice: {
     fontFamily: fonts.body,
-    fontSize: px(11),
-    color: "#e2af64",
-    marginBottom: px(14),
-    lineHeight: px(16),
+    fontSize: px(13),
+    lineHeight: px(19),
+    marginBottom: px(space.lg),
   },
   multiline: {
-    height: px(90),
+    minHeight: px(96),
     textAlignVertical: "top",
-    paddingTop: px(10),
+    paddingTop: px(space.md),
   },
-  fieldLabel: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(11),
-    letterSpacing: px(1.5),
-    color: "#ffe9b8",
-    marginBottom: px(8),
-  },
+
   targetRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: px(8),
+    gap: px(space.sm),
+    marginTop: px(space.sm),
   },
   targetChip: {
-    paddingVertical: px(8),
-    paddingHorizontal: px(12),
-    backgroundColor: "#202736",
-    borderRadius: px(6),
-    borderWidth: px(1),
-    borderColor: "#2a3245",
-  },
-  targetChipActive: {
-    backgroundColor: "#2a1e12",
-    borderColor: "#c8a679",
+    paddingHorizontal: px(space.md),
+    paddingVertical: px(space.sm),
   },
   targetChipText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(10),
-    color: "#8090a8",
+    fontFamily: typography.eyebrow.fontFamily,
+    fontSize: px(13),
+    letterSpacing: typography.eyebrow.letterSpacing,
   },
-  targetChipTextActive: {
-    color: "#ffe9b8",
-  },
-  historyHeader: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(12),
-    color: "#a08c70",
-    letterSpacing: px(1),
-    marginTop: px(20),
-    marginBottom: px(10),
-  },
+
+  sendBtn: { marginTop: px(space.xl) },
+
+  historyHeader: { marginTop: px(space["2xl"]), marginBottom: px(space.md) },
   emptyText: {
     fontFamily: fonts.body,
-    fontSize: px(13),
-    color: "#5a6478",
+    fontSize: px(14),
   },
   historyCard: {
-    backgroundColor: "#161b26",
-    borderRadius: px(8),
-    borderWidth: px(1),
-    borderColor: "#2a3245",
-    padding: px(12),
-    marginBottom: px(10),
+    padding: px(space.md),
+    marginBottom: px(space.sm),
+    borderRadius: 0,
+    overflow: "hidden",
   },
   historyHeaderRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    gap: px(8),
+    justifyContent: "space-between",
+    gap: px(space.sm),
   },
   historyTitle: {
     flex: 1,
-    fontFamily: fonts.bodyBold,
-    fontSize: px(14),
-    color: "#ffe9b8",
+    fontFamily: typography.h3.fontFamily,
+    fontSize: px(typography.h3.fontSize),
+    letterSpacing: typography.h3.letterSpacing,
   },
   historyBody: {
     fontFamily: fonts.body,
-    fontSize: px(12),
-    color: "#a0a0a0",
-    marginTop: px(4),
+    fontSize: px(14),
+    lineHeight: px(20),
+    marginTop: px(space.xs),
   },
   targetBadge: {
-    backgroundColor: "#202736",
+    paddingHorizontal: px(space.sm),
     paddingVertical: px(3),
-    paddingHorizontal: px(8),
-    borderRadius: px(4),
+    borderRadius: 0,
+    overflow: "hidden",
   },
   targetBadgeText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(9),
-    color: "#8090a8",
+    fontFamily: typography.eyebrow.fontFamily,
+    fontSize: px(11),
+    letterSpacing: typography.eyebrow.letterSpacing,
   },
 });

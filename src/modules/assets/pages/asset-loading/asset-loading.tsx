@@ -46,6 +46,8 @@ export function AssetLoadingScreen({ onDone }: { onDone: () => void }) {
 
   return (
     <View style={styles.root}>
+      {/* Two lines set at 0.85 line-height so they interlock — see the note on
+          `typography.hero`. This is the app's masthead. */}
       <Text style={styles.wordmark}>GATEWAYS</Text>
       <Text style={styles.year}>2026</Text>
 

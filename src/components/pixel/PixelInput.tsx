@@ -7,10 +7,10 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-import { colors, fonts, type } from "@/theme/tokens";
+import { fonts, typography } from "@/theme/tokens";
 import { px } from "@/theme/scale";
-import { Bevel } from "./Primitives";
-import { useM3Theme } from "@/theme/M3ThemeContext";
+import { Frame, useSurface } from "@/components/mc";
+import { useBlockTheme } from "@/theme/BlockThemeContext";
 
 export type PixelInputHandle = TextInput;
 
@@ -22,15 +22,22 @@ export type PixelInputProps = TextInputProps & {
 };
 
 /**
- * A Silkscreen-labelled field sunk into the notice board: a 2px dark frame with
- * a hard inner top shadow, matching the design's inset box-shadow exactly.
+ * A text field, sunk into the panel like an inventory slot.
+ *
+ * The frame was a coloured border that turned gold on focus — a web input's
+ * focus ring wearing pixel clothes. It is now the same construction as every
+ * other inset surface in the app: a sunken `Frame` over the field, with the
+ * *outline* going white on focus, which is precisely how vanilla shows a
+ * focused widget (`button_highlighted.png` is the button with `#000000`
+ * swapped for `#ffffff`).
  */
 export const PixelInput = forwardRef<TextInput, PixelInputProps>(function PixelInput(
   { label, errorNonce = 0, onFocus, onBlur, style, rightAccessory, ...rest },
   ref,
 ) {
   const [focused, setFocused] = useState(false);
-  const { theme } = useM3Theme();
+  const { theme } = useBlockTheme();
+  const surface = useSurface();
   const shake = useSharedValue(0);
 
   useEffect(() => {
@@ -58,8 +65,8 @@ export const PixelInput = forwardRef<TextInput, PixelInputProps>(function PixelI
         {label}
       </Text>
 
-      <View style={[styles.frame, { backgroundColor: theme.border }, focused && { backgroundColor: theme.primary }]}>
-        <Bevel top={{ color: "rgba(0,0,0,0.5)", size: 3 }} />
+      <View style={[styles.frame, { backgroundColor: surface.slot }]}>
+        <Frame depth="sunken" focused={focused} />
         <TextInput
           ref={ref}
           accessibilityLabel={label}
@@ -75,7 +82,7 @@ export const PixelInput = forwardRef<TextInput, PixelInputProps>(function PixelI
             setFocused(false);
             onBlur?.(e);
           }}
-          style={[styles.field, { backgroundColor: theme.surface, color: theme.text }, style, rightAccessory ? { paddingRight: px(40) } : null]}
+          style={[styles.field, { color: theme.text }, style, rightAccessory ? { paddingRight: px(40) } : null]}
           {...rest}
         />
         {rightAccessory && (
@@ -90,29 +97,22 @@ export const PixelInput = forwardRef<TextInput, PixelInputProps>(function PixelI
 
 const styles = StyleSheet.create({
   label: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(11),
-    letterSpacing: px(1.5),
-    color: colors.gold.title,
+    fontFamily: typography.eyebrow.fontFamily,
+    fontSize: px(typography.eyebrow.fontSize),
+    letterSpacing: typography.eyebrow.letterSpacing,
     marginBottom: px(6),
   },
   frame: {
-    padding: px(2),
-    backgroundColor: colors.gold.muted,
-    borderRadius: px(4),
-  },
-  frameFocused: {
-    backgroundColor: colors.gold.bright,
+    borderRadius: 0,
+    overflow: "hidden",
   },
   field: {
-    paddingVertical: px(10),
+    paddingVertical: px(11),
     paddingHorizontal: px(14),
-    backgroundColor: "#1c140c", // Rich high-contrast dark wood
-    color: "#ffffff", // Pure white input text
     fontFamily: fonts.bodyMedium,
-    fontSize: px(15), // Much larger, readable text
-    height: px(48), // Comfortable touch height
-    borderRadius: px(2),
+    fontSize: px(15),
+    minHeight: px(46),
+    borderRadius: 0,
   },
   rightAccessoryContainer: {
     position: "absolute",

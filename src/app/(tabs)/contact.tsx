@@ -1,9 +1,16 @@
-import { View, Text, StyleSheet, Pressable, Linking, Alert } from "react-native";
+import { View, Text, StyleSheet, Linking, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, fonts } from "@/theme/tokens";
+import { colors, fonts, typography } from "@/theme/tokens";
 import { px } from "@/theme/scale";
-import { Ionicons } from "@expo/vector-icons";
-import { useM3Theme } from "@/theme/M3ThemeContext";
+import { useBlockTheme } from "@/theme/BlockThemeContext";
+import {
+  CREW_PALETTES,
+  McGlyph,
+  PixelIcon,
+  crewHead,
+  paletteIndexFor,
+} from "@/components/mc/PixelIcon";
+import { DirtBackground, Frame, McCard, useSurface } from "@/components/mc";
 
 const TEAM_CONTACTS = [
   { id: "1", name: "Alice Event Lead", phone: "+1234567890" },
@@ -13,7 +20,8 @@ const TEAM_CONTACTS = [
 
 export default function ContactTab() {
   const insets = useSafeAreaInsets();
-  const { theme } = useM3Theme();
+  const { theme } = useBlockTheme();
+  const surface = useSurface();
   const handleCall = async (phone: string) => {
     const url = `tel:${phone}`;
     const supported = await Linking.canOpenURL(url);
@@ -25,24 +33,53 @@ export default function ContactTab() {
   };
 
   return (
-    <View style={[styles.root, { paddingTop: Math.max(insets.top, px(16)) + px(8), backgroundColor: theme.background }]}>
-      <Text style={[styles.title, { color: theme.text }]}>Team Contacts</Text>
-      <Text style={[styles.body, { color: theme.textDim }]}>Tap on a contact to initiate a call immediately.</Text>
+    <View style={[styles.root, { paddingTop: insets.top + px(52), backgroundColor: theme.background }]}>
+      {/*
+        The dirt menu background.
+
+        Minecraft splits its backdrops: the title screen gets the panning
+        panorama, and every menu behind it — options, inventory, controls — gets
+        the dirt block tiled and darkened. Home is this app's title screen and
+        carries the panorama; the list screens get the dirt, which is what makes
+        them read as *inside* the same game rather than as a different app's
+        settings page.
+      */}
+      <DirtBackground brightness={0.085} />
+      <Text style={[styles.title, { color: theme.text }]}>CREW</Text>
+      <Text style={[styles.body, { color: theme.textDim }]}>
+        Tap a name to call them straight away.
+      </Text>
 
       <View style={styles.list}>
         {TEAM_CONTACTS.map((contact) => (
-          <View key={contact.id} style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+          <McCard
+            key={contact.id}
+            onPress={() => handleCall(contact.phone)}
+            fill={theme.surfaceElevated}
+            style={styles.card}
+            accessibilityLabel={`Call ${contact.name}`}
+          >
+            {/* A player head per crew member, in their own colours — the
+                game's own way of showing who someone is. */}
+            <View style={[styles.headSlot, { backgroundColor: surface.slot }]}>
+              <Frame depth="sunken" />
+              <PixelIcon
+                art={crewHead(...CREW_PALETTES[paletteIndexFor(contact.name)])}
+                size={px(30)}
+              />
+            </View>
+
             <View style={styles.cardInfo}>
-              <Text style={[styles.contactName, { color: theme.text }]}>{contact.name}</Text>
+              <Text style={[styles.contactName, { color: theme.text }]}>
+                {contact.name}
+              </Text>
               <Text style={[styles.contactPhone, { color: theme.primary }]}>{contact.phone}</Text>
             </View>
-            <Pressable
-              onPress={() => handleCall(contact.phone)}
-              style={[styles.callButton, { backgroundColor: theme.primaryContainer }]}
-            >
-              <Ionicons name="call" size={20} color={theme.primary} />
-            </Pressable>
-          </View>
+            <View style={[styles.callButton, { backgroundColor: surface.slotActive }]}>
+              <Frame depth="raised" />
+              <McGlyph name="phone" size={px(18)} color={theme.primary} />
+            </View>
+          </McCard>
         ))}
       </View>
     </View>
@@ -56,8 +93,9 @@ const styles = StyleSheet.create({
     padding: px(16),
   },
   title: {
-    fontFamily: fonts.pixelBold,
-    fontSize: px(18),
+    fontFamily: typography.pageTitle.fontFamily,
+    fontSize: px(32),
+    letterSpacing: typography.pageTitle.letterSpacing,
     color: colors.gold.title,
     marginBottom: px(8),
   },
@@ -73,29 +111,37 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "rgba(255,255,255,0.05)",
-    padding: px(16),
-    borderColor: colors.gold.muted,
+    gap: px(14),
+    padding: px(14),
+  },
+  headSlot: {
+    width: px(44),
+    height: px(44),
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 0,
+    overflow: "hidden",
   },
   cardInfo: {
     flex: 1,
   },
   contactName: {
-    fontFamily: fonts.pixel,
-    fontSize: px(12),
+    fontFamily: typography.h3.fontFamily,
+    fontSize: px(typography.h3.fontSize),
     color: colors.gold.title,
     marginBottom: px(4),
   },
   contactPhone: {
     fontFamily: fonts.body,
-    fontSize: px(12),
+    fontSize: px(15),
     color: colors.cyan,
   },
   callButton: {
-    backgroundColor: colors.gold.muted,
-    padding: px(10),
+    width: px(38),
+    height: px(38),
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: 0,
+    overflow: "hidden",
   },
 });

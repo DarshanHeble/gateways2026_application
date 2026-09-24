@@ -10,7 +10,7 @@ import Animated, {
 import { fonts, type } from "@/theme/tokens";
 import { px } from "@/theme/scale";
 import { Bevel } from "./Primitives";
-import { useM3Theme } from "@/theme/M3ThemeContext";
+import { useBlockTheme } from "@/theme/BlockThemeContext";
 
 /**
  * The design's `toastIn` notice — a dark slab with a mint hairline outline,
@@ -18,7 +18,7 @@ import { useM3Theme } from "@/theme/M3ThemeContext";
  */
 export function PixelToast({ message, bottom = 112 }: { message: string | null; bottom?: number }) {
   const progress = useSharedValue(0);
-  const { theme } = useM3Theme();
+  const { theme } = useBlockTheme();
 
   useEffect(() => {
     progress.value = withTiming(message ? 1 : 0, {

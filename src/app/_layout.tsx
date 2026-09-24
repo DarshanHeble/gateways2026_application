@@ -11,17 +11,17 @@ import {
   SpaceGrotesk_700Bold,
 } from "@expo-google-fonts/space-grotesk";
 import { colors } from "@/theme/tokens";
+import { SCREEN_ANIMATION, SCREEN_ANIMATION_DURATION } from "@/theme/motion";
 import { MobConvergenceOverlay } from "@/modules/splash";
 import { AuthProvider, useAuth } from "@/modules/auth";
 import { AssetsProvider } from "@/modules/assets";
 import { NotificationsProvider } from "@/modules/notifications";
 import { DataProvider } from "@/modules/core/DataProvider";
 import { NetworkProvider } from "@/modules/core/NetworkProvider";
-import { M3ThemeProvider } from "@/theme/M3ThemeContext";
+import { BlockThemeProvider } from "@/theme/BlockThemeContext";
 import { PaperProvider } from 'react-native-paper';
 import { minecraftTheme } from '@/theme/minecraftTheme';
-import { ConnectionStatus } from '@/components/ConnectionStatus';
-import { SyncStatusPill } from '@/components/SyncStatusPill';
+import { ServerStatus } from '@/components/ServerStatus';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -42,11 +42,14 @@ function RootLayoutNav() {
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: colors.stage },
-          animation: "fade",
+          // See @/theme/motion: a horizontal push is an iOS idiom with no
+          // counterpart in game. A Minecraft screen is swapped, not slid.
+          animation: SCREEN_ANIMATION,
+          animationDuration: SCREEN_ANIMATION_DURATION,
         }}
       />
-      <ConnectionStatus />
-      <SyncStatusPill />
+      {/* One status surface for the whole app. See ServerStatus. */}
+      <ServerStatus />
       <MobConvergenceOverlay />
     </>
   );
@@ -54,6 +57,18 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
+    /*
+     * The actual Minecraft UI typeface, as a faithful OFL-1.1 recreation
+     * (IdreesInc/minecraft-font). It contains no Mojang assets — it is a vector
+     * redraw of the bitmap font's letterforms, with the original's kerning and
+     * weight. Pixelify Sans, which the app used before, is a generic pixel face
+     * and reads as "retro game" rather than as this game; side by side the
+     * difference is immediate.
+     *
+     * The licence ships beside the files in assets/fonts/.
+     */
+    Minecraft: require("../../assets/fonts/Minecraft.otf"),
+    MinecraftBold: require("../../assets/fonts/Minecraft-Bold.otf"),
     PixelifySans_400Regular,
     PixelifySans_500Medium,
     PixelifySans_700Bold,
@@ -68,7 +83,7 @@ export default function RootLayout() {
     <PaperProvider theme={minecraftTheme}>
       <SafeAreaProvider>
         <StatusBar style="light" />
-        <M3ThemeProvider>
+        <BlockThemeProvider>
           <NetworkProvider>
             {/*
               Above the router so `resolveAsset` is primed before any screen
@@ -85,7 +100,7 @@ export default function RootLayout() {
               </AuthProvider>
             </AssetsProvider>
           </NetworkProvider>
-        </M3ThemeProvider>
+        </BlockThemeProvider>
       </SafeAreaProvider>
     </PaperProvider>
   );

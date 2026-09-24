@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { Ionicons } from "@expo/vector-icons";
 import {
   View,
   Text,
@@ -16,8 +15,7 @@ import { useAuth } from "@/modules/auth";
 import { px } from "@/theme/scale";
 import { ImageBackground } from "expo-image";
 import { useAssetSource } from "@/modules/assets";
-import { Bevel } from "@/components/pixel/Primitives";
-import { DitherFill } from "@/components/pixel/Fills";
+import { Frame, Grain } from "@/components/mc";
 import { API_BASE_URL, apiClient } from "@/services/api";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { coverScreen, revealScreen } from "@/modules/splash";
@@ -26,6 +24,7 @@ import { GlassInput } from "./components/GlassInput";
 import { CreeperFaceIcon, GoogleGIcon } from "./components/PixelIcons";
 import { useLoginForm } from "./hooks/useLoginForm";
 import { styles } from "./login.styles";
+import { McGlyph } from "@/components/mc/PixelIcon";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -152,8 +151,10 @@ export function LoginScreen() {
                 glass card this time, matching this brighter daytime poster. */}
             <View style={styles.cardWrapper}>
               <View style={styles.card}>
+                <Grain />
+                <Frame depth="raised" />
                 <GlassInput
-                  icon="mail-outline"
+                  icon="mail"
                   value={form.email}
                   onChangeText={form.setEmail}
                   placeholder="College Email"
@@ -167,7 +168,7 @@ export function LoginScreen() {
 
                 <GlassInput
                   ref={form.passwordRef}
-                  icon="lock-closed-outline"
+                  icon="lock"
                   value={form.password}
                   onChangeText={form.setPassword}
                   placeholder="Password"
@@ -177,11 +178,7 @@ export function LoginScreen() {
                   onSubmitEditing={form.submit}
                   rightAccessory={
                     <TouchableOpacity onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
-                      <Ionicons
-                        name={showPassword ? "eye-off-outline" : "eye-outline"}
-                        size={px(15)}
-                        color="#8d93ab"
-                      />
+                      <McGlyph name={showPassword ? "eyeOff" : "eye"} size={px(15)} color="#8d93ab" />
                     </TouchableOpacity>
                   }
                 />
@@ -195,20 +192,15 @@ export function LoginScreen() {
                   disabled={form.busy}
                   activeOpacity={0.85}
                 >
-                  <DitherFill style={styles.signInDither} light={0.14} dark={0.16} size={3} />
-                  <Bevel
-                    top={{ color: "rgba(255,255,255,0.4)", size: 3 }}
-                    left={{ color: "rgba(255,255,255,0.25)", size: 3 }}
-                    bottom={{ color: "rgba(6,40,20,0.55)", size: 4 }}
-                    right={{ color: "rgba(6,40,20,0.4)", size: 4 }}
-                  />
+                  <Grain />
+                  <Frame depth="green" />
                   <CreeperFaceIcon size={17} />
                   {form.busy ? (
-                    <ActivityIndicator color="#ffffff" style={styles.signInText} />
+                    <ActivityIndicator color="#ffffff" style={styles.signInSpinner} />
                   ) : (
                     <Text style={styles.signInText}>SIGN IN</Text>
                   )}
-                  <Ionicons name="arrow-forward" size={px(15)} color="#ffffff" />
+                  <McGlyph name="arrowRight" size={px(15)} color="#ffffff" />
                 </TouchableOpacity>
 
                 <View style={styles.dividerRow}>
