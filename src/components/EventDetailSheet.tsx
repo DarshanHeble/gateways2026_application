@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Dimensions,
+  Linking,
   Modal,
   PanResponder,
   Pressable,
@@ -16,18 +17,97 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { Image } from "expo-image";
+import * as WebBrowser from "expo-web-browser";
 
 import { timing } from "@/theme/motion";
 import { useBlockTheme } from "@/theme/BlockThemeContext";
-import { space, typography } from "@/theme/tokens";
+import { fonts, space, typography } from "@/theme/tokens";
 import { EventItem } from "@/services/api";
 import { getEventImage } from "@/services/EventAssets";
 import { useAssetsVersion } from "@/modules/assets";
-import { px } from "@/theme/scale";
+import { px, pxFont } from "@/theme/scale";
 import { Frame, Grain, McButton, McDivider, useSurface } from "@/components/mc";
 import { McGlyph, PixelIcon, type PixelIconName } from "@/components/mc/PixelIcon";
+import { rupees, teamLabel } from "@/utils/fest";
 
 const { height: SCREEN_H } = Dimensions.get("window");
+
+// ── Links ───────────────────────────────────────────────────────────────────
+
+/** URLs in the organisers' free text. A capture group, so `split` keeps them. */
+const URL_SPLIT = /(https?:\/\/[^\s)>\]]+)/;
+
+/** Trailing punctuation is the sentence's, not the link's. */
+function trimUrl(url: string) {
+  return url.replace(/[.,;:!?'"]+$/, "");
+}
+
+/**
+ * A readable name for a link. The rules are Google Docs, and a 90-character
+ * `docs.google.com/document/d/1-C9U3…/edit?usp=drive_link` is noise on a phone.
+ */
+function linkLabel(url: string) {
+  const m = url.match(/^https?:\/\/(?:www\.)?([^/?#]+)([^?#]*)/i);
+  if (!m) return url;
+  const [, host, path] = m;
+  if (host === "docs.google.com") {
+    if (path.startsWith("/forms")) return "Google Form";
+    if (path.startsWith("/spreadsheets")) return "Google Sheet";
+    if (path.startsWith("/presentation")) return "Google Slides";
+    return "Google Doc";
+  }
+  if (host === "drive.google.com") return "Google Drive";
+  if (host === "forms.gle") return "Google Form";
+  return host;
+}
+
+/**
+ * Open in the in-app browser — a sheet over the event, so closing it lands you
+ * back where you were — and fall back to the system if that can't open.
+ */
+function openLink(url: string) {
+  WebBrowser.openBrowserAsync(url).catch(() => {
+    Linking.openURL(url).catch(() => {});
+  });
+}
+
+/** Text with any URLs in it turned into tappable, named links. */
+function LinkedText({
+  text,
+  style,
+  linkColor,
+  numberOfLines,
+}: {
+  text: string;
+  style: any;
+  linkColor: string;
+  numberOfLines?: number;
+}) {
+  const parts = text.split(URL_SPLIT);
+  return (
+    <Text style={style} numberOfLines={numberOfLines}>
+      {parts.map((part, i) => {
+        // `split` with one capture group puts the matches at the odd indices.
+        if (i % 2 === 0) return part;
+        const url = trimUrl(part);
+        const rest = part.slice(url.length);
+        return (
+          <Text key={i}>
+            <Text
+              onPress={() => openLink(url)}
+              accessibilityRole="link"
+              style={[styles.link, { color: linkColor }]}
+              suppressHighlighting={false}
+            >
+              {`Open ${linkLabel(url)}`}
+            </Text>
+            {rest}
+          </Text>
+        );
+      })}
+    </Text>
+  );
+}
 
 interface EventDetailSheetProps {
   visible: boolean;
@@ -88,6 +168,14 @@ export function EventDetailSheet({
   // the sheet would keep whatever was resolvable on first render.
   useAssetsVersion();
   const { theme } = useBlockTheme();
+  // Folded again whenever a different event opens (reset during render, not in
+  // an effect, so the new event never flashes fully expanded).
+  const [expanded, setExpanded] = useState(false);
+  const [expandedFor, setExpandedFor] = useState<string | undefined>(event?.id);
+  if (event?.id !== expandedFor) {
+    setExpandedFor(event?.id);
+    setExpanded(false);
+  }
   const surface = useSurface();
 
   const sheetY = useSharedValue(SCREEN_H);
@@ -128,6 +216,25 @@ export function EventDetailSheet({
   const art = getEventImage(event.title);
   const prizes = PODIUM.filter(({ key }) => event.prizes?.[key]);
 
+  const rulesUrl = event.rules_pdf_url?.trim() || null;
+  const description = event.description || "Compete against top participants across colleges.";
+  const longDescription = description.length > 320;
+  const hasTime = !!event.from_time && !/^tba$/i.test(event.from_time.trim());
+  const hasEnd = !!event.end_time && !/^tba$/i.test(event.end_time.trim());
+  const timeText = hasTime ? `${event.from_time}${hasEnd ? ` – ${event.end_time}` : ""}` : "Time TBA";
+  const team = teamLabel(event.participation_type);
+  const pool = rupees(event.prizes?.pool);
+  const eligibility = (event.eligibility ?? []).map((l) => l.trim()).filter(Boolean);
+  /*
+   * Every event's first rule is "Detailed Rules & Guidelines: <the same URL>".
+   * The rulebook button says that already, so a rule that is only a label for
+   * that link is dropped rather than shown twice.
+   */
+  const rules = (event.rules ?? []).filter((rule) => {
+    if (!rulesUrl || !rule.includes(rulesUrl)) return true;
+    return rule.replace(rulesUrl, "").replace(/[\s:–-]+$/, "").trim().length > 60;
+  });
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <View style={[styles.overlay, { backgroundColor: theme.overlay }]}>
@@ -161,7 +268,13 @@ export function EventDetailSheet({
             <View style={styles.headerRow}>
               <View style={[styles.artSlot, { backgroundColor: surface.slot }]}>
                 <Frame depth="sunken" />
-                {art ? <Image source={art} style={styles.artImage} contentFit="contain" /> : null}
+                {/* Clipped to the badge's circle: some art files carry a black
+                    square behind it (see EventArt). */}
+                {art ? (
+                  <View style={styles.artClip}>
+                    <Image source={art} style={styles.artFill} contentFit="cover" />
+                  </View>
+                ) : null}
               </View>
               <View style={styles.headerText}>
                 <Text style={[styles.title, { color: theme.text }]} numberOfLines={3}>
@@ -178,8 +291,7 @@ export function EventDetailSheet({
             {/* Metadata, as slot-style chips with drawn glyphs. */}
             <View style={styles.metaRow}>
               <MetaChip glyph="clock" fill={surface.slot} color={theme.textDim}>
-                {event.from_time || "TBA"}
-                {event.end_time ? ` – ${event.end_time}` : ""}
+                {timeText}
               </MetaChip>
               {event.venue ? (
                 <MetaChip glyph="pin" fill={surface.slot} color={theme.textDim}>
@@ -191,19 +303,46 @@ export function EventDetailSheet({
                   {event.date}
                 </MetaChip>
               ) : null}
+              {team ? (
+                <MetaChip icon="crew" fill={surface.slot} color={theme.textDim}>
+                  {team}
+                </MetaChip>
+              ) : null}
+              {event.max_slots ? (
+                <MetaChip icon="events" fill={surface.slot} color={theme.textDim}>
+                  {event.max_slots} slots
+                </MetaChip>
+              ) : null}
             </View>
 
             <McDivider style={styles.divider} />
 
             <Text style={[styles.eyebrow, { color: theme.textDim }]}>OVERVIEW</Text>
-            <Text style={[styles.paragraph, { color: theme.textDim }]}>
-              {event.description || "Compete against top participants across colleges."}
-            </Text>
+            {/* Long write-ups start folded to five lines, so prizes and the
+                rulebook aren't a long scroll away. */}
+            <Pressable onPress={() => setExpanded((v) => !v)} disabled={!longDescription}>
+              <LinkedText
+                text={description}
+                style={[styles.paragraph, { color: theme.textDim }]}
+                linkColor={theme.primary}
+                numberOfLines={longDescription && !expanded ? 5 : undefined}
+              />
+              {longDescription ? (
+                <Text style={[styles.readMore, { color: theme.primary }]}>{expanded ? "Show less" : "Read more"}</Text>
+              ) : null}
+            </Pressable>
 
             {prizes.length > 0 ? (
               <>
                 <McDivider style={styles.divider} />
-                <Text style={[styles.eyebrow, { color: theme.textDim }]}>PRIZES</Text>
+                <View style={styles.eyebrowRow}>
+                  <Text style={[styles.eyebrow, { color: theme.textDim }]}>PRIZES</Text>
+                  {pool ? (
+                    <Text style={[styles.poolText, { color: theme.primary }]}>
+                      ₹{pool.toLocaleString("en-IN")} pool
+                    </Text>
+                  ) : null}
+                </View>
                 <View style={styles.prizeList}>
                   {prizes.map(({ icon, label, key }) => (
                     <View key={label} style={styles.prizeRow}>
@@ -226,19 +365,68 @@ export function EventDetailSheet({
               </>
             ) : null}
 
-            {event.rules && event.rules.length > 0 ? (
+            {eligibility.length ? (
+              <>
+                <McDivider style={styles.divider} />
+                <Text style={[styles.eyebrow, { color: theme.textDim }]}>WHO CAN ENTER</Text>
+                {eligibility.map((line, i) => (
+                  <LinkedText
+                    key={i}
+                    text={line}
+                    style={[styles.paragraph, { color: theme.textDim }]}
+                    linkColor={theme.primary}
+                  />
+                ))}
+              </>
+            ) : null}
+
+            {rules.length > 0 || rulesUrl ? (
               <>
                 <McDivider style={styles.divider} />
                 <Text style={[styles.eyebrow, { color: theme.textDim }]}>RULES &amp; INFO</Text>
-                <View style={styles.ruleList}>
-                  {event.rules.map((rule, idx) => (
-                    <View key={idx} style={styles.ruleRow}>
-                      {/* A square bullet, because nothing here is round. */}
-                      <View style={[styles.ruleBullet, { backgroundColor: theme.primary }]} />
-                      <Text style={[styles.ruleText, { color: theme.textDim }]}>{rule}</Text>
+
+                {/* The full rulebook, as a proper control rather than a raw URL
+                    in a bullet point that nobody could tap. */}
+                {rulesUrl ? (
+                  <Pressable
+                    onPress={() => openLink(rulesUrl)}
+                    accessibilityRole="link"
+                    accessibilityLabel={`Rules and guidelines, opens ${linkLabel(rulesUrl)}`}
+                    style={({ pressed }) => [
+                      styles.docLink,
+                      { backgroundColor: theme.surfaceElevated, opacity: pressed ? 0.75 : 1 },
+                    ]}
+                  >
+                    <Frame depth="raised" />
+                    <View style={[styles.docIcon, { backgroundColor: surface.slot }]}>
+                      <Frame depth="sunken" />
+                      <PixelIcon name="events" size={px(24)} />
                     </View>
-                  ))}
-                </View>
+                    <View style={styles.docBody}>
+                      <Text style={[styles.docTitle, { color: theme.text }]}>Rules &amp; guidelines</Text>
+                      <Text style={[styles.docMeta, { color: theme.textDim }]}>
+                        {linkLabel(rulesUrl)} · opens in the app
+                      </Text>
+                    </View>
+                    <McGlyph name="arrowRight" size={px(14)} color={theme.primary} />
+                  </Pressable>
+                ) : null}
+
+                {rules.length > 0 ? (
+                  <View style={styles.ruleList}>
+                    {rules.map((rule, idx) => (
+                      <View key={idx} style={styles.ruleRow}>
+                        {/* A square bullet, because nothing here is round. */}
+                        <View style={[styles.ruleBullet, { backgroundColor: theme.primary }]} />
+                        <LinkedText
+                          text={rule}
+                          style={[styles.ruleText, { color: theme.textDim }]}
+                          linkColor={theme.primary}
+                        />
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
               </>
             ) : null}
 
@@ -270,11 +458,14 @@ export function EventDetailSheet({
 
 function MetaChip({
   glyph,
+  icon,
   children,
   fill,
   color,
 }: {
-  glyph: "clock" | "pin" | "star";
+  glyph?: "clock" | "pin" | "star";
+  /** A full-colour item sprite instead of a tinted glyph. */
+  icon?: PixelIconName;
   children: React.ReactNode;
   fill: string;
   color: string;
@@ -282,7 +473,7 @@ function MetaChip({
   return (
     <View style={[styles.metaChip, { backgroundColor: fill }]}>
       <Frame depth="sunken" />
-      <McGlyph name={glyph} size={px(12)} color={color} />
+      {icon ? <PixelIcon name={icon} size={px(12)} /> : glyph ? <McGlyph name={glyph} size={px(12)} color={color} /> : null}
       <Text style={[styles.metaText, { color }]} numberOfLines={1}>
         {children}
       </Text>
@@ -308,7 +499,7 @@ const styles = StyleSheet.create({
   },
   containerName: {
     fontFamily: typography.eyebrow.fontFamily,
-    fontSize: px(typography.eyebrow.fontSize),
+    fontSize: pxFont(typography.eyebrow.fontSize), lineHeight: Math.round(pxFont(typography.eyebrow.fontSize) * 1.25),
     letterSpacing: typography.eyebrow.letterSpacing,
   },
   closeBtn: {
@@ -331,11 +522,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  artImage: { width: "86%", height: "86%" },
+  artClip: { width: "86%", aspectRatio: 1, borderRadius: 9999, overflow: "hidden" },
+  artFill: { width: "100%", height: "100%" },
   headerText: { flex: 1, minWidth: 0 },
   title: {
     fontFamily: typography.h1.fontFamily,
-    fontSize: px(typography.h1.fontSize),
+    fontSize: pxFont(typography.h1.fontSize), lineHeight: Math.round(pxFont(typography.h1.fontSize) * 1.25),
     letterSpacing: typography.h1.letterSpacing,
   },
   subtitle: {
@@ -359,10 +551,13 @@ const styles = StyleSheet.create({
   divider: { marginVertical: px(space.lg) },
   eyebrow: {
     fontFamily: typography.eyebrow.fontFamily,
-    fontSize: px(typography.eyebrow.fontSize),
+    fontSize: pxFont(typography.eyebrow.fontSize), lineHeight: Math.round(pxFont(typography.eyebrow.fontSize) * 1.25),
     letterSpacing: typography.eyebrow.letterSpacing,
     marginBottom: px(space.sm),
   },
+  readMore: { fontFamily: fonts.bodyBold, fontSize: px(13), marginTop: px(6) },
+  eyebrowRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
+  poolText: { fontFamily: fonts.bodyBold, fontSize: px(13) },
   paragraph: {
     fontFamily: typography.body.fontFamily,
     fontSize: px(typography.body.fontSize),
@@ -384,7 +579,7 @@ const styles = StyleSheet.create({
     // sans: at 34 it wrapped to "15 / T".
     width: px(44),
     fontFamily: typography.eyebrow.fontFamily,
-    fontSize: px(typography.eyebrow.fontSize),
+    fontSize: pxFont(typography.eyebrow.fontSize), lineHeight: Math.round(pxFont(typography.eyebrow.fontSize) * 1.25),
     letterSpacing: typography.eyebrow.letterSpacing,
   },
   prizeValue: {
@@ -395,6 +590,18 @@ const styles = StyleSheet.create({
 
   ruleList: { gap: px(space.sm) },
   ruleRow: { flexDirection: "row", gap: px(space.sm), alignItems: "flex-start" },
+  link: { fontFamily: fonts.bodyBold, textDecorationLine: "underline" },
+  docLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: px(12),
+    padding: px(10),
+    marginBottom: px(space.md),
+  },
+  docIcon: { width: px(40), height: px(40), alignItems: "center", justifyContent: "center" },
+  docBody: { flex: 1, minWidth: 0 },
+  docTitle: { fontFamily: fonts.display, fontSize: pxFont(15), lineHeight: Math.round(pxFont(15) * 1.25) },
+  docMeta: { fontFamily: typography.body.fontFamily, fontSize: px(12), marginTop: px(2) },
   ruleBullet: { width: px(5), height: px(5), marginTop: px(7), borderRadius: 0 },
   ruleText: {
     flex: 1,

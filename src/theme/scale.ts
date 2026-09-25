@@ -1,4 +1,4 @@
-import { Dimensions } from "react-native";
+import { Dimensions, PixelRatio } from "react-native";
 
 /**
  * The design was authored on a fixed 390x844 canvas (iPhone 14 logical size).
@@ -28,6 +28,19 @@ export const px = (n: number) => {
   "worklet";
   return n * S;
 };
+
+/**
+ * Design units -> device points, for text in the Minecraft face.
+ *
+ * The typeface is drawn on a grid: one of its pixels is 1/9 of the font size.
+ * Unless that lands on whole device pixels the glyphs render with uneven,
+ * smeared edges — `px(20)` on a 3x phone is 6.87 device pixels per font pixel,
+ * which is what made the first pass of pixel headings look blobby. This snaps
+ * to the nearest size where each font pixel is an exact number of device
+ * pixels (multiples of 3pt on a 3x screen, 4.5pt on 2x).
+ */
+const PIXEL_FONT_STEP = 9 / PixelRatio.get();
+export const pxFont = (n: number) => Math.max(PIXEL_FONT_STEP, Math.round((n * S) / PIXEL_FONT_STEP) * PIXEL_FONT_STEP);
 
 /**
  * The scene is anchored top and bottom (matching the source, which positions

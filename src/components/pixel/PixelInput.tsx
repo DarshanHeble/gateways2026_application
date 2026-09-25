@@ -8,7 +8,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { fonts, typography } from "@/theme/tokens";
-import { px } from "@/theme/scale";
+import { px, pxFont } from "@/theme/scale";
 import { Frame, useSurface } from "@/components/mc";
 import { useBlockTheme } from "@/theme/BlockThemeContext";
 
@@ -98,7 +98,7 @@ export const PixelInput = forwardRef<TextInput, PixelInputProps>(function PixelI
 const styles = StyleSheet.create({
   label: {
     fontFamily: typography.eyebrow.fontFamily,
-    fontSize: px(typography.eyebrow.fontSize),
+    fontSize: pxFont(typography.eyebrow.fontSize), lineHeight: Math.round(pxFont(typography.eyebrow.fontSize) * 1.25),
     letterSpacing: typography.eyebrow.letterSpacing,
     marginBottom: px(6),
   },

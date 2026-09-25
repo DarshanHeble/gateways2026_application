@@ -21,6 +21,7 @@ export interface SeedAnnouncement {
   body?: string;
   content?: string;
   target?: string;
+  expiry?: string;
   createdAt?: number;
 }
 

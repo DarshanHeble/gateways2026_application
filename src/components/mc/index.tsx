@@ -28,7 +28,7 @@ import {
 import * as Haptics from "expo-haptics";
 
 import { DitherFill } from "@/components/pixel/Fills";
-import { px } from "@/theme/scale";
+import { px, pxFont } from "@/theme/scale";
 import { fonts } from "@/theme/tokens";
 import { GRAIN, gap, mcTextShadow, mojang, schemes, slotSize } from "@/theme/minecraft";
 import { useBlockTheme } from "@/theme/BlockThemeContext";
@@ -266,10 +266,11 @@ export function McCard({
       style={[
         styles.square,
         { backgroundColor: fill },
-        // The sink: one design pixel, taken off the top and given to the
-        // bottom so the card's own height never changes and the list below
-        // does not jump.
-        { paddingTop: pressed ? px(1) : 0, paddingBottom: pressed ? 0 : px(1) },
+        // The sink: one design pixel down while pressed, as a transform so it
+        // never touches layout. It used to be paddingTop/paddingBottom, which
+        // overrode any vertical padding a caller gave the card — every padded
+        // card lost its top and bottom padding and its text sat on the edge.
+        pressed && styles.cardPressed,
         style,
       ]}
     >
@@ -402,10 +403,11 @@ const styles = StyleSheet.create({
   },
   buttonLabel: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(15),
+    fontSize: pxFont(15), lineHeight: Math.round(pxFont(15) * 1.25),
     letterSpacing: px(0.5),
     textTransform: "uppercase",
   },
+  cardPressed: { transform: [{ translateY: px(1) }] },
   slotOuter: {
     alignItems: "center",
     justifyContent: "center",

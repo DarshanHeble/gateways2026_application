@@ -396,6 +396,17 @@ const G = "#ffffff"; // replaced by `tint` at every call site
 const glyph = (rows: string[]): PixelArt => ({ palette: { X: G }, rows });
 
 export const GLYPHS = {
+  search: glyph([
+    "..XXXX...",
+    ".X....X..",
+    "X......X.",
+    "X......X.",
+    "X......X.",
+    ".X....X..",
+    "..XXXXXX.",
+    "......XXX",
+    ".......XX",
+  ]),
   close: glyph([
     "XX.....XX",
     "XXX...XXX",

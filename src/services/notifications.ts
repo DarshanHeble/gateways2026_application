@@ -120,8 +120,36 @@ export async function sendNotification(input: {
 }
 
 /** Normalise a raw sheet/seed announcement row into an AppNotification. */
-function toAppNotification(item: any, readSet: Set<string>): AppNotification {
-  const rawTarget = (item.target || "").toString().toLowerCase().trim();
+/**
+ * "30/09/2026", "30-09-2026", "2026-09-30", "30 Sep 2026", "30th September 2026"
+ * → the end of that day, local time. `null` for blank or unreadable.
+ */
+export function parseExpiry(value: unknown): number | null {
+  const v = String(value ?? "").trim();
+  if (!v) return null;
+  let y: number | undefined, m: number | undefined, d: number | undefined;
+  const iso = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  const dmy = v.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/);
+  if (iso) [y, m, d] = [Number(iso[1]), Number(iso[2]), Number(iso[3])];
+  else if (dmy) [d, m, y] = [Number(dmy[1]), Number(dmy[2]), Number(dmy[3])];
+  else {
+    const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+    const words = v.toLowerCase().match(/(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]{3})[a-z]*,?\s+(\d{4})/);
+    if (words) [d, m, y] = [Number(words[1]), months.indexOf(words[2]) + 1, Number(words[3])];
+  }
+  if (!y || !m || !d) return null;
+  if (y < 100) y += 2000;
+  const end = new Date(y, m - 1, d, 23, 59, 59).getTime();
+  return Number.isFinite(end) ? end : null;
+}
+
+function toAppNotification(
+  item: any,
+  known: Map<string, AppNotification>,
+  now: number = Date.now(),
+): AppNotification {
+  const audience = String(item.target || "").trim();
+  const rawTarget = audience.toLowerCase();
   let target: NotificationTarget = "all";
   if (rawTarget.startsWith("participant")) {
     target = "participant";
@@ -130,13 +158,17 @@ function toAppNotification(item: any, readSet: Set<string>): AppNotification {
   }
 
   const id = String(item.id || `announcement-${item.sr_no ?? item.title ?? "unknown"}`);
+  const seen = known.get(id);
   return {
     id,
     title: item.title || "ANNOUNCEMENT",
     body: item.body || item.content || "",
     target,
-    createdAt: item.createdAt || Date.now(),
-    read: readSet.has(id),
+    audience: audience && !/^all$/i.test(audience) ? audience : undefined,
+    expiresAt: parseExpiry(item.expiry),
+    // Keep the first time this device saw it; a new one is "now".
+    createdAt: seen?.createdAt ?? now,
+    read: seen?.read ?? false,
   };
 }
 
@@ -149,7 +181,10 @@ function toAppNotification(item: any, readSet: Set<string>): AppNotification {
  */
 export async function fetchNotifications(): Promise<AppNotification[]> {
   const stored = await notificationStore.getAll();
-  const readSet = new Set(stored.filter((n) => n.read).map((n) => n.id));
+  const known = new Map(stored.map((n) => [n.id, n]));
+  const now = Date.now();
+  // An announcement past its expiry date no longer applies.
+  const current = (list: AppNotification[]) => list.filter((n) => !n.expiresAt || n.expiresAt >= now);
 
   try {
     const { data } = await apiClient<any[]>(`${API_BASE_URL}/events/announcements`, {
@@ -158,10 +193,13 @@ export async function fetchNotifications(): Promise<AppNotification[]> {
     });
 
     if (Array.isArray(data)) {
-      const live = data.map((item) => toAppNotification(item, readSet));
+      // Rows with no text are placeholders in the sheet, not announcements.
+      const live = data
+        .filter((item) => String(item?.body || item?.content || "").trim())
+        .map((item, i) => toAppNotification(item, known, now - i));
       // Persist so the next cold start has them without a network round-trip.
       await notificationStore.replaceAll(live);
-      return live;
+      return current(live);
     }
   } catch (err: any) {
     if (!err?.isOffline) {
@@ -169,8 +207,12 @@ export async function fetchNotifications(): Promise<AppNotification[]> {
     }
   }
 
-  if (stored.length > 0) return stored;
+  if (stored.length > 0) return current(stored);
 
   // Nothing synced yet and no network: fall back to the bundled snapshot.
-  return SEED_ANNOUNCEMENTS.map((item) => toAppNotification(item, readSet));
+  return current(
+    SEED_ANNOUNCEMENTS.filter((item) => String(item?.body || item?.content || "").trim()).map((item, i) =>
+      toAppNotification(item, known, now - i),
+    ),
+  );
 }

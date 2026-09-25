@@ -11,7 +11,7 @@ import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
-import { px } from "@/theme/scale";
+import { px, pxFont } from "@/theme/scale";
 import { fonts } from "@/theme/tokens";
 import { SELECTOR_OVERHANG_RATIO, material, mcTextShadow } from "@/theme/minecraft";
 
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   },
   nameText: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(11),
+    fontSize: pxFont(11), lineHeight: Math.round(pxFont(11) * 1.25),
     letterSpacing: px(1),
   },
 
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(10),
+    fontSize: pxFont(10),
     lineHeight: px(16),
     color: "#ffffff",
   },

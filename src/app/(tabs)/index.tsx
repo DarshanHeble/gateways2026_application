@@ -8,8 +8,6 @@ import {
   StyleSheet,
   Text,
   View,
-  type StyleProp,
-  type ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
@@ -32,16 +30,18 @@ import * as Haptics from "expo-haptics";
 import { EventDetailSheet } from "@/components/EventDetailSheet";
 import { McGlyph, PixelIcon, type PixelIconName } from "@/components/mc/PixelIcon";
 import { McSlot, useSurface } from "@/components/mc";
+import { ArtBackdrop, EventArt, PressScale, SectionHeader, categoryTag } from "@/components/launcher";
 import { useAssetSource, useAssetsVersion } from "@/modules/assets";
 import { useAuth } from "@/modules/auth";
 import { useAppData } from "@/modules/core/DataProvider";
 import { resolveAsset } from "@/services/assets";
-import { getEventImage } from "@/services/EventAssets";
 import type { EventItem } from "@/services/api";
 import { useBlockTheme } from "@/theme/BlockThemeContext";
 import { mcTextShadow, mojang } from "@/theme/minecraft";
-import { px } from "@/theme/scale";
+import { px, pxFont } from "@/theme/scale";
 import { fonts, space } from "@/theme/tokens";
+
+import { LINEUP_STORAGE_KEY as STORAGE_MY_EVENTS, clockMinutes, festStatus, localIso } from "@/utils/fest";
 
 import { MINECRAFT_SKINS } from "./profile";
 
@@ -77,40 +77,7 @@ const { height: SCREEN_H } = Dimensions.get("window");
 // of the hero's clip, and a hairline of art showed along the bottom edge.
 const HERO_H = Math.round(Math.max(px(520), SCREEN_H * 0.72));
 
-const STORAGE_MY_EVENTS = "@gateways_my_events";
 const STORAGE_PROFILE_KEY = "@gateways_user_profile_v1";
-
-/** Local calendar date as `YYYY-MM-DD`. */
-function localIso(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-/** Whole days between two `YYYY-MM-DD` dates. */
-function daysBetween(a: string, b: string) {
-  const [ay, am, ad] = a.split("-").map(Number);
-  const [by, bm, bd] = b.split("-").map(Number);
-  return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86_400_000);
-}
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** "Oct 8 – 9" style range, and where today sits relative to it. */
-function festStatus(start: string, end: string, today: string) {
-  const [, sm, sd] = start.split("-").map(Number);
-  const [, em, ed] = end.split("-").map(Number);
-  const range =
-    start === end
-      ? `${MONTHS[sm - 1]} ${sd}`
-      : sm === em
-        ? `${MONTHS[sm - 1]} ${sd} – ${ed}`
-        : `${MONTHS[sm - 1]} ${sd} – ${MONTHS[em - 1]} ${ed}`;
-
-  const toStart = daysBetween(today, start);
-  if (toStart > 1) return { range, label: `${toStart} days to go` };
-  if (toStart === 1) return { range, label: "Starts tomorrow" };
-  if (daysBetween(today, end) >= 0) return { range, label: `Day ${daysBetween(start, today) + 1} · Live now` };
-  return { range, label: "That's a wrap" };
-}
 
 export default function Home() {
   // `getEventImage` / `resolveAsset` are synchronous registry reads; this keeps
@@ -188,13 +155,20 @@ export default function Home() {
 
   // ── Derived ────────────────────────────────────────────────────────────────
 
-  const tracked = useMemo(
-    () => allEvents.filter((e) => myEventIds.includes(e.id)),
-    [allEvents, myEventIds],
-  );
+  // Soonest first: timed slots in clock order, then the ones still TBA. With a
+  // long lineup the order is what makes the first few rows worth reading.
+  const tracked = useMemo(() => {
+    const mine = allEvents.filter((e) => myEventIds.includes(e.id));
+    const key = (e: EventItem) => clockMinutes(e.from_time) ?? Number.MAX_SAFE_INTEGER;
+    return mine.sort((a, b) => key(a) - key(b));
+  }, [allEvents, myEventIds]);
   const upNext: EventItem | null = tracked[0] ?? allEvents[0] ?? null;
   const upNextIsTracked = !!upNext && myEventIds.includes(upNext.id);
-  const lineupRest = upNextIsTracked ? tracked.slice(1) : tracked;
+  const lineupAll = upNextIsTracked ? tracked.slice(1) : tracked;
+  // Home is a glance: a few rows, then a way into the full list on Schedule.
+  const LINEUP_CAP = 4;
+  const lineupRest = lineupAll.slice(0, LINEUP_CAP);
+  const lineupMore = lineupAll.length - lineupRest.length;
   const explore = useMemo(
     () => allEvents.filter((e) => !myEventIds.includes(e.id)).slice(0, 8),
     [allEvents, myEventIds],
@@ -344,21 +318,24 @@ export default function Home() {
 
           <Animated.View style={[styles.heroCopy, heroCopyStyle]}>
             <Text style={[styles.heroEyebrow, { color: theme.primary }]}>
-              {fest.label.toUpperCase()} · {fest.range.toUpperCase()}
+              {/* Just the countdown: with the dates as well it ran under the
+                  character in the wide pixel face. The dates lead the line below. */}
+              {fest.label.toUpperCase()}
             </Text>
             {/* Two lines, the name in the accent: a lockup rather than a
                 sentence, and room beside it for the character. */}
-            <Text style={[styles.heroGreeting, { color: theme.text }]}>Welcome back,</Text>
+            <Text style={[styles.heroGreeting, { color: theme.text }, mcTextShadow(theme.text, 20)]}>Welcome back,</Text>
             <Text
-              style={[styles.heroTitle, styles.heroName, { color: theme.primary }]}
+              style={[styles.heroTitle, styles.heroName, { color: theme.primary }, mcTextShadow(theme.primary, 46)]}
               numberOfLines={1}
               adjustsFontSizeToFit
             >
               {firstName}
             </Text>
             <Text style={[styles.heroSub, { color: theme.textDim }]}>
+              {`${fest.range} · `}
               {tracked.length === 0
-                ? "Build your lineup to get reminders for the events you care about."
+                ? "build your lineup to get reminders for the events you care about."
                 : `${tracked.length} ${tracked.length === 1 ? "event" : "events"} in your lineup.`}
             </Text>
 
@@ -398,28 +375,28 @@ export default function Home() {
           {upNext ? (
             <Animated.View entering={FadeInDown.duration(380).delay(60)}>
               <SectionHeader icon="schedule" title={upNextIsTracked ? "Up next" : "Featured"} />
-              {/* Always dark, in either mode: a featured card is media, like the
-                  Launcher's news hero, and a light scrim over blurred art just
-                  turned it grey. The contrast is what marks it as the lead. */}
+              {/* Media card that follows the mode: dark scrim over the art at
+                  night, a light one by day, with the accent edge marking it as
+                  the lead either way. */}
               <PressScale
                 onPress={() => setOpenEventId(upNext.id)}
-                style={[styles.feature, { backgroundColor: "#141313", borderColor: "#000000" }]}
+                style={[styles.feature, { backgroundColor: isDark ? "#141313" : theme.surfaceElevated, borderColor: isDark ? "#000000" : theme.border }]}
               >
                 {/* The event's own art, blurred into a colour field behind the
                     card — so each featured event carries its own mood rather
                     than every card being the same grey. */}
-                <ArtBackdrop event={upNext} strength={0.5} tint="#0b0a0a" />
-                <View style={[styles.featureArt, { backgroundColor: "rgba(0,0,0,0.35)", borderColor: "rgba(255,255,255,0.12)" }]}>
+                <ArtBackdrop event={upNext} strength={isDark ? 0.5 : 0.82} tint={isDark ? "#0b0a0a" : theme.surfaceElevated} />
+                <View style={[styles.featureArt, isDark ? { backgroundColor: "rgba(0,0,0,0.35)", borderColor: "rgba(255,255,255,0.12)" } : { backgroundColor: surface.slot, borderColor: theme.border }]}>
                   <EventArt event={upNext} size={px(96)} />
                 </View>
                 <View style={styles.featureBody}>
-                  <Text style={[styles.metaCaps, { color: mojang.goldDeep }]}>
+                  <Text style={[styles.metaCaps, { color: isDark ? mojang.goldDeep : theme.primary }]}>
                     {(upNext.type || "Event").toUpperCase()}
                   </Text>
-                  <Text style={[styles.featureTitle, { color: "#ffffff" }]} numberOfLines={2}>
+                  <Text style={[styles.featureTitle, { color: isDark ? "#ffffff" : theme.text }]} numberOfLines={2}>
                     {upNext.title}
                   </Text>
-                  <Text style={[styles.meta, { color: "rgba(255,255,255,0.72)" }]} numberOfLines={1}>
+                  <Text style={[styles.meta, { color: isDark ? "rgba(255,255,255,0.72)" : theme.textDim }]} numberOfLines={1}>
                     {[upNext.from_time, upNext.venue].filter(Boolean).join(" · ")}
                   </Text>
                 </View>
@@ -437,14 +414,31 @@ export default function Home() {
             />
             <View style={[styles.list, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
               {lineupRest.length > 0 ? (
-                lineupRest.map((ev, i) => (
-                  <LineupRow
-                    key={ev.id}
-                    event={ev}
-                    first={i === 0}
-                    onPress={() => setOpenEventId(ev.id)}
-                  />
-                ))
+                <>
+                  {lineupRest.map((ev, i) => (
+                    <LineupRow
+                      key={ev.id}
+                      event={ev}
+                      first={i === 0}
+                      onPress={() => setOpenEventId(ev.id)}
+                    />
+                  ))}
+                  {lineupMore > 0 ? (
+                    <Pressable
+                      onPress={() => router.navigate("/(tabs)/schedule?filter=lineup" as never)}
+                      accessibilityRole="button"
+                      style={({ pressed }) => [
+                        styles.lineupMore,
+                        { borderTopColor: theme.border, opacity: pressed ? 0.6 : 1 },
+                      ]}
+                    >
+                      <Text style={[styles.lineupMoreText, { color: theme.primary }]}>
+                        See all {tracked.length} in your schedule
+                      </Text>
+                      <McGlyph name="arrowRight" size={px(12)} color={theme.primary} />
+                    </Pressable>
+                  ) : null}
+                </>
               ) : (
                 <Pressable
                   onPress={() => setPickerVisible(true)}
@@ -624,73 +618,6 @@ function pickOtherSkin(except: number): number {
   return i >= except ? i + 1 : i;
 }
 
-/** Gentle scale-down on press. Timed, not sprung — it settles, it doesn't bounce. */
-function PressScale({
-  children,
-  onPress,
-  style,
-}: {
-  children: React.ReactNode;
-  onPress: () => void;
-  style?: StyleProp<ViewStyle>;
-}) {
-  const scale = useSharedValue(1);
-  const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  return (
-    <Pressable
-      onPress={onPress}
-      // Shared values are mutable by design; the compiler lint rule doesn't
-      // recognise that yet (same exception as PixelButton).
-      onPressIn={() => {
-        // eslint-disable-next-line react-hooks/immutability
-        scale.value = withTiming(0.975, { duration: 90 });
-      }}
-      onPressOut={() => {
-        // eslint-disable-next-line react-hooks/immutability
-        scale.value = withTiming(1, { duration: 140 });
-      }}
-      accessibilityRole="button"
-    >
-      <Animated.View style={[style, animated]}>{children}</Animated.View>
-    </Pressable>
-  );
-}
-
-function SectionHeader({
-  title,
-  count,
-  action,
-  icon,
-}: {
-  title: string;
-  count?: number;
-  action?: { label: string; onPress: () => void };
-  /** A small item sprite marking the section — the game's own nouns. */
-  icon?: PixelIconName;
-}) {
-  const { theme } = useBlockTheme();
-  return (
-    <View style={styles.sectionHead}>
-      <View style={styles.sectionLead}>
-        {icon ? <PixelIcon name={icon} size={px(18)} /> : null}
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>
-        {title}
-          {count ? <Text style={{ color: theme.textDim }}>  {count}</Text> : null}
-        </Text>
-      </View>
-      {action ? (
-        <Pressable onPress={action.onPress} hitSlop={px(10)} accessibilityRole="button">
-          {({ pressed }) => (
-            <Text style={[styles.sectionAction, { color: theme.primary, opacity: pressed ? 0.6 : 1 }]}>
-              {action.label}
-            </Text>
-          )}
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
-
 /**
  * One figure in the at-a-glance strip: an item in a slot, with the figure as its
  * stack count in the bottom-right corner. Pressing it lights the slot the way
@@ -743,52 +670,6 @@ function Stat({
       )}
     </Pressable>
   );
-}
-
-/**
- * The event's own artwork, heavily blurred and scrimmed, filling its card.
- * `strength` is how much of the page colour is laid back over it.
- */
-function ArtBackdrop({
-  event,
-  strength,
-  tint,
-}: {
-  event: EventItem;
-  strength: number;
-  /** Scrim colour. Defaults to the page's surface. */
-  tint?: string;
-}) {
-  const { theme } = useBlockTheme();
-  const source = getEventImage(event.title) || (event.image_url ? { uri: event.image_url } : null);
-  if (!source) return null;
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <Image
-        source={source}
-        style={[StyleSheet.absoluteFill, styles.backdropImage]}
-        contentFit="cover"
-        blurRadius={36}
-      />
-      <View
-        style={[StyleSheet.absoluteFill, { backgroundColor: tint ?? theme.surfaceElevated, opacity: strength }]}
-      />
-    </View>
-  );
-}
-
-/** "Technical" / "Non-Technical" / "Non Technical" → a short tile tag. */
-function categoryTag(type?: string) {
-  const t = (type ?? "").toLowerCase().replace(/[^a-z]/g, "");
-  if (t === "technical") return "TECH";
-  if (t === "nontechnical") return "NON-TECH";
-  return (type ?? "EVENT").toUpperCase();
-}
-
-function EventArt({ event, size }: { event: EventItem; size: number }) {
-  const source = getEventImage(event.title) || (event.image_url ? { uri: event.image_url } : null);
-  if (!source) return null;
-  return <Image source={source} style={{ width: size, height: size }} contentFit="contain" />;
 }
 
 function LineupRow({ event, first, onPress }: { event: EventItem; first: boolean; onPress: () => void }) {
@@ -933,9 +814,9 @@ const styles = StyleSheet.create({
     width: HERO_H * 0.44 * 0.72,
   },
   heroEyebrow: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(12),
-    letterSpacing: px(1.2),
+    fontFamily: fonts.pixelBold,
+    fontSize: pxFont(11), lineHeight: Math.round(pxFont(11) * 1.25),
+    letterSpacing: px(0.5),
   },
   /*
    * A small greeting over a large name. At 34pt "Welcome back," wrapped inside
@@ -943,19 +824,20 @@ const styles = StyleSheet.create({
    * up onto art that had not faded yet.
    */
   heroGreeting: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: px(22),
-    letterSpacing: -0.4,
+    fontFamily: fonts.display,
+    fontSize: pxFont(20),
+    lineHeight: px(24),
+    letterSpacing: 0,
     marginTop: px(8),
   },
   heroTitle: {
-    fontFamily: fonts.bodyBold,
+    fontFamily: fonts.display,
     maxWidth: "64%",
   },
   heroName: {
-    fontSize: px(52),
-    lineHeight: px(56),
-    letterSpacing: -1.8,
+    fontSize: px(46),
+    lineHeight: px(54),
+    letterSpacing: 0,
   },
   heroSub: {
     fontFamily: fonts.body,
@@ -1004,13 +886,13 @@ const styles = StyleSheet.create({
   ctaLip: { backgroundColor: "#1d4a14" },
   ctaLabel: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(13),
+    fontSize: pxFont(13), lineHeight: Math.round(pxFont(13) * 1.25),
     letterSpacing: px(0.5),
     color: "#ffffff",
   },
 
   textButton: { flexDirection: "row", alignItems: "center", gap: px(6) },
-  textButtonLabel: { fontFamily: fonts.bodyBold, fontSize: px(14) },
+  textButtonLabel: { fontFamily: fonts.pixelBold, fontSize: pxFont(14), lineHeight: Math.round(pxFont(14) * 1.25) },
 
   body: { paddingHorizontal: px(space.xl) },
 
@@ -1023,11 +905,11 @@ const styles = StyleSheet.create({
   },
   sectionLead: { flexDirection: "row", alignItems: "center", gap: px(10) },
   sectionTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(19),
-    letterSpacing: -0.3,
+    fontFamily: fonts.pixelBold,
+    fontSize: pxFont(19), lineHeight: Math.round(pxFont(19) * 1.25),
+    letterSpacing: 0,
   },
-  sectionAction: { fontFamily: fonts.bodyBold, fontSize: px(14) },
+  sectionAction: { fontFamily: fonts.pixelBold, fontSize: pxFont(14), lineHeight: Math.round(pxFont(14) * 1.25) },
 
   stats: {
     flexDirection: "row",
@@ -1046,12 +928,12 @@ const styles = StyleSheet.create({
     right: px(3),
     bottom: px(1),
     fontFamily: fonts.pixelBold,
-    fontSize: px(17),
+    fontSize: pxFont(17), lineHeight: Math.round(pxFont(17) * 1.25),
     color: "#ffffff",
   },
   statLabel: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(10.5),
+    fontFamily: fonts.pixelBold,
+    fontSize: pxFont(10.5), lineHeight: Math.round(pxFont(10.5) * 1.25),
     letterSpacing: px(1.2),
     marginTop: px(10),
   },
@@ -1077,13 +959,13 @@ const styles = StyleSheet.create({
   backdropImage: { transform: [{ scale: 1.6 }] },
   featureBody: { flex: 1, minWidth: 0 },
   featureTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(20),
-    letterSpacing: -0.3,
+    fontFamily: fonts.display,
+    fontSize: pxFont(20), lineHeight: Math.round(pxFont(20) * 1.25),
+    letterSpacing: 0,
     marginTop: px(4),
   },
 
-  metaCaps: { fontFamily: fonts.bodyBold, fontSize: px(11), letterSpacing: px(1) },
+  metaCaps: { fontFamily: fonts.pixelBold, fontSize: pxFont(11), lineHeight: Math.round(pxFont(11) * 1.25), letterSpacing: px(1) },
   meta: { fontFamily: fonts.body, fontSize: px(13), marginTop: px(3) },
 
   list: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 0 },
@@ -1101,7 +983,7 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   rowBody: { flex: 1, minWidth: 0 },
-  rowTitle: { fontFamily: fonts.bodyBold, fontSize: px(15) },
+  rowTitle: { fontFamily: fonts.display, fontSize: pxFont(15), lineHeight: Math.round(pxFont(15) * 1.25) },
   emptyRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1109,7 +991,7 @@ const styles = StyleSheet.create({
     padding: px(space.md),
   },
   emptyText: { flex: 1, minWidth: 0 },
-  emptyAction: { fontFamily: fonts.bodyBold, fontSize: px(14) },
+  emptyAction: { fontFamily: fonts.pixelBold, fontSize: pxFont(14), lineHeight: Math.round(pxFont(14) * 1.25) },
 
   tiles: { gap: px(space.md), paddingRight: px(space.xl) },
   tile: { width: TILE_W, borderWidth: StyleSheet.hairlineWidth, borderRadius: 0 },
@@ -1129,14 +1011,23 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.62)",
   },
   tileTagText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(9.5),
+    fontFamily: fonts.pixelBold,
+    fontSize: pxFont(9.5), lineHeight: Math.round(pxFont(9.5) * 1.25),
     letterSpacing: px(1),
     color: "#ffffff",
   },
   tileBody: { padding: px(10) },
-  tileTitle: { fontFamily: fonts.bodyBold, fontSize: px(14) },
+  tileTitle: { fontFamily: fonts.display, fontSize: pxFont(14), lineHeight: Math.round(pxFont(14) * 1.25) },
 
+  lineupMore: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: px(8),
+    paddingVertical: px(14),
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  lineupMoreText: { fontFamily: fonts.displayMedium, fontSize: px(14) },
   footer: {
     flexDirection: "row",
     alignItems: "center",
@@ -1157,7 +1048,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: px(space.lg),
   },
   barSolid: { borderBottomWidth: StyleSheet.hairlineWidth },
-  barTitle: { fontFamily: fonts.bodyBold, fontSize: px(16) },
+  barTitle: { fontFamily: fonts.display, fontSize: pxFont(16), lineHeight: Math.round(pxFont(16) * 1.25) },
   avatar: {
     width: px(36),
     height: px(36),
@@ -1179,8 +1070,8 @@ const styles = StyleSheet.create({
     paddingBottom: px(space.md),
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  pickerTitle: { fontFamily: fonts.bodyBold, fontSize: px(22), letterSpacing: -0.4 },
-  pickerDone: { fontFamily: fonts.bodyBold, fontSize: px(16) },
+  pickerTitle: { fontFamily: fonts.display, fontSize: pxFont(22), lineHeight: Math.round(pxFont(22) * 1.25), letterSpacing: 0 },
+  pickerDone: { fontFamily: fonts.pixelBold, fontSize: pxFont(16), lineHeight: Math.round(pxFont(16) * 1.25) },
   pickerRow: {
     flexDirection: "row",
     alignItems: "center",

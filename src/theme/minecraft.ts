@@ -1,7 +1,7 @@
-import type { TextStyle } from "react-native";
+import { PixelRatio, type TextStyle } from "react-native";
 
 import { colors } from "./tokens";
-import { px } from "./scale";
+import { S, px } from "./scale";
 
 /**
  * The Minecraft UI spec, measured rather than invented.
@@ -112,12 +112,30 @@ export function shadowColorFor(hex: string): string {
  * place once ascender and line box are accounted for.
  */
 export function mcTextShadow(color: string, fontSize: number): TextStyle {
-  const offset = Math.max(1, Math.round(fontSize / 12));
+  // Dark text on a light surface — a book, a sign, the inventory's "Inventory"
+  // label — is drawn without a shadow in game. Shadowing it doubles its weight
+  // and was what made headings look blotchy in light mode.
+  if (isDarkColor(color)) return {};
+  // Exactly one font pixel (1/9 of the size), snapped to device pixels.
+  const ratio = PixelRatio.get();
+  const offset = Math.max(1 / ratio, Math.round(((fontSize * S) / 9) * ratio) / ratio);
   return {
     textShadowColor: shadowColorFor(color),
     textShadowOffset: { width: offset, height: offset },
     textShadowRadius: 0,
   };
+}
+
+/** Perceived lightness below ~55% (light mode's ink and deep accents). Non-hex colours count as light. */
+function isDarkColor(color: string): boolean {
+  // Six digits first: tried the other way round, "#8f7825" matched as "#8f7".
+  const c = color.trim();
+  const six = c.match(/^#([0-9a-f]{6})/i)?.[1];
+  const three = c.match(/^#([0-9a-f]{3})$/i)?.[1];
+  const hex = six ?? (three ? three.split("").map((ch) => ch + ch).join("") : null);
+  if (!hex) return false;
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.55;
 }
 
 /**

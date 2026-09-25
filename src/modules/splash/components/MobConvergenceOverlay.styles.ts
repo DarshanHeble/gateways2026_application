@@ -3,7 +3,7 @@ import { StyleSheet, Dimensions } from "react-native";
 // 1px outline, and a cyan halo around a pixel panel is the loudest possible
 // contradiction of that.
 import { colors, fonts } from "@/theme/tokens";
-import { px } from "@/theme/scale";
+import { px, pxFont } from "@/theme/scale";
 
 const { height: SCREEN_H } = Dimensions.get("window");
 
@@ -44,13 +44,13 @@ export const styles = StyleSheet.create({
   },
   emblemTitle: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(13),
+    fontSize: pxFont(13), lineHeight: Math.round(pxFont(13) * 1.25),
     color: colors.gold.bright,
     letterSpacing: px(2),
   },
   emblemSub: {
     fontFamily: fonts.pixel,
-    fontSize: px(9),
+    fontSize: pxFont(9), lineHeight: Math.round(pxFont(9) * 1.25),
     color: colors.cta.glow,
     letterSpacing: px(1.5),
     marginTop: px(4),

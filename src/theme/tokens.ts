@@ -143,6 +143,16 @@ export const fonts = {
   pixel: "Minecraft",
   pixelMedium: "Minecraft",
   pixelBold: "MinecraftBold",
+  /*
+   * Display: headings, names, titles. Pixelify Sans rather than the Minecraft
+   * face — the game's font is drawn for 8px HUD text and at heading sizes its
+   * one-pixel strokes turn thin and spiky. Pixelify is a pixel face drawn for
+   * display, with real weights, so a 40pt title is solid and legible while still
+   * reading as blocks. The Minecraft face keeps the small HUD-like labels
+   * (eyebrows, tags, tab names, tooltips), which is where it looks authentic.
+   */
+  display: "PixelifySans_700Bold",
+  displayMedium: "PixelifySans_500Medium",
   // DM Sans for normal text
   body: "SpaceGrotesk_400Regular",
   bodyMedium: "SpaceGrotesk_500Medium",
@@ -212,34 +222,28 @@ export const motion = {
 export const typography = {
   // Massive screen headers
   /**
-   * Display type — in the *sans*, not the pixel face.
+   * Display type — in the display pixel face (see `fonts.display`).
    *
-   * This is the correction that separates a fan project from a product. Mojang
-   * ships the bitmap face in exactly two places: the Minecraft logo, and small
-   * in-game-flavoured labels. Everything else on minecraft.net, in the Launcher,
-   * in Dungeons and in Legends is a clean modern sans. Setting a person's name
-   * at 46px in a bitmap font is the single loudest "made by a fan" signal a
-   * Minecraft-themed interface can send, however faithful the font itself is.
-   *
-   * The Minecraft-ness lives in the materials, the palette, the sprite edges,
-   * the iconography and the motion — not in the headlines. So the headlines get
-   * weight and tight tracking instead, and the pixel face is reserved for
-   * eyebrows, tab labels, badges and the XP level, where its texture reads as
-   * deliberate rather than as a costume.
+   * The Launcher's own split: headings, names, labels and numbers are set in
+   * the game's typeface; paragraphs and small metadata stay in the sans, where
+   * a bitmap face at 13pt would cost readability for no gain. The pixel face
+   * never takes negative tracking (it would fuse the glyphs), and its line box
+   * is exactly 1em, so every size here carries a line height of ~1.15em to keep
+   * descenders and the drop shadow from clipping.
    */
   hero: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 44,
-    lineHeight: 42,
-    letterSpacing: -1.6,
+    fontFamily: fonts.display,
+    fontSize: 40,
+    lineHeight: 46,
+    letterSpacing: 0,
   },
   // Sub-headers or Kickers (WELCOME BACK)
   // Main page headers (Events, Schedule, Alerts)
   pageTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 40,
+    fontFamily: fonts.display,
+    fontSize: 34,
     lineHeight: 40,
-    letterSpacing: -1.4,
+    letterSpacing: 0.5,
   },
   /**
    * Eyebrow labels, in the pixel face at Mojang's tracking (16px / 0.96px).
@@ -258,15 +262,15 @@ export const typography = {
   },
   // Large modal or page headers
   h1: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 26,
-    letterSpacing: -0.4,
+    fontFamily: fonts.display,
+    fontSize: 24,
+    letterSpacing: 0.3,
   },
   // Medium section headers
   h2: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 22,
-    letterSpacing: -0.3,
+    fontFamily: fonts.display,
+    fontSize: 20,
+    letterSpacing: 0.3,
   },
   /*
    * Card titles.
@@ -277,9 +281,9 @@ export const typography = {
    * has no hyphenation to fall back on.
    */
   h3: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 18,
-    letterSpacing: -0.2,
+    fontFamily: fonts.display,
+    fontSize: 16,
+    letterSpacing: 0.2,
   },
   /*
    * Body sits at 15/16, not 17/19.

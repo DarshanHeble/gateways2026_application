@@ -2,14 +2,14 @@ import React, { useCallback, useEffect, useState } from "react";
 import { View, Text, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 import { Redirect } from "expo-router";
 
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { space } from "@/theme/tokens";
 import { mcTextShadow } from "@/theme/minecraft";
 import { px } from "@/theme/scale";
 import { PixelInput } from "@/components/pixel/PixelInput";
 
 import { PixelToast } from "@/components/pixel/PixelToast";
-import { DirtBackground, Frame, Grain, McButton, McCard, useSurface } from "@/components/mc";
+import { Frame, Grain, McButton, McCard, useSurface } from "@/components/mc";
+import { PageBanner } from "@/components/launcher";
 import { useAuth } from "@/modules/auth";
 import { useNotifications } from "../../stores/NotificationsContext";
 import { fetchNotifications } from "@/services/notifications";
@@ -27,7 +27,6 @@ const TARGET_OPTIONS: { key: TargetOption; label: string }[] = [
 ];
 
 export function BroadcastScreen() {
-  const insets = useSafeAreaInsets();
   const { theme } = useBlockTheme();
   const surface = useSurface();
   const { role } = useAuth();
@@ -90,21 +89,17 @@ export function BroadcastScreen() {
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <View style={[styles.flex, { backgroundColor: theme.background }]}>
-        {/* Dirt behind, as on every menu screen. */}
-        <DirtBackground brightness={0.085} />
-
         <ScrollView
           style={styles.root}
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingTop: insets.top + px(52) },
-          ]}
+          contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={[styles.pageTitle, { color: theme.text }]}>BROADCAST</Text>
-          <Text style={[styles.pageSub, { color: theme.textDim }]}>
-            Send a push notification to the fest.
-          </Text>
+          <PageBanner
+            eyebrow="CREW ONLY"
+            title="Shout"
+            subtitle="Send an announcement to everyone at the fest."
+            gutter={px(space.lg)}
+          />
 
           {/* The composer, as a container panel. */}
           <View style={[styles.panel, { backgroundColor: theme.surfaceElevated }]}>

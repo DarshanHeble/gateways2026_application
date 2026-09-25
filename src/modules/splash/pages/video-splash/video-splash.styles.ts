@@ -1,6 +1,6 @@
 import { StyleSheet } from "react-native";
 import { colors, fonts } from "@/theme/tokens";
-import { px } from "@/theme/scale";
+import { px, pxFont } from "@/theme/scale";
 
 export const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.stage },
@@ -15,7 +15,7 @@ export const styles = StyleSheet.create({
   },
   chipText: {
     fontFamily: fonts.pixel,
-    fontSize: px(9),
+    fontSize: pxFont(9), lineHeight: Math.round(pxFont(9) * 1.25),
     letterSpacing: px(1),
     color: colors.gold.text,
   },

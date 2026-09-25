@@ -8,7 +8,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { fonts, type } from "@/theme/tokens";
-import { px } from "@/theme/scale";
+import { px, pxFont } from "@/theme/scale";
 import { Bevel } from "./Primitives";
 import { useBlockTheme } from "@/theme/BlockThemeContext";
 
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontFamily: fonts.pixel,
-    fontSize: px(type.toast.size),
+    fontSize: pxFont(type.toast.size), lineHeight: Math.round(pxFont(type.toast.size) * 1.25),
     letterSpacing: px(type.toast.tracking),
     color: "#7dffc0",
   },

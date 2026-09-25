@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, ViewStyle } from "react-native";
 import { colors, fonts } from "@/theme/tokens";
-import { px } from "@/theme/scale";
+import { px, pxFont } from "@/theme/scale";
 
 interface PixelCardProps {
   children: React.ReactNode;
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(14),
+    fontSize: pxFont(14), lineHeight: Math.round(pxFont(14) * 1.25),
     color: colors.gold.title,
   },
   badgeContainer: {
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontFamily: fonts.pixel,
-    fontSize: px(9),
+    fontSize: pxFont(9), lineHeight: Math.round(pxFont(9) * 1.25),
     color: colors.gold.text,
     textTransform: "uppercase",
   },

@@ -17,37 +17,40 @@ import {
 } from "react-native";
 import { PixelToast } from "@/components/pixel/PixelToast";
 import { Image } from "expo-image";
+import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  withRepeat,
-  Easing,
   FadeInDown,
   FadeInUp,
   runOnJS,
-  SharedValue,
 } from "react-native-reanimated";
 import { duration, stepped, timing } from "@/theme/motion";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { fonts, typography } from "@/theme/tokens";
-import { px } from "@/theme/scale";
+import { px, pxFont } from "@/theme/scale";
 import { resolveAsset } from "@/services/assets";
-import { useAssetsVersion } from "@/modules/assets";
+import { useAssetSource, useAssetsVersion } from "@/modules/assets";
 import { useAuth } from "@/modules/auth";
-import { useBlockTheme, BlockTheme } from "@/theme/BlockThemeContext";
+import { useBlockTheme } from "@/theme/BlockThemeContext";
 import { coverScreen, revealScreen } from "@/modules/splash";
 import { API_BASE_URL, apiClient } from "@/services/api";
 import { enqueue } from "@/services/offline/outbox";
 import { useAppData } from "@/modules/core/DataProvider";
-import { McGlyph } from "@/components/mc/PixelIcon";
-import { DirtBackground, Frame, Grain, McButton, McSlot, useSurface } from "@/components/mc";
+import { McGlyph, PixelIcon } from "@/components/mc/PixelIcon";
+import { SectionHeader } from "@/components/launcher";
+import { LINEUP_STORAGE_KEY, daysBetween, localIso } from "@/utils/fest";
+import { Frame, Grain, McSlot, useSurface } from "@/components/mc";
 import { Bevel } from "@/components/pixel/Primitives";
-import { material, mcTextShadow, mojang } from "@/theme/minecraft";
+import { mcTextShadow, mojang } from "@/theme/minecraft";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 
@@ -141,36 +144,29 @@ const STORAGE_PROFILE_KEY = "@gateways_user_profile_v1";
 
 // Floating satellite pod component
 
-/**
- * One "label + control" row inside a settings card.
- *
- * Each of these used to be written inline as a `space-between` row whose text
- * column had no `flex`. The description ("Toggle between light and dark mode")
- * therefore claimed its full intrinsic width and pushed the control past the
- * card's padding — which is why CHANGE SKIN was visibly clipped at the screen
- * edge. The text has to be the flexible side; the control keeps its natural size.
- */
-function SettingRow({
-  title,
-  description,
-  theme,
-  children,
+
+/** One figure on the fest pass. */
+function PassStat({
+  value,
+  label,
+  accent,
+  onPress,
 }: {
-  title: string;
-  description: string;
-  theme: any;
-  children: React.ReactNode;
+  value: string;
+  label: string;
+  accent?: boolean;
+  onPress?: () => void;
 }) {
+  const { theme } = useBlockTheme();
   return (
-    <View style={styles.settingRow}>
-      <View style={styles.settingRowText}>
-        <Text style={[styles.fieldValue, { color: theme.text }]}>{title}</Text>
-        <Text style={[styles.fieldLabel, { color: theme.textDim, marginTop: px(4) }]}>
-          {description}
-        </Text>
-      </View>
-      <View style={styles.settingRowControl}>{children}</View>
-    </View>
+    <Pressable onPress={onPress} disabled={!onPress} style={({ pressed }) => [styles.passStat, pressed && { opacity: 0.6 }]}>
+      <Text style={[styles.passValue, { color: accent ? theme.primary : theme.text }]} numberOfLines={1} adjustsFontSizeToFit>
+        {value}
+      </Text>
+      <Text style={[styles.passLabel, { color: theme.textDim }]} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -197,6 +193,52 @@ export default function ProfileTab() {
       .toUpperCase();
     return { days: d1 === d2 ? `${d1}` : `${d1} – ${d2}`, monthYear: `${month} ${y}` };
   }, [schedule]);
+
+  /** Days to go / live / done, from the same schedule dates. */
+  const festCountdown = useMemo(() => {
+    const dates = (schedule?.days ?? []).map((d) => d.date).filter(Boolean).sort();
+    const start = dates[0] ?? "2026-10-08";
+    const end = dates[dates.length - 1] ?? start;
+    const today = localIso(new Date());
+    const toGo = daysBetween(today, start);
+    if (toGo > 0) return { value: String(toGo), label: toGo === 1 ? "day to go" : "days to go" };
+    if (daysBetween(today, end) >= 0) return { value: "LIVE", label: "happening now" };
+    return { value: "GG", label: "that's a wrap" };
+  }, [schedule]);
+
+  const [lineupCount, setLineupCount] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      AsyncStorage.getItem(LINEUP_STORAGE_KEY).then((raw) => {
+        if (!active) return;
+        try {
+          const ids = raw ? JSON.parse(raw) : [];
+          setLineupCount(Array.isArray(ids) ? ids.length : 0);
+        } catch {
+          setLineupCount(0);
+        }
+      });
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
+
+  // ── Banner parallax, as on the other tabs ────────────────────────────────
+  const bannerArt = useAssetSource("ui/login-bg");
+  const BANNER_H = insets.top + px(280);
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+  const bannerArtStyle = useAnimatedStyle(() => {
+    const y = scrollY.value;
+    return { transform: [{ translateY: y < 0 ? y / 2 : y * 0.45 }, { scale: y < 0 ? 1 + -y / BANNER_H : 1 }] };
+  });
+  const skinDepthStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [0, BANNER_H * 0.6], [1, 0], Extrapolation.CLAMP),
+  }));
 
   const [profile, setProfile] = useState<UserProfileData>(DEFAULT_PROFILE);
   const [activeSkin, setActiveSkin] = useState<MinecraftSkin>(MINECRAFT_SKINS[0]);
@@ -399,30 +441,53 @@ export default function ProfileTab() {
     >
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.background} />
 
-      {/*
-        The dirt menu background.
-
-        Minecraft splits its backdrops: the title screen gets the panning
-        panorama, and every menu behind it — options, inventory, controls — gets
-        the dirt block tiled and darkened. Home is this app's title screen and
-        carries the panorama; the list screens get the dirt, which is what makes
-        them read as *inside* the same game rather than as a different app's
-        settings page.
-      */}
-      <DirtBackground brightness={0.085} />
-
-      <ScrollView
+      <Animated.ScrollView
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         style={styles.root}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Generous top clearance matching Home page */}
-        <View style={{ height: insets.top + px(52) }} />
+        {/* ── Player banner: the key art, your skin standing in it ─────── */}
+        <View style={[styles.pBanner, { height: BANNER_H }]}>
+          <Animated.View style={[StyleSheet.absoluteFill, bannerArtStyle]}>
+            {bannerArt ? (
+              <Image
+                source={bannerArt}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                contentPosition={{ top: "92%", left: "50%" }}
+                transition={250}
+              />
+            ) : null}
+          </Animated.View>
+          <Svg style={StyleSheet.absoluteFill} width="100%" height={BANNER_H}>
+            <Defs>
+              <LinearGradient id="settingsFade" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0%" stopColor={theme.background} stopOpacity={0.3} />
+                <Stop offset="25%" stopColor={theme.background} stopOpacity={0.05} />
+                <Stop offset="62%" stopColor={theme.background} stopOpacity={0.8} />
+                <Stop offset="90%" stopColor={theme.background} stopOpacity={1} />
+                <Stop offset="100%" stopColor={theme.background} stopOpacity={1} />
+              </LinearGradient>
+            </Defs>
+            <Rect width="100%" height={BANNER_H} fill="url(#settingsFade)" />
+          </Svg>
+          <View pointerEvents="none" style={[styles.pBannerFoot, { backgroundColor: theme.background }]} />
 
-        {/* Hero Massive Bold Header */}
-        <View style={styles.heroHeaderRow}>
-          <View style={styles.titleColumn}>
-            <Text style={[styles.heroSupTitle, { color: theme.textDim }]}>STAGE IDENTITY,</Text>
+          <Animated.View key={activeSkin.id} entering={FadeInDown.duration(480)} style={[styles.pSkin, skinDepthStyle]} pointerEvents="none">
+            <Image
+              source={resolveAsset(activeSkin.assetKey)}
+              style={StyleSheet.absoluteFill}
+              contentFit="contain"
+              contentPosition="bottom"
+            />
+          </Animated.View>
+
+          <View style={styles.pCopy}>
+            <Text style={[styles.pEyebrow, { color: theme.primary }]}>
+              {role === "team" ? "CREW" : "PLAYER"} · {profile.participantId}
+            </Text>
             {/*
               `wrap` + shrinkable children: a long name used to run straight off
               the right edge, because two `numberOfLines={1}` Texts in a row with
@@ -430,70 +495,102 @@ export default function ProfileTab() {
               truncate.
             */}
             <View style={styles.heroNameRow}>
-              <Text style={[styles.heroFirstNameTitle, styles.heroNamePart, { color: theme.text }]}
+              <Text
+                style={[styles.pName, styles.heroNamePart, { color: theme.text }, mcTextShadow(theme.text, 34)]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                minimumFontScale={0.55}>
+                minimumFontScale={0.55}
+              >
                 {firstName}
               </Text>
               {lastName ? (
-                <Text style={[styles.heroLastNameTitle, styles.heroNamePart, { color: theme.primary }]}
+                <Text
+                  style={[styles.pName, styles.heroNamePart, { color: theme.primary }, mcTextShadow(theme.primary, 34)]}
                   numberOfLines={1}
                   adjustsFontSizeToFit
-                  minimumFontScale={0.55}>
+                  minimumFontScale={0.55}
+                >
                   {lastName}
                 </Text>
               ) : null}
             </View>
-            <Text style={[styles.heroSubtitle, { color: theme.textDim }]} numberOfLines={2}>
-              {profile.participantId} • {activeSkin.title}
+            <Text style={[styles.pSub, { color: theme.textDim }]} numberOfLines={1}>
+              {activeSkin.name} · {activeSkin.title}
             </Text>
+            <Pressable
+              onPress={() => setSkinModalVisible(true)}
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.pSkinBtn,
+                { borderColor: theme.primary, backgroundColor: theme.primaryContainer, opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              <PixelIcon name="crew" size={px(14)} />
+              <Text style={[styles.pSkinBtnText, { color: theme.primary }]}>Change skin</Text>
+            </Pressable>
           </View>
         </View>
 
-        
+        {/* ── Fest pass ─────────────────────────────────────────────────── */}
+        <View style={[styles.pass, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+          <PassStat value={festDates.days} label={festDates.monthYear.toLowerCase().replace(/^./, (c) => c.toUpperCase())} />
+          <View style={[styles.passRule, { backgroundColor: theme.border }]} />
+          <PassStat value={String(lineupCount)} label="in your lineup" accent onPress={() => router.navigate("/(tabs)/schedule?filter=lineup" as never)} />
+          <View style={[styles.passRule, { backgroundColor: theme.border }]} />
+          <PassStat value={festCountdown.value} label={festCountdown.label} />
+        </View>
 
-        
-        <View style={{ marginTop: px(32), marginBottom: px(8) }}>
-          <Text style={[styles.sectionHeading, { color: theme.textDim }]}>APP PREFERENCES</Text>
-          
-          <View style={[styles.credentialsCard, { backgroundColor: theme.surfaceElevated, marginBottom: px(16) }]}>
-            <Grain />
-            <Frame depth="raised" />
-            <SettingRow
-              title="Color Theme"
-              description="Toggle between light and dark mode"
-              theme={theme}
-            >
-              <Pressable
-                style={[styles.iconToggle, { backgroundColor: surface.slot }]}
-                onPress={toggleColorMode}
-                accessibilityRole="button"
-                accessibilityLabel={isDark ? "Switch to light mode" : "Switch to dark mode"}
-                hitSlop={px(8)}
-              >
-                <Frame depth="raised" />
-                <McGlyph name={isDark ? "sun" : "moon"} size={px(18)} color={theme.primary} />
-              </Pressable>
-            </SettingRow>
+        {/* ── Appearance ────────────────────────────────────────────────── */}
+        <SectionHeader icon="settings" title="Appearance" />
+        <View style={[styles.group, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+          <View style={styles.groupRow}>
+            <View style={styles.settingRowText}>
+              <Text style={[styles.settingTitle, { color: theme.text }]}>Theme</Text>
+              <Text style={[styles.settingDesc, { color: theme.textDim }]}>Day or night, for the whole app</Text>
+            </View>
+            {/* A two-way switch shows both states; the old single icon only
+                showed the one you'd get, which read backwards. */}
+            <View style={[styles.segment, { borderColor: theme.border, backgroundColor: surface.slot }]}>
+              {([false, true] as const).map((dark) => {
+                const active = isDark === dark;
+                return (
+                  <Pressable
+                    key={String(dark)}
+                    onPress={() => {
+                      if (!active) {
+                        Haptics.selectionAsync().catch(() => {});
+                        toggleColorMode();
+                      }
+                    }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={dark ? "Dark mode" : "Light mode"}
+                    style={[styles.segmentBtn, active && { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}
+                  >
+                    <McGlyph name={dark ? "moon" : "sun"} size={px(13)} color={active ? theme.primary : theme.textDim} />
+                    <Text style={[styles.segmentText, { color: active ? theme.primary : theme.textDim }]}>
+                      {dark ? "Night" : "Day"}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
 
-          {/*
-            The accent picker, moved here from the home screen.
+          <View style={[styles.groupDivider, { backgroundColor: theme.border }]} />
 
-            It lived under the character on the landing page as six saturated
-            blocks in a row — the loudest thing on the front door and the least
-            useful thing to put there. As a row of slots in Settings, beside the
-            light/dark control it belongs with, it does the same job quietly.
+          {/*
+            The accent picker, moved here from the home screen. As a row of
+            slots in Settings, beside the light/dark control it belongs with, it
+            does its job quietly.
           */}
-          <View style={[styles.credentialsCard, { backgroundColor: theme.surfaceElevated, marginBottom: px(16) }]}>
-            <Grain />
-            <Frame depth="raised" />
+          <View>
             <View style={styles.accentHeader}>
-              <Text style={[styles.fieldValue, { color: theme.text }]}>Accent Block</Text>
-              <Text style={[styles.accentValue, { color: theme.primary }]}>
-                {activeShape.name.toUpperCase()}
-              </Text>
+              <View style={styles.settingRowText}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>Accent block</Text>
+                <Text style={[styles.settingDesc, { color: theme.textDim }]}>Colours buttons, highlights and tags</Text>
+              </View>
+              <Text style={[styles.accentValue, { color: theme.primary }]}>{activeShape.name.toUpperCase()}</Text>
             </View>
             <View style={styles.accentRow}>
               {shapes.map((block) => (
@@ -516,20 +613,7 @@ export default function ProfileTab() {
               ))}
             </View>
           </View>
-
-          <View style={[styles.credentialsCard, { backgroundColor: theme.surfaceElevated }]}>
-            <Grain />
-            <Frame depth="raised" />
-            <SettingRow
-              title="Minecraft Skin"
-              description="Choose your stage identity"
-              theme={theme}
-            >
-              <McButton label="Change skin" onPress={() => setSkinModalVisible(true)} />
-            </SettingRow>
-          </View>
         </View>
-    
 
         {/* Success Alert Banner */}
         {saveSuccess ? (<Animated.View entering={FadeInUp.duration(duration.screen).easing(stepped(5))} style={[styles.successBanner, { backgroundColor: theme.surfaceElevated }]}>
@@ -545,16 +629,14 @@ export default function ProfileTab() {
             </Text>
           </Animated.View>) : null}
 
-        <View style={{ marginTop: px(24) }}>
-          <Text style={[styles.sectionHeading, { color: theme.textDim }]}>ACCOUNT PROFILE</Text>
-        {/* Player Credentials Spotlight Card */}
-        <View style={[styles.credentialsCard, { backgroundColor: theme.surfaceElevated }]}>
-            <Grain />
-            <Frame depth="raised" />
+        <View>
+          <SectionHeader icon="crew" title="Your details" />
+        {/* Player Credentials Card */}
+        <View style={[styles.credentialsCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
           <View style={styles.credentialsHeader}>
             <View style={styles.settingRowText}>
-              <Text style={[styles.credentialsSectionTitle, { color: theme.text }]}>PLAYER CREDENTIALS</Text>
-              <Text style={[styles.credentialsSubtitle, { color: theme.textDim }]}>Registered festival details & preferences</Text>
+              <Text style={[styles.settingTitle, { color: theme.text }]}>Registration</Text>
+              <Text style={[styles.settingDesc, { color: theme.textDim }]}>What organisers see for your fest pass</Text>
             </View>
             <Pressable
               style={[
@@ -741,45 +823,28 @@ export default function ProfileTab() {
           )}
         </View>
 
-        {/* Quick Fest Information Cards */}
-        <View style={styles.festInfoGrid}>
-          <View style={[styles.festInfoCard, { backgroundColor: theme.surfaceElevated }]}>
-            <Grain />
-            <Frame depth="raised" />
-            {/* From the schedule, not typed in: this read "10 – 11 October"
-                while the programme itself runs on the 8th and 9th. */}
-            <Text style={[styles.festInfoNumber, { color: theme.primary }]}>{festDates.days}</Text>
-            <Text style={[styles.festInfoTitle, { color: theme.text }]}>{festDates.monthYear}</Text>
-            <Text style={[styles.festInfoSub, { color: theme.textDim }]}>Fest Dates</Text>
-          </View>
-          <View style={[styles.festInfoCard, { backgroundColor: theme.surfaceElevated }]}>
-            <Grain />
-            <Frame depth="raised" />
-            <Text style={[styles.festInfoNumber, { color: theme.primary }]}>CENTRAL</Text>
-            <Text style={[styles.festInfoTitle, { color: theme.text }]}>CAMPUS</Text>
-            <Text style={[styles.festInfoSub, { color: theme.textDim }]}>Main Auditorium</Text>
-          </View>
-        </View>
-
         {/* Logout Button */}
         <Pressable
-          style={styles.logoutBtn}
+          style={({ pressed }) => [
+            styles.logoutBtn,
+            { borderColor: isDark ? "#7a2c2c" : "#c98a8a", backgroundColor: isDark ? "#2a1414" : "#f6e4e2", opacity: pressed ? 0.75 : 1 },
+          ]}
           onPress={handleLogout}
           accessibilityRole="button"
         >
-          <Grain />
-          <Frame depth="raised" />
-          <McGlyph name="door" size={px(18)} color="#ff8080" />
-          <Text style={[styles.logoutBtnText, mcTextShadow("#ff8080", 16)]}>
-            LOGOUT FROM REALM
-          </Text>
+          <McGlyph name="door" size={px(16)} color={isDark ? "#ff8080" : "#a32d2d"} />
+          <Text style={[styles.logoutBtnText, { color: isDark ? "#ff8080" : "#a32d2d" }]}>Sign out</Text>
         </Pressable>
+        <View style={styles.appFooter}>
+          <PixelIcon name="home" size={px(14)} />
+          <Text style={[styles.appFooterText, { color: theme.textDim }]}>Gateways 2026 · Christ University</Text>
+        </View>
 
         </View>
 
         {/* Bottom padding to clear floating navigation bar */}
         <View style={{ height: px(24) }} />
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Skin Selection Modal with Slide-Down Gesture */}
       <Modal
@@ -873,6 +938,48 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: px(20),
   },
+
+  pBanner: { marginHorizontal: -px(20), overflow: "hidden", justifyContent: "flex-end" },
+  pBannerFoot: { position: "absolute", left: 0, right: 0, bottom: 0, height: px(6) },
+  pSkin: { position: "absolute", right: px(4), bottom: px(6), width: px(150), height: px(210) },
+  pCopy: { paddingHorizontal: px(20), paddingBottom: px(16), paddingRight: px(150) },
+  pEyebrow: { fontFamily: fonts.pixelBold, fontSize: pxFont(11), lineHeight: Math.round(pxFont(11) * 1.25), letterSpacing: px(1) },
+  pName: { fontFamily: fonts.display, fontSize: px(34), lineHeight: px(40) },
+  pSub: { fontFamily: fonts.body, fontSize: px(13.5), marginTop: px(2) },
+  pSkinBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: px(7),
+    alignSelf: "flex-start",
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: px(10),
+    paddingVertical: px(6),
+    marginTop: px(10),
+  },
+  pSkinBtnText: { fontFamily: fonts.displayMedium, fontSize: px(13) },
+
+  pass: { flexDirection: "row", alignItems: "center", borderWidth: StyleSheet.hairlineWidth, paddingVertical: px(12), marginTop: px(4) },
+  passRule: { width: StyleSheet.hairlineWidth, alignSelf: "stretch" },
+  passStat: { flex: 1, alignItems: "center", paddingHorizontal: px(6) },
+  passValue: { fontFamily: fonts.display, fontSize: px(22), lineHeight: px(26) },
+  passLabel: { fontFamily: fonts.body, fontSize: px(11.5), marginTop: px(2) },
+
+  group: { borderWidth: StyleSheet.hairlineWidth, padding: px(16) },
+  groupRow: { flexDirection: "row", alignItems: "center", gap: px(12) },
+  groupDivider: { height: StyleSheet.hairlineWidth, marginVertical: px(16) },
+  segment: { flexDirection: "row", borderWidth: StyleSheet.hairlineWidth, padding: px(2) },
+  segmentBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: px(6),
+    paddingHorizontal: px(10),
+    paddingVertical: px(7),
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "transparent",
+  },
+  segmentText: { fontFamily: fonts.displayMedium, fontSize: px(13) },
+  appFooter: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: px(8), marginTop: px(22) },
+  appFooterText: { fontFamily: fonts.body, fontSize: px(12) },
   heroHeaderRow: {
     marginBottom: px(12),
   },
@@ -892,8 +999,8 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   heroSupTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(16),
+    fontFamily: fonts.pixelBold,
+    fontSize: pxFont(16), lineHeight: Math.round(pxFont(16) * 1.25),
     fontWeight: "700",
     letterSpacing: px(2.2),
     color: "#d6c8aa",
@@ -901,14 +1008,14 @@ const styles = StyleSheet.create({
   },
   heroFirstNameTitle: {
     fontFamily: typography.pageTitle.fontFamily,
-    fontSize: px(typography.pageTitle.fontSize),
+    fontSize: pxFont(typography.pageTitle.fontSize),
     lineHeight: px(typography.pageTitle.lineHeight),
     color: "#ffffff",
     letterSpacing: typography.pageTitle.letterSpacing,
   },
   heroLastNameTitle: {
     fontFamily: typography.pageTitle.fontFamily,
-    fontSize: px(typography.pageTitle.fontSize),
+    fontSize: pxFont(typography.pageTitle.fontSize),
     lineHeight: px(typography.pageTitle.lineHeight),
     letterSpacing: typography.pageTitle.letterSpacing,
     marginBottom: px(4),
@@ -938,14 +1045,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: px(18),
   },
   capsuleTagName: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(15),
+    fontFamily: fonts.display,
+    fontSize: pxFont(15), lineHeight: Math.round(pxFont(15) * 1.25),
     color: "#e8dec8",
     letterSpacing: 1.2,
   },
   capsuleTagRole: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(12.5),
+    fontFamily: fonts.pixelBold,
+    fontSize: pxFont(12.5), lineHeight: Math.round(pxFont(12.5) * 1.25),
     letterSpacing: 0.8,
     marginTop: px(2),
   },
@@ -959,8 +1066,8 @@ const styles = StyleSheet.create({
     marginBottom: px(8),
   },
   switchSkinPillText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(15),
+    fontFamily: fonts.pixelBold,
+    fontSize: pxFont(15), lineHeight: Math.round(pxFont(15) * 1.25),
     letterSpacing: 0.8,
   },
   m3ShapeShelfSection: {
@@ -979,7 +1086,7 @@ const styles = StyleSheet.create({
   },
   m3ShelfTitle: {
     fontFamily: fonts.pixelMedium,
-    fontSize: px(14.5),
+    fontSize: pxFont(14.5), lineHeight: Math.round(pxFont(14.5) * 1.25),
     letterSpacing: 1.2,
   },
   m3CurrentTag: {
@@ -1023,8 +1130,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   successBannerText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(15),
+    fontFamily: fonts.pixelBold,
+    fontSize: pxFont(15), lineHeight: Math.round(pxFont(15) * 1.25),
     letterSpacing: 0.5,
   },
   settingRow: {
@@ -1055,7 +1162,7 @@ const styles = StyleSheet.create({
     // it, and a 55%-alpha panel let the background through the highlight.
     padding: px(18),
     gap: px(14),
-    marginVertical: px(8),
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 0,
     overflow: "hidden",
   },
@@ -1072,14 +1179,14 @@ const styles = StyleSheet.create({
   /*
    * A card heading, set like its siblings.
    *
-   * "Color Theme", "Accent Block" and "Minecraft Skin" are all sans card
-   * headings; this one was the pixel face at display size, so it read as a
-   * section break inside a card and competed with the real section eyebrow
-   * above it.
+   * "Color Theme", "Accent Block" and "Minecraft Skin" are pixel card headings
+   * at 15; this one matches them rather than running at display size, where it
+   * read as a section break inside a card and competed with the real section
+   * eyebrow above it.
    */
   credentialsSectionTitle: {
     fontFamily: typography.h3.fontFamily,
-    fontSize: px(typography.h3.fontSize),
+    fontSize: pxFont(typography.h3.fontSize), lineHeight: Math.round(pxFont(typography.h3.fontSize) * 1.25),
     letterSpacing: typography.h3.letterSpacing,
   },
   credentialsSubtitle: {
@@ -1096,16 +1203,18 @@ const styles = StyleSheet.create({
     paddingVertical: px(5),
   },
   editToggleText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(14),
+    fontFamily: fonts.pixelBold,
+    fontSize: pxFont(14), lineHeight: Math.round(pxFont(14) * 1.25),
     letterSpacing: 0.5,
   },
   fieldGroup: {
     gap: px(4),
   },
+  settingTitle: { fontFamily: fonts.pixelBold, fontSize: pxFont(15), lineHeight: Math.round(pxFont(15) * 1.25) },
+  settingDesc: { fontFamily: fonts.body, fontSize: px(13), lineHeight: px(18), marginTop: px(4) },
   fieldLabel: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(13.5),
+    fontFamily: fonts.pixelBold,
+    fontSize: pxFont(13.5), lineHeight: Math.round(pxFont(13.5) * 1.25),
     color: mojang.greySoft,
     letterSpacing: 0.8,
   },
@@ -1156,8 +1265,8 @@ const styles = StyleSheet.create({
     marginTop: px(6),
   },
   saveBtnText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(14.5),
+    fontFamily: fonts.pixelBold,
+    fontSize: pxFont(14.5), lineHeight: Math.round(pxFont(14.5) * 1.25),
     letterSpacing: 1,
   },
   festInfoGrid: {
@@ -1173,12 +1282,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   festInfoNumber: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(20),
+    fontFamily: fonts.display,
+    fontSize: pxFont(20), lineHeight: Math.round(pxFont(20) * 1.25),
   },
   festInfoTitle: {
     fontFamily: fonts.pixelMedium,
-    fontSize: px(14),
+    fontSize: pxFont(14), lineHeight: Math.round(pxFont(14) * 1.25),
     color: "#ffffff",
     letterSpacing: 1,
     marginTop: px(2),
@@ -1197,7 +1306,7 @@ const styles = StyleSheet.create({
   },
   accentValue: {
     fontFamily: typography.eyebrow.fontFamily,
-    fontSize: px(typography.eyebrow.fontSize),
+    fontSize: pxFont(typography.eyebrow.fontSize), lineHeight: Math.round(pxFont(typography.eyebrow.fontSize) * 1.25),
     letterSpacing: typography.eyebrow.letterSpacing,
   },
   accentRow: {
@@ -1212,7 +1321,7 @@ const styles = StyleSheet.create({
   /** An eyebrow, not a heading — small, tracked, in the pixel face. */
   sectionHeading: {
     fontFamily: typography.eyebrow.fontFamily,
-    fontSize: px(typography.eyebrow.fontSize),
+    fontSize: pxFont(typography.eyebrow.fontSize), lineHeight: Math.round(pxFont(typography.eyebrow.fontSize) * 1.25),
     letterSpacing: typography.eyebrow.letterSpacing,
     marginBottom: px(14),
   },
@@ -1221,16 +1330,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: px(8),
-    backgroundColor: "#4a1f1f",
+    borderWidth: StyleSheet.hairlineWidth,
     paddingVertical: px(14),
-    marginTop: px(14),
+    marginTop: px(22),
     borderRadius: 0,
     overflow: "hidden",
   },
   logoutBtnText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(14.5),
-    color: "#ff8080",
+    fontFamily: fonts.displayMedium,
+    fontSize: px(15),
     letterSpacing: 0.8,
   },
   modalOverlay: {
@@ -1262,7 +1370,7 @@ const styles = StyleSheet.create({
   },
   modalMainTitle: {
     fontFamily: fonts.pixelMedium,
-    fontSize: px(22),
+    fontSize: pxFont(22), lineHeight: Math.round(pxFont(22) * 1.25),
     color: "#ffffff",
   },
   modalSubTitle: {
@@ -1304,8 +1412,8 @@ const styles = StyleSheet.create({
     paddingVertical: px(2),
   },
   activeCheckPillText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(12),
+    fontFamily: fonts.pixelBold,
+    fontSize: pxFont(12), lineHeight: Math.round(pxFont(12) * 1.25),
     letterSpacing: 0.5,
   },
   skinCardImageWrap: {
@@ -1320,14 +1428,14 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   skinCardName: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(14.5),
+    fontFamily: fonts.display,
+    fontSize: pxFont(14.5), lineHeight: Math.round(pxFont(14.5) * 1.25),
     color: "#ffffff",
     textAlign: "center",
   },
   skinCardBadge: {
-    fontFamily: fonts.bodyBold,
-    fontSize: px(13),
+    fontFamily: fonts.pixelBold,
+    fontSize: pxFont(13), lineHeight: Math.round(pxFont(13) * 1.25),
     letterSpacing: 0.5,
     marginVertical: px(2),
   },

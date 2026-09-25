@@ -1,7 +1,7 @@
 import { StyleSheet } from "react-native";
 
 import { colors, fonts, typography } from "@/theme/tokens";
-import { px } from "@/theme/scale";
+import { px, pxFont } from "@/theme/scale";
 import { mojang } from "@/theme/minecraft";
 
 export const CHUNKS = 20;
@@ -18,7 +18,7 @@ export const styles = StyleSheet.create({
   /** Display type at Mojang's metrics: large, tight, interlocking. */
   wordmark: {
     fontFamily: typography.hero.fontFamily,
-    fontSize: px(44),
+    fontSize: pxFont(44),
     lineHeight: px(37),
     letterSpacing: -1.4,
     color: mojang.offWhite,
@@ -26,7 +26,7 @@ export const styles = StyleSheet.create({
   },
   year: {
     fontFamily: typography.hero.fontFamily,
-    fontSize: px(44),
+    fontSize: pxFont(44),
     lineHeight: px(40),
     letterSpacing: -1.4,
     color: mojang.goldDeep,
@@ -35,7 +35,7 @@ export const styles = StyleSheet.create({
 
   headline: {
     fontFamily: typography.eyebrow.fontFamily,
-    fontSize: px(typography.eyebrow.fontSize),
+    fontSize: pxFont(typography.eyebrow.fontSize), lineHeight: Math.round(pxFont(typography.eyebrow.fontSize) * 1.25),
     letterSpacing: typography.eyebrow.letterSpacing,
     color: mojang.green3,
     marginTop: px(44),
@@ -87,7 +87,7 @@ export const styles = StyleSheet.create({
   },
   percent: {
     fontFamily: typography.eyebrow.fontFamily,
-    fontSize: px(typography.eyebrow.fontSize),
+    fontSize: pxFont(typography.eyebrow.fontSize), lineHeight: Math.round(pxFont(typography.eyebrow.fontSize) * 1.25),
     letterSpacing: typography.eyebrow.letterSpacing,
     color: mojang.offWhite,
   },
@@ -118,7 +118,7 @@ export const styles = StyleSheet.create({
   },
   buttonText: {
     fontFamily: typography.kicker.fontFamily,
-    fontSize: px(typography.kicker.fontSize),
+    fontSize: pxFont(typography.kicker.fontSize), lineHeight: Math.round(pxFont(typography.kicker.fontSize) * 1.25),
     letterSpacing: typography.kicker.letterSpacing,
     color: mojang.greyWarm,
   },

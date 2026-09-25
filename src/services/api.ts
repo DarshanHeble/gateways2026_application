@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { CACHE_KEYS, readCache, writeCache } from "./offline/cache";
 import { SEED_EVENTS, SEED_SCHEDULE, SEED_GENERATED_AT } from "./offline/seed";
+import { cleanText } from "@/utils/fest";
 
 // Determine the active API URL:
 // 1. If EXPO_PUBLIC_API_URL is set and not a broken/expired tunnel, use it
@@ -36,6 +37,8 @@ export interface EventItem {
   venue: string;
   type: string;
   participation_type?: string;
+  /** Entries the organisers will take, from the sheet's "Maximum Slots". */
+  max_slots?: number | null;
   image_url?: string;
   description: string;
   rules: string[];
@@ -224,7 +227,7 @@ async function fetchWithFallback<T>(
 }
 
 export async function fetchEvents(): Promise<FetchResult<EventItem[]>> {
-  return fetchWithFallback<EventItem[]>(
+  const result = await fetchWithFallback<EventItem[]>(
     "/events",
     CACHE_KEYS.EVENTS,
     (value) => Array.isArray(value) && value.length > 0,
@@ -234,10 +237,15 @@ export async function fetchEvents(): Promise<FetchResult<EventItem[]>> {
     // can take 8-12s. A tighter timeout here used to drop real data for mocks.
     15000,
   );
+  // Whatever the source — network, cache or seed — titles reach the screens clean.
+  return {
+    ...result,
+    data: result.data.map((e) => ({ ...e, title: cleanText(e.title), subtitle: cleanText(e.subtitle) })),
+  };
 }
 
 export async function fetchSchedule(): Promise<FetchResult<ScheduleResponse>> {
-  return fetchWithFallback<ScheduleResponse>(
+  const result = await fetchWithFallback<ScheduleResponse>(
     "/events/schedule",
     CACHE_KEYS.SCHEDULE,
     (value) => Array.isArray(value?.days) && value.days.length > 0,
@@ -245,4 +253,14 @@ export async function fetchSchedule(): Promise<FetchResult<ScheduleResponse>> {
     SEED_GENERATED_AT,
     15000,
   );
+  return {
+    ...result,
+    data: {
+      ...result.data,
+      days: result.data.days.map((d) => ({
+        ...d,
+        timeline: d.timeline.map((t) => ({ ...t, title: cleanText(t.title), subtitle: cleanText(t.subtitle) })),
+      })),
+    },
+  };
 }

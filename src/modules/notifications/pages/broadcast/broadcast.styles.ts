@@ -1,7 +1,7 @@
 import { StyleSheet } from "react-native";
 
 import { fonts, space, typography } from "@/theme/tokens";
-import { px } from "@/theme/scale";
+import { px, pxFont } from "@/theme/scale";
 
 export const styles = StyleSheet.create({
   flex: { flex: 1 },
@@ -11,19 +11,6 @@ export const styles = StyleSheet.create({
     paddingBottom: px(space["4xl"]),
   },
 
-  pageTitle: {
-    fontFamily: typography.pageTitle.fontFamily,
-    fontSize: px(typography.pageTitle.fontSize),
-    lineHeight: px(typography.pageTitle.lineHeight),
-    letterSpacing: typography.pageTitle.letterSpacing,
-  },
-  pageSub: {
-    fontFamily: typography.body.fontFamily,
-    fontSize: px(typography.body.fontSize),
-    lineHeight: px(typography.body.lineHeight),
-    marginTop: px(space.xs),
-    marginBottom: px(space.xl),
-  },
 
   /** The composer, as a container panel. */
   panel: {
@@ -39,7 +26,7 @@ export const styles = StyleSheet.create({
   },
   eyebrow: {
     fontFamily: typography.eyebrow.fontFamily,
-    fontSize: px(typography.eyebrow.fontSize),
+    fontSize: pxFont(typography.eyebrow.fontSize), lineHeight: Math.round(pxFont(typography.eyebrow.fontSize) * 1.25),
     letterSpacing: typography.eyebrow.letterSpacing,
   },
   teamTag: {
@@ -50,7 +37,7 @@ export const styles = StyleSheet.create({
   },
   teamTagText: {
     fontFamily: typography.eyebrow.fontFamily,
-    fontSize: px(12),
+    fontSize: pxFont(12), lineHeight: Math.round(pxFont(12) * 1.25),
     letterSpacing: typography.eyebrow.letterSpacing,
   },
 
@@ -78,7 +65,7 @@ export const styles = StyleSheet.create({
   },
   targetChipText: {
     fontFamily: typography.eyebrow.fontFamily,
-    fontSize: px(13),
+    fontSize: pxFont(13), lineHeight: Math.round(pxFont(13) * 1.25),
     letterSpacing: typography.eyebrow.letterSpacing,
   },
 
@@ -104,7 +91,7 @@ export const styles = StyleSheet.create({
   historyTitle: {
     flex: 1,
     fontFamily: typography.h3.fontFamily,
-    fontSize: px(typography.h3.fontSize),
+    fontSize: pxFont(typography.h3.fontSize), lineHeight: Math.round(pxFont(typography.h3.fontSize) * 1.25),
     letterSpacing: typography.h3.letterSpacing,
   },
   historyBody: {
@@ -121,7 +108,7 @@ export const styles = StyleSheet.create({
   },
   targetBadgeText: {
     fontFamily: typography.eyebrow.fontFamily,
-    fontSize: px(11),
+    fontSize: pxFont(11), lineHeight: Math.round(pxFont(11) * 1.25),
     letterSpacing: typography.eyebrow.letterSpacing,
   },
 });

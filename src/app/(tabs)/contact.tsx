@@ -1,6 +1,6 @@
-import { View, Text, StyleSheet, Linking, Alert } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, fonts, typography } from "@/theme/tokens";
+import { View, Text, StyleSheet, Linking, Alert, ScrollView, StatusBar } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import { fonts, space } from "@/theme/tokens";
 import { px } from "@/theme/scale";
 import { useBlockTheme } from "@/theme/BlockThemeContext";
 import {
@@ -10,8 +10,16 @@ import {
   crewHead,
   paletteIndexFor,
 } from "@/components/mc/PixelIcon";
-import { DirtBackground, Frame, McCard, useSurface } from "@/components/mc";
+import { PageBanner, PressScale, SectionHeader } from "@/components/launcher";
+import { useSurface } from "@/components/mc";
 
+/*
+ * PLACEHOLDERS. These are not real people or numbers: the organisers' "event
+ * heads" sheet is still empty, so there is nothing to load yet. The screen
+ * says so rather than presenting them as the actual crew. Replace with the
+ * sheet (or a backend endpoint) before the fest.
+ */
+const PLACEHOLDER_CONTACTS = true;
 const TEAM_CONTACTS = [
   { id: "1", name: "Alice Event Lead", phone: "+1234567890" },
   { id: "2", name: "Bob Security", phone: "+0987654321" },
@@ -19,8 +27,7 @@ const TEAM_CONTACTS = [
 ];
 
 export default function ContactTab() {
-  const insets = useSafeAreaInsets();
-  const { theme } = useBlockTheme();
+  const { theme, isDark } = useBlockTheme();
   const surface = useSurface();
   const handleCall = async (phone: string) => {
     const url = `tel:${phone}`;
@@ -33,115 +40,85 @@ export default function ContactTab() {
   };
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + px(52), backgroundColor: theme.background }]}>
-      {/*
-        The dirt menu background.
+    <View style={[styles.root, { backgroundColor: theme.background }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <PageBanner
+          eyebrow="CREW ONLY"
+          title="Crew"
+          subtitle="The people running the fest. Tap anyone to call."
+          gutter={GUTTER}
+        />
 
-        Minecraft splits its backdrops: the title screen gets the panning
-        panorama, and every menu behind it — options, inventory, controls — gets
-        the dirt block tiled and darkened. Home is this app's title screen and
-        carries the panorama; the list screens get the dirt, which is what makes
-        them read as *inside* the same game rather than as a different app's
-        settings page.
-      */}
-      <DirtBackground brightness={0.085} />
-      <Text style={[styles.title, { color: theme.text }]}>CREW</Text>
-      <Text style={[styles.body, { color: theme.textDim }]}>
-        Tap a name to call them straight away.
-      </Text>
+        {PLACEHOLDER_CONTACTS ? (
+          <View style={[styles.notice, { borderColor: theme.primary, backgroundColor: theme.primaryContainer }]}>
+            <McGlyph name="bellOff" size={px(13)} color={theme.primary} />
+            <Text style={[styles.noticeText, { color: theme.text }]}>
+              Sample contacts. The real crew list will appear once the organisers fill in the event-heads sheet.
+            </Text>
+          </View>
+        ) : null}
 
-      <View style={styles.list}>
-        {TEAM_CONTACTS.map((contact) => (
-          <McCard
-            key={contact.id}
-            onPress={() => handleCall(contact.phone)}
-            fill={theme.surfaceElevated}
-            style={styles.card}
-            accessibilityLabel={`Call ${contact.name}`}
-          >
-            {/* A player head per crew member, in their own colours — the
-                game's own way of showing who someone is. */}
-            <View style={[styles.headSlot, { backgroundColor: surface.slot }]}>
-              <Frame depth="sunken" />
-              <PixelIcon
-                art={crewHead(...CREW_PALETTES[paletteIndexFor(contact.name)])}
-                size={px(30)}
-              />
-            </View>
-
-            <View style={styles.cardInfo}>
-              <Text style={[styles.contactName, { color: theme.text }]}>
-                {contact.name}
-              </Text>
-              <Text style={[styles.contactPhone, { color: theme.primary }]}>{contact.phone}</Text>
-            </View>
-            <View style={[styles.callButton, { backgroundColor: surface.slotActive }]}>
-              <Frame depth="raised" />
-              <McGlyph name="phone" size={px(18)} color={theme.primary} />
-            </View>
-          </McCard>
-        ))}
-      </View>
+        <SectionHeader icon="crew" title="On call" count={TEAM_CONTACTS.length} />
+        <View style={styles.list}>
+          {TEAM_CONTACTS.map((contact, i) => (
+            <Animated.View key={contact.id} entering={FadeInDown.duration(320).delay(i * 50)}>
+              <PressScale
+                onPress={() => handleCall(contact.phone)}
+                style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+              >
+                {/* A player head per crew member, in their own colours. */}
+                <View style={[styles.headSlot, { backgroundColor: surface.slot }]}>
+                  <PixelIcon art={crewHead(...CREW_PALETTES[paletteIndexFor(contact.name)])} size={px(30)} />
+                </View>
+                <View style={styles.cardInfo}>
+                  <Text style={[styles.contactName, { color: theme.text }]} numberOfLines={1}>
+                    {contact.name}
+                  </Text>
+                  <Text style={[styles.contactPhone, { color: theme.textDim }]}>{contact.phone}</Text>
+                </View>
+                <View style={[styles.callButton, { borderColor: theme.primary, backgroundColor: theme.primaryContainer }]}>
+                  <McGlyph name="phone" size={px(16)} color={theme.primary} />
+                </View>
+              </PressScale>
+            </Animated.View>
+          ))}
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
+const GUTTER = px(space.xl);
+
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.stage,
-    padding: px(16),
+  root: { flex: 1 },
+  content: { paddingHorizontal: GUTTER, paddingBottom: px(40) },
+  notice: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: px(8),
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: px(12),
   },
-  title: {
-    fontFamily: typography.pageTitle.fontFamily,
-    fontSize: px(32),
-    letterSpacing: typography.pageTitle.letterSpacing,
-    color: colors.gold.title,
-    marginBottom: px(8),
-  },
-  body: {
-    fontFamily: fonts.body,
-    fontSize: px(14),
-    color: colors.body,
-    marginBottom: px(24),
-  },
-  list: {
-    gap: px(12),
-  },
+  noticeText: { flex: 1, fontFamily: fonts.body, fontSize: px(13), lineHeight: px(18) },
+  list: { gap: px(10) },
   card: {
     flexDirection: "row",
     alignItems: "center",
     gap: px(14),
-    padding: px(14),
+    padding: px(12),
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  headSlot: {
-    width: px(44),
-    height: px(44),
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 0,
-    overflow: "hidden",
-  },
-  cardInfo: {
-    flex: 1,
-  },
-  contactName: {
-    fontFamily: typography.h3.fontFamily,
-    fontSize: px(typography.h3.fontSize),
-    color: colors.gold.title,
-    marginBottom: px(4),
-  },
-  contactPhone: {
-    fontFamily: fonts.body,
-    fontSize: px(15),
-    color: colors.cyan,
-  },
+  headSlot: { width: px(46), height: px(46), alignItems: "center", justifyContent: "center" },
+  cardInfo: { flex: 1, minWidth: 0 },
+  contactName: { fontFamily: fonts.display, fontSize: px(17), lineHeight: px(21) },
+  contactPhone: { fontFamily: fonts.bodyMedium, fontSize: px(14), marginTop: px(2) },
   callButton: {
-    width: px(38),
-    height: px(38),
+    width: px(40),
+    height: px(40),
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 0,
-    overflow: "hidden",
+    borderWidth: StyleSheet.hairlineWidth,
   },
 });

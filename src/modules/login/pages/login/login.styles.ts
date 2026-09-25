@@ -1,132 +1,102 @@
 import { StyleSheet } from "react-native";
-import { fonts, typography } from "@/theme/tokens";
-import { mcTextShadow, mojang } from "@/theme/minecraft";
-import { px, SCREEN_HEIGHT } from "@/theme/scale";
+import { fonts } from "@/theme/tokens";
+import { mojang } from "@/theme/minecraft";
+import { px, pxFont } from "@/theme/scale";
 
+/**
+ * Login, in the same language as the tabs: the key art as a hero fading into
+ * the page, then a plain form on the page itself — no floating card, so it
+ * follows light and dark like everything else instead of being a fixed light
+ * box pasted onto a poster.
+ */
 export const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
+  root: { flex: 1 },
+  hero: { marginHorizontal: -px(24), overflow: "hidden" },
+  safeArea: { flex: 1 },
+  keyboardAvoid: { flex: 1 },
+  scrollContent: { flexGrow: 1, paddingHorizontal: px(24), paddingBottom: px(28) },
+  form: { width: "100%", maxWidth: px(440), alignSelf: "center" },
+
+  eyebrow: {
+    fontFamily: fonts.pixelBold,
+    fontSize: pxFont(11),
+    lineHeight: Math.round(pxFont(11) * 1.25),
+    letterSpacing: px(1.2),
   },
-  safeArea: {
-    flex: 1,
+  title: { fontFamily: fonts.display, fontSize: px(32), lineHeight: px(38), marginTop: px(4) },
+  sub: { fontFamily: fonts.body, fontSize: px(14.5), lineHeight: px(20), marginTop: px(4), marginBottom: px(10) },
+
+  label: {
+    fontFamily: fonts.pixelBold,
+    fontSize: pxFont(10),
+    lineHeight: Math.round(pxFont(10) * 1.25),
+    letterSpacing: px(1),
+    marginTop: px(8),
+    marginBottom: px(6),
   },
-  keyboardAvoid: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    alignItems: "center",
-    paddingHorizontal: px(24),
-    paddingBottom: px(32),
-  },
-  cardWrapper: {
-    width: "100%",
-    maxWidth: px(252),
-    alignItems: "center",
-    // Clears the "GATEWAYS 2026 / #PARALLEX" title that's baked into the
-    // background art, landing the card in the empty sky gap above the
-    // campus scene below — proportional to screen height so it tracks the
-    // same spot on the source poster across device sizes.
-    marginTop: SCREEN_HEIGHT * 0.335,
-  },
-  /*
-   * The sign-in panel.
-   *
-   * Stays light in both colour modes, deliberately: it sits on the fest's
-   * daytime poster, which does not change, so a dark panel here would be
-   * fighting the sky rather than following the app. It is now built like every
-   * other surface — opaque fill, 1px stamped outline, light edge top-left — via
-   * `Frame` in the component, rather than the translucent 1.5px-bordered glass
-   * card it was, which belonged to no system at all.
-   */
-  card: {
-    width: "100%",
-    backgroundColor: "#f4efec",
-    borderRadius: 0,
-    paddingHorizontal: px(16),
-    paddingVertical: px(16),
-    overflow: "hidden",
-  },
-  signInBtn: {
+
+  cta: { borderWidth: px(2), borderColor: "#000000", backgroundColor: "#000000" },
+  ctaFace: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: px(6),
-    // Mojang's Vanilla green, not a stock Material `#4caf50`.
+    gap: px(10),
+    height: px(52),
+    paddingHorizontal: px(16),
     backgroundColor: mojang.green5,
-    borderRadius: 0,
-    height: px(42),
-    paddingHorizontal: px(12),
-    marginTop: px(4),
-    overflow: "hidden",
+    borderTopWidth: px(3),
+    borderLeftWidth: px(3),
+    borderBottomWidth: px(3),
+    borderRightWidth: px(3),
+    borderTopColor: mojang.green3,
+    borderLeftColor: mojang.green4,
+    borderBottomColor: mojang.green6,
+    borderRightColor: mojang.green6,
   },
-  signInDither: {
-    borderRadius: 0,
+  ctaFacePressed: {
+    backgroundColor: mojang.green6,
+    borderTopColor: "#1d4a14",
+    borderLeftColor: "#1d4a14",
+    borderBottomColor: mojang.green5,
+    borderRightColor: mojang.green5,
   },
-  btnDisabled: {
-    opacity: 0.6,
-  },
-  /** The spinner takes the label's slot, and only its layout. */
-  signInSpinner: {
-    flex: 1,
-  },
-  signInText: {
+  ctaLip: { height: px(4), backgroundColor: "#1d4a14" },
+  ctaLabel: {
     flex: 1,
     textAlign: "center",
-    fontFamily: typography.kicker.fontFamily,
-    fontSize: px(typography.kicker.fontSize),
-    color: "#ffffff",
-    letterSpacing: typography.kicker.letterSpacing,
-    // The derived Minecraft shadow, not a soft blurred one.
-    ...mcTextShadow("#ffffff", typography.kicker.fontSize),
-  },
-  dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: px(10),
-  },
-  dividerLine: {
-    flex: 1,
-    height: px(1),
-    backgroundColor: "rgba(60,55,40,0.18)",
-  },
-  dividerText: {
-    marginHorizontal: px(8),
-    fontFamily: fonts.bodyMedium,
-    fontSize: px(9.5),
+    fontFamily: fonts.pixelBold,
+    fontSize: pxFont(15),
+    lineHeight: Math.round(pxFont(15) * 1.25),
     letterSpacing: px(1),
-    color: "#6b6a63",
+    color: "#ffffff",
   },
+  signInSpinner: { flex: 1 },
+  btnDisabled: { opacity: 0.6 },
+
+  dividerRow: { flexDirection: "row", alignItems: "center", marginVertical: px(18) },
+  dividerLine: { flex: 1, height: StyleSheet.hairlineWidth },
+  dividerText: { marginHorizontal: px(10), fontFamily: fonts.bodyMedium, fontSize: px(12), letterSpacing: px(1) },
+
   googleBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: px(6),
-    backgroundColor: "#ffffff",
-    borderRadius: 0,
-    height: px(40),
-    borderWidth: px(1),
-    borderColor: "rgba(0,0,0,0.08)",
+    gap: px(10),
+    height: px(50),
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  googleText: {
-    fontFamily: fonts.bodySemi,
-    fontSize: px(12),
-    color: "#1f1f1f",
-  },
+  googleText: { fontFamily: fonts.bodySemi, fontSize: px(15) },
+
   toast: {
-    marginTop: px(16),
-    alignSelf: "center",
-    backgroundColor: "rgba(0,0,0,0.55)",
-    borderRadius: 0,
-    paddingVertical: px(8),
-    paddingHorizontal: px(14),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: px(8),
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: px(10),
+    paddingHorizontal: px(12),
+    marginBottom: px(6),
   },
-  toastText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: px(12),
-    color: "#ffe9b8",
-    textAlign: "center",
-  },
+  toastText: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: px(13) },
+
+  footer: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: px(8), marginTop: px(20) },
+  footerText: { fontFamily: fonts.body, fontSize: px(12) },
 });

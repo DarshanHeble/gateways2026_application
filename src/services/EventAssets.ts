@@ -29,13 +29,28 @@ const EVENT_ASSET_KEYS: Record<string, string> = {
   "twin protocol": "event/twin-protocol",
 };
 
+/**
+ * Letters and digits only, lower-cased. The backend's titles are hand-typed in
+ * a sheet: "RenderRush" is one word there and two words here, and some titles
+ * carry an invisible U+2060 word joiner at the start ("\u2060RenderRush"), so a
+ * plain lower-case compare missed that event's art entirely.
+ */
+function compact(value: string): string {
+  return value.normalize("NFKC").toLowerCase().replace(/[^a-z0-9°]/g, "");
+}
+
 /** Title -> asset key, tolerant of the backend's inconsistent event naming. */
 function assetKeyForTitle(title: string): string | null {
-  const normalized = title.toLowerCase().trim();
-  if (EVENT_ASSET_KEYS[normalized]) return EVENT_ASSET_KEYS[normalized];
+  const normalized = compact(title);
+  if (!normalized) return null;
 
   for (const [name, key] of Object.entries(EVENT_ASSET_KEYS)) {
-    if (normalized.includes(name) || name.includes(normalized)) return key;
+    const candidate = compact(name);
+    if (normalized === candidate) return key;
+  }
+  for (const [name, key] of Object.entries(EVENT_ASSET_KEYS)) {
+    const candidate = compact(name);
+    if (normalized.includes(candidate) || candidate.includes(normalized)) return key;
   }
   return null;
 }
@@ -44,7 +59,7 @@ function assetKeyForTitle(title: string): string | null {
  * Artwork for an event, or `null` if we have none.
  *
  * `null` is meaningful and callers rely on it: `events.tsx` falls back to the
- * backend's `image_url`, and `TimelineCard` omits the thumbnail entirely rather
+ * backend's `image_url`, and the cards swap in an item sprite rather
  * than reserving space for an image that will never arrive.
  *
  * Resolution is synchronous — this is called inline from `renderItem` — and

@@ -10,7 +10,7 @@ import { useAppData } from "@/modules/core/DataProvider";
 import { useNetwork } from "@/modules/core/NetworkProvider";
 import { formatAge } from "@/services/offline/cache";
 import { mcTextShadow } from "@/theme/minecraft";
-import { px } from "@/theme/scale";
+import { px, pxFont } from "@/theme/scale";
 import { fonts } from "@/theme/tokens";
 
 /**
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(11),
+    fontSize: pxFont(11), lineHeight: Math.round(pxFont(11) * 1.25),
   },
 
   panelWrap: { marginTop: px(5) },
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
   name: {
     flexShrink: 1,
     fontFamily: fonts.pixelBold,
-    fontSize: px(12),
+    fontSize: pxFont(12), lineHeight: Math.round(pxFont(12) * 1.25),
     color: COLOR.white,
   },
   titleRow: {
@@ -284,12 +284,12 @@ const styles = StyleSheet.create({
   },
   line: {
     fontFamily: fonts.pixel,
-    fontSize: px(10),
+    fontSize: pxFont(10), lineHeight: Math.round(pxFont(10) * 1.25),
     marginTop: px(3),
   },
   retryText: {
     fontFamily: fonts.pixelBold,
-    fontSize: px(10),
+    fontSize: pxFont(10), lineHeight: Math.round(pxFont(10) * 1.25),
     color: COLOR.yellow,
   },
 
