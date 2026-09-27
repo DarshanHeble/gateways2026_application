@@ -191,7 +191,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const wasOnline = useRef(isOnline);
   useEffect(() => {
     if (isOnline && !wasOnline.current) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       runSync();
     }
     wasOnline.current = isOnline;

@@ -1,13 +1,13 @@
 // `manifest.ts` reaches into the request layer and AsyncStorage at import time;
 // neither is relevant to the structural guard under test.
+import { isValidManifest } from "../manifest";
+
 jest.mock("../../api", () => ({ getOnlineHint: () => true }));
 jest.mock("../../offline/cache", () => ({
   CACHE_KEYS: { ASSET_MANIFEST: "@test_manifest" },
   readCache: jest.fn(),
   writeCache: jest.fn(),
 }));
-
-import { isValidManifest } from "../manifest";
 
 const valid = {
   version: 1,

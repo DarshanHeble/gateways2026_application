@@ -10,6 +10,7 @@ import {
   Pressable,
   StatusBar,
   StyleSheet,
+  TextInput,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -67,6 +68,7 @@ export function LoginScreen() {
   // field scrolls the form's heading to the top — both fields and the button
   // stay visible above the keyboard instead of the password hiding under it.
   const scrollRef = useRef<ScrollView>(null);
+  const passwordRef = useRef<TextInput>(null);
   const formTop = HERO_H * 0.72;
   const insets = useSafeAreaInsets();
   const liftForm = () =>
@@ -206,12 +208,12 @@ export function LoginScreen() {
                 autoComplete="email"
                 editable={!form.busy}
                 returnKeyType="next"
-                onSubmitEditing={() => form.passwordRef.current?.focus()}
+                onSubmitEditing={() => passwordRef.current?.focus()}
               />
 
               <Text style={[styles.label, { color: theme.textDim }]}>PASSWORD</Text>
               <GlassInput
-                ref={form.passwordRef}
+                ref={passwordRef}
                 icon="lock"
                 value={form.password}
                 onChangeText={form.setPassword}

@@ -1,6 +1,5 @@
 import { PixelRatio, type TextStyle } from "react-native";
 
-import { colors } from "./tokens";
 import { S, px } from "./scale";
 
 /**

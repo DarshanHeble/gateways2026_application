@@ -3,14 +3,14 @@ import { View, Text, StyleSheet, ViewStyle } from "react-native";
 import { colors, fonts } from "@/theme/tokens";
 import { px, pxFont } from "@/theme/scale";
 
+import { useBlockTheme } from "@/theme/BlockThemeContext";
+
 interface PixelCardProps {
   children: React.ReactNode;
   style?: ViewStyle;
   headerTitle?: string;
   badge?: string;
 }
-
-import { useBlockTheme } from "@/theme/BlockThemeContext";
 export function PixelCard({ children, style, headerTitle, badge }: PixelCardProps) {
   const { theme } = useBlockTheme();
   return (

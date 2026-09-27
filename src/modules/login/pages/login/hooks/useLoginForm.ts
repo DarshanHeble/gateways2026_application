@@ -1,8 +1,4 @@
 import { useCallback, useRef, useState } from "react";
-import type { TextInput } from "react-native";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const MIN_PASSWORD = 6;
 
 export type LoginFieldError = "email" | "password" | null;
 
@@ -29,7 +25,6 @@ export function useLoginForm(onAuthenticated: (role: "participant" | "team") => 
   const [errorField, setErrorField] = useState<LoginFieldError>(null);
   const [errorNonce, setErrorNonce] = useState(0);
 
-  const passwordRef = useRef<TextInput>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const say = useCallback((message: string) => {
@@ -75,7 +70,6 @@ export function useLoginForm(onAuthenticated: (role: "participant" | "team") => 
     say,
     errorField,
     errorNonce,
-    passwordRef,
     submit,
   };
 }

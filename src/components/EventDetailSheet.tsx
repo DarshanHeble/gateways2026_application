@@ -181,12 +181,14 @@ export function EventDetailSheet({
   const sheetY = useSharedValue(SCREEN_H);
 
   const handleClose = useCallback(() => {
+    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared value.
     sheetY.value = withTiming(SCREEN_H, timing.sheet, (done) => {
       if (done) runOnJS(onClose)();
     });
   }, [onClose, sheetY]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared value.
     sheetY.value = visible ? withTiming(0, timing.sheet) : SCREEN_H;
   }, [visible, sheetY]);
 
@@ -197,10 +199,12 @@ export function EventDetailSheet({
         onMoveShouldSetPanResponder: (_, g) =>
           g.dy > 6 && Math.abs(g.dx) < Math.abs(g.dy),
         onPanResponderMove: (_, g) => {
+          // eslint-disable-next-line react-hooks/immutability -- Reanimated shared value.
           if (g.dy > 0) sheetY.value = g.dy;
         },
         onPanResponderRelease: (_, g) => {
           if (g.dy > 120 || g.vy > 0.8) handleClose();
+          // eslint-disable-next-line react-hooks/immutability -- Reanimated shared value.
           else sheetY.value = withTiming(0, timing.sheet);
         },
       }),

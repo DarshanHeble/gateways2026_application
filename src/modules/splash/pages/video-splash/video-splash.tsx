@@ -1,10 +1,9 @@
 import { useEffect } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { VideoView } from "expo-video";
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay } from "react-native-reanimated";
 
-import { colors, fonts } from "@/theme/tokens";
 import { px, FILL } from "@/theme/scale";
 import { Bevel } from "@/components/pixel/Primitives";
 import { useVideoSplash } from "../../hooks/useVideoSplash";

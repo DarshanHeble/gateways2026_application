@@ -265,6 +265,7 @@ export default function ProfileTab() {
 
   const closeSkinModal = useCallback(() => {
     setSkinModalVisible(false);
+    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared value.
     skinSheetY.value = 0;
   }, [skinSheetY]);
 
@@ -276,6 +277,7 @@ export default function ProfileTab() {
           gestureState.dy > 6 && Math.abs(gestureState.dx) < Math.abs(gestureState.dy),
         onPanResponderMove: (_, gestureState) => {
           if (gestureState.dy > 0) {
+            // eslint-disable-next-line react-hooks/immutability -- Reanimated shared value.
             skinSheetY.value = gestureState.dy;
           }
         },
@@ -283,7 +285,8 @@ export default function ProfileTab() {
           if (gestureState.dy > 110 || gestureState.vy > 0.7) {
             try {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            } catch (_) {}
+            } catch {}
+            // eslint-disable-next-line react-hooks/immutability -- Reanimated shared value.
             skinSheetY.value = withTiming(SCREEN_H * 0.85, { duration: 220 }, (done) => {
               if (done) {
                 runOnJS(closeSkinModal)();
@@ -305,6 +308,7 @@ export default function ProfileTab() {
 
   useEffect(() => {
     if (skinModalVisible) {
+      // eslint-disable-next-line react-hooks/immutability -- Reanimated shared value.
       skinSheetY.value = 0;
     }
   }, [skinModalVisible, skinSheetY]);

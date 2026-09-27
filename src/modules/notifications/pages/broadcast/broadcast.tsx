@@ -45,7 +45,9 @@ export function BroadcastScreen() {
   }, []);
 
   useEffect(() => {
-    loadHistory();
+    (async () => {
+      await loadHistory();
+    })();
   }, [loadHistory]);
 
   const toastTimerRef = React.useRef<any>(null);
