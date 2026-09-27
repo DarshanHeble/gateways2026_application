@@ -3,6 +3,7 @@ import { useEventListener } from "expo";
 import { useVideoPlayer, type VideoSource } from "expo-video";
 
 import { useReducedMotion } from "react-native-reanimated";
+import { useAssets } from "@/modules/assets";
 import { isLocal, resolveAssetUri } from "@/services/assets";
 import { coverScreen, revealScreen } from "../utils/chunkTransition";
 
@@ -35,12 +36,20 @@ export function useVideoSplash(onDone: () => void) {
    *    CDN with `useCaching` so expo-video populates its own cache on the way.
    *  - unknown (first launch, offline, no manifest yet) -> `null`, and we skip
    *    the intro entirely rather than hanging on a video that cannot load.
+   *
+   * And one more: if this launch's download *failed* (the CDN couldn't be
+   * reached), streaming from that same CDN would only show a black screen
+   * until the player gave up, so the intro is skipped too. A download the user
+   * *skipped* on a slow network is different — streaming may well work there.
    */
+  const { status: assetStatus } = useAssets();
+  const downloadFailed = assetStatus === "failed";
   const source = useMemo<VideoSource | null>(() => {
     const uri = resolveAssetUri("video/splash");
     if (!uri) return null;
-    return isLocal("video/splash") ? uri : { uri, useCaching: true };
-  }, []);
+    if (isLocal("video/splash")) return uri;
+    return downloadFailed ? null : { uri, useCaching: true };
+  }, [downloadFailed]);
 
   const finish = useCallback(() => {
     if (done.current) return;

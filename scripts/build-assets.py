@@ -158,10 +158,17 @@ def build_specs() -> list[Spec]:
              out_dir="images", mode="copy")
     )
 
-    # No ffmpeg on this machine, and 2.7 MB is acceptable for a one-time
-    # download, so the clip is copied as-is.
+    # The splash clip is encoded ahead of time, not here: there is no ffmpeg
+    # on the build machine, so it goes through scripts/encode-video.swift
+    # (AVFoundation, built into macOS) and the result is kept as the source.
+    #   hero_app_gwr_video_mvp.mp4  15.0 MB, 12 Mbps
+    #   -> gateways-hero.mp4          3.8 MB, H.264 High 3 Mbps + AAC 128k,
+    #      720x1280@24, fast-start; PSNR 38.8 dB avg against the master.
+    # Re-encode with:
+    #   swiftc -O scripts/encode-video.swift -o /tmp/encode-video
+    #   /tmp/encode-video <master.mp4> ../gateways2026-assets/source/videos/gateways-hero.mp4 3000 128
     specs.append(
-        Spec(key="video/splash", source="videos/minecraft-splash.mp4",
+        Spec(key="video/splash", source="videos/gateways-hero.mp4",
              out_dir="videos", mode="copy")
     )
 

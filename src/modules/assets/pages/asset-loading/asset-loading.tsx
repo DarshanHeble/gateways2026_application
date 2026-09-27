@@ -41,8 +41,12 @@ export function AssetLoadingScreen({ onDone }: { onDone: () => void }) {
 
   // On a warm launch `status` resolves to "ready" within a frame or two. Painting
   // a progress bar for 30ms and tearing it away reads as a flash, so render
-  // nothing at all until we know there is real work to show.
+  // nothing at all until we know there is real work to show. That includes
+  // "ready" with nothing downloaded: the navigator's fade keeps this screen on
+  // show while it hands off, so without this every warm launch flashed
+  // "Generating world" for a moment.
   if (status === "checking") return null;
+  if (status === "ready" && progress.bytesTotal === 0) return null;
 
   return (
     <View style={styles.root}>

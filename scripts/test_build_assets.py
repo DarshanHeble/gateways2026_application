@@ -195,7 +195,7 @@ class EndToEndTests(unittest.TestCase):
         self.assertEqual(self._run()["baseUrl"], "https://cdn.example.test/base/")
 
     def test_missing_source_is_reported_not_silently_skipped(self):
-        (self.source / "videos" / "minecraft-splash.mp4").unlink()
+        (self.source / "videos" / "gateways-hero.mp4").unlink()
         with self.assertRaises(FileNotFoundError):
             self._run()
 

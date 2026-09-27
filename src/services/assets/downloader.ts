@@ -15,7 +15,7 @@ import type { AssetEntry, AssetManifest, AssetProgress } from "./types";
  * reboots and app updates, and is cleared only on uninstall.
  *
  * Known trade-off on iOS: `Documents/` is included in iCloud backups, so this
- * ~3.3 MB of re-downloadable data is backed up with the app. Apple would rather
+ * ~4.3 MB of re-downloadable data is backed up with the app. Apple would rather
  * regenerable data were excluded, but expo-file-system (SDK 57) exposes no
  * `isExcludedFromBackup` equivalent, and the only alternative — `Paths.cache` —
  * trades a guarantee the product actually needs (download once, then work
@@ -31,6 +31,25 @@ import type { AssetEntry, AssetManifest, AssetProgress } from "./types";
 
 const ASSET_DIR = "assets";
 const MAX_CONCURRENT = 3;
+
+/**
+ * How long a download may go without receiving a single byte.
+ *
+ * Downloads run on iOS's background URL session, which treats "can't connect"
+ * as "wait for connectivity" with a 7-day timeout. On a network that is up but
+ * can't reach the CDN (campus firewall, hotel captive portal) that left the
+ * first-launch screen sitting at 0% until someone noticed Skip.
+ *
+ * Two watchdogs use it:
+ *  - per file: one dead URL is dropped while the rest keep going;
+ *  - per run: if *nothing* has arrived for this long, the network is the
+ *    problem, so every remaining file is abandoned at once. Per-file alone
+ *    meant 12 files x 3 at a time = ~80 s before a dead network let go.
+ *
+ * Anything abandoned still streams from the CDN at render time, and the next
+ * launch retries it.
+ */
+export const STALL_TIMEOUT_MS = 15_000;
 
 export interface DownloadOutcome {
   /** Files actually fetched over the network this run. */
@@ -154,33 +173,88 @@ export async function downloadManifest(
 
   emit();
 
+  // Run-level watchdog: re-armed by any byte from any file.
+  const runController = new AbortController();
+  const abortRun = () => runController.abort();
+  signal?.addEventListener("abort", abortRun);
+  let runStalled = false;
+  let runWatchdog: ReturnType<typeof setTimeout> | undefined;
+  const armRunWatchdog = () => {
+    if (runWatchdog) clearTimeout(runWatchdog);
+    runWatchdog = setTimeout(() => {
+      runStalled = true;
+      runController.abort();
+    }, STALL_TIMEOUT_MS);
+  };
+  if (queue.length > 0) armRunWatchdog();
+
+  const abandon = (entry: AssetEntry) => {
+    failed.push({ path: entry.path, error: `network stalled (no data for ${STALL_TIMEOUT_MS / 1000}s)` });
+    settledBytes += entry.bytes;
+  };
+
   let cursor = 0;
   const runWorker = async () => {
     while (cursor < queue.length) {
       if (signal?.aborted) return;
 
       const entry = queue[cursor++];
+      if (runStalled) {
+        abandon(entry);
+        continue;
+      }
       const url = remoteUrlFor(manifest, entry);
 
+      // Per-file controller: aborts on the caller's signal, a run stall, or
+      // this file's own stall.
+      const fileController = new AbortController();
+      const forward = () => fileController.abort();
+      runController.signal.addEventListener("abort", forward);
+      let stalled = false;
+      let watchdog: ReturnType<typeof setTimeout> | undefined;
+      const armWatchdog = () => {
+        if (watchdog) clearTimeout(watchdog);
+        watchdog = setTimeout(() => {
+          stalled = true;
+          fileController.abort();
+        }, STALL_TIMEOUT_MS);
+      };
+
       try {
+        armWatchdog();
         const task = File.createDownloadTask(url, fileFor(entry), {
-          signal,
+          signal: fileController.signal,
           onProgress: ({ bytesWritten }) => {
+            if (bytesWritten > (inFlight.get(entry.path) ?? 0)) {
+              armWatchdog();
+              armRunWatchdog();
+            }
             inFlight.set(entry.path, bytesWritten);
             emit();
           },
         });
         await task.downloadAsync();
+        if (stalled || runStalled) throw new Error("stalled");
 
         completedPaths.add(entry.path);
         settledBytes += entry.bytes;
+        armRunWatchdog();
       } catch (error: any) {
         if (signal?.aborted) return;
-        failed.push({ path: entry.path, error: error?.message ?? String(error) });
-        // Charge the budget anyway so a failure can't strand the bar short of
-        // 100% and make a finished run look stuck.
-        settledBytes += entry.bytes;
+        if (runStalled) {
+          abandon(entry);
+        } else {
+          const message = stalled
+            ? `no data for ${STALL_TIMEOUT_MS / 1000}s`
+            : (error?.message ?? String(error));
+          failed.push({ path: entry.path, error: message });
+          // Charge the budget anyway so a failure can't strand the bar short
+          // of 100% and make a finished run look stuck.
+          settledBytes += entry.bytes;
+        }
       } finally {
+        if (watchdog) clearTimeout(watchdog);
+        runController.signal.removeEventListener("abort", forward);
         inFlight.delete(entry.path);
         emit();
       }
@@ -190,6 +264,8 @@ export async function downloadManifest(
   await Promise.all(
     Array.from({ length: Math.min(MAX_CONCURRENT, queue.length) }, runWorker),
   );
+  if (runWatchdog) clearTimeout(runWatchdog);
+  signal?.removeEventListener("abort", abortRun);
 
   // Re-scan rather than trusting the bookkeeping: this is what the registry and
   // the "are we ready?" check are built on, so it should reflect the disk.

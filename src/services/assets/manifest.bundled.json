@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-18T16:22:55+00:00",
+  "generatedAt": "2026-09-27T13:49:32+00:00",
   "baseUrl": "https://cdn.jsdelivr.net/gh/vishalbg02/gateways2026-assets@main/",
   "assets": [
     {
@@ -113,9 +113,9 @@
     },
     {
       "key": "video/splash",
-      "path": "videos/minecraft-splash.eff4addf.mp4",
-      "bytes": 2751038,
-      "sha256": "eff4addf5954c2fd18bab3c6fda69b5f0cc1088939ca030a8f47e9d34ba353da"
+      "path": "videos/gateways-hero.33f9c570.mp4",
+      "bytes": 3847509,
+      "sha256": "33f9c570432423592eb11e784ad4623c3c9cd894555b005102aa94b9029327b4"
     }
   ]
 }
