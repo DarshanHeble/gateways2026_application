@@ -14,7 +14,6 @@ import { Image } from "expo-image";
 import Animated, {
   Easing,
   Extrapolation,
-  FadeInDown,
   interpolate,
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -22,6 +21,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
+import { EnterFromBelow } from "@/theme/motion";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useFocusEffect } from "expo-router";
@@ -30,7 +30,7 @@ import * as Haptics from "expo-haptics";
 import { EventDetailSheet } from "@/components/EventDetailSheet";
 import { McGlyph, PixelIcon, type PixelIconName } from "@/components/mc/PixelIcon";
 import { McSlot, useSurface } from "@/components/mc";
-import { ArtBackdrop, EventArt, PressScale, SectionHeader, categoryTag } from "@/components/launcher";
+import { ArtBackdrop, EventArt, PressScale, SectionHeader, categoryTag, Digits } from "@/components/launcher";
 import { useAssetSource, useAssetsVersion } from "@/modules/assets";
 import { useAuth } from "@/modules/auth";
 import { useAppData } from "@/modules/core/DataProvider";
@@ -302,7 +302,7 @@ export default function Home() {
               new character steps in with the entrance rather than popping. */}
           <Animated.View
             key={MINECRAFT_SKINS[heroSkin].id}
-            entering={FadeInDown.duration(520).delay(120)}
+            entering={EnterFromBelow.duration(520).delay(120)}
             style={styles.heroCharacter}
             pointerEvents="none"
           >
@@ -355,7 +355,7 @@ export default function Home() {
               figure as the stack count — the way the game shows how many of
               something you have. Each one opens what it counts. */}
           <Animated.View
-            entering={FadeInDown.duration(380)}
+            entering={EnterFromBelow.duration(380)}
             style={[styles.stats, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
           >
             <Stat icon="events" value={allEvents.length} label="Events" onPress={goEvents} />
@@ -373,7 +373,7 @@ export default function Home() {
 
           {/* ── Up next ──────────────────────────────────────────────────── */}
           {upNext ? (
-            <Animated.View entering={FadeInDown.duration(380).delay(60)}>
+            <Animated.View entering={EnterFromBelow.duration(380).delay(60)}>
               <SectionHeader icon="schedule" title={upNextIsTracked ? "Up next" : "Featured"} />
               {/* Media card that follows the mode: dark scrim over the art at
                   night, a light one by day, with the accent edge marking it as
@@ -394,7 +394,7 @@ export default function Home() {
                     {(upNext.type || "Event").toUpperCase()}
                   </Text>
                   <Text style={[styles.featureTitle, { color: isDark ? "#ffffff" : theme.text }]} numberOfLines={2}>
-                    {upNext.title}
+                    <Digits>{upNext.title}</Digits>
                   </Text>
                   <Text style={[styles.meta, { color: isDark ? "rgba(255,255,255,0.72)" : theme.textDim }]} numberOfLines={1}>
                     {[upNext.from_time, upNext.venue].filter(Boolean).join(" · ")}
@@ -405,7 +405,7 @@ export default function Home() {
           ) : null}
 
           {/* ── Lineup ───────────────────────────────────────────────────── */}
-          <Animated.View entering={FadeInDown.duration(380).delay(120)}>
+          <Animated.View entering={EnterFromBelow.duration(380).delay(120)}>
             <SectionHeader
               icon="events"
               title="Your lineup"
@@ -461,7 +461,7 @@ export default function Home() {
 
           {/* ── Explore ──────────────────────────────────────────────────── */}
           {explore.length > 0 ? (
-            <Animated.View entering={FadeInDown.duration(380).delay(180)}>
+            <Animated.View entering={EnterFromBelow.duration(380).delay(180)}>
               <SectionHeader icon="compass" title="Explore" action={{ label: "See all", onPress: goEvents }} />
               <ScrollView
                 horizontal
@@ -485,7 +485,7 @@ export default function Home() {
                     </View>
                     <View style={styles.tileBody}>
                       <Text style={[styles.tileTitle, { color: theme.text }]} numberOfLines={1}>
-                        {ev.title}
+                        <Digits>{ev.title}</Digits>
                       </Text>
                       <Text style={[styles.meta, { color: theme.textDim }]} numberOfLines={1}>
                         {ev.type || "Event"}
@@ -690,7 +690,7 @@ function LineupRow({ event, first, onPress }: { event: EventItem; first: boolean
       </Text>
       <View style={styles.rowBody}>
         <Text style={[styles.rowTitle, { color: theme.text }]} numberOfLines={1}>
-          {event.title}
+          <Digits>{event.title}</Digits>
         </Text>
         {event.venue ? (
           <Text style={[styles.meta, { color: theme.textDim }]} numberOfLines={1}>
@@ -763,7 +763,7 @@ function LineupPicker({
                 </View>
                 <View style={styles.rowBody}>
                   <Text style={[styles.rowTitle, { color: theme.text }]} numberOfLines={1}>
-                    {ev.title}
+                    <Digits>{ev.title}</Digits>
                   </Text>
                   <Text style={[styles.meta, { color: theme.textDim }]} numberOfLines={1}>
                     {[ev.type, ev.from_time].filter(Boolean).join(" · ")}

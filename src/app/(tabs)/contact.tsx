@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, Linking, Alert, ScrollView, StatusBar } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated from "react-native-reanimated";
+import { EnterFromBelow } from "@/theme/motion";
 import { fonts, space } from "@/theme/tokens";
 import { px } from "@/theme/scale";
 import { useBlockTheme } from "@/theme/BlockThemeContext";
@@ -62,7 +63,7 @@ export default function ContactTab() {
         <SectionHeader icon="crew" title="On call" count={TEAM_CONTACTS.length} />
         <View style={styles.list}>
           {TEAM_CONTACTS.map((contact, i) => (
-            <Animated.View key={contact.id} entering={FadeInDown.duration(320).delay(i * 50)}>
+            <Animated.View key={contact.id} entering={EnterFromBelow.duration(320).delay(i * 50)}>
               <PressScale
                 onPress={() => handleCall(contact.phone)}
                 style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}

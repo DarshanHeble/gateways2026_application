@@ -18,7 +18,8 @@ import * as WebBrowser from "expo-web-browser";
 import { useAuth } from "@/modules/auth";
 import { px, SCREEN_HEIGHT } from "@/theme/scale";
 import { Image } from "expo-image";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated from "react-native-reanimated";
+import { EnterFromBelow } from "@/theme/motion";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { useAssetSource } from "@/modules/assets";
 import { API_BASE_URL, apiClient } from "@/services/api";
@@ -180,7 +181,7 @@ export function LoginScreen() {
 
             {/* The form rises into the art's faded foot; the art scrolls with it,
                 so text never lands on the logo. */}
-            <Animated.View entering={FadeInDown.duration(480)} style={[styles.form, { marginTop: formTop - HERO_H }]}>
+            <Animated.View entering={EnterFromBelow.duration(480)} style={[styles.form, { marginTop: formTop - HERO_H }]}>
               <Text style={[styles.eyebrow, { color: theme.primary }]}>PLAYER LOGIN</Text>
               <Text style={[styles.title, { color: theme.text }, mcTextShadow(theme.text, 30)]}>Enter the realm</Text>
               <Text style={[styles.sub, { color: theme.textDim }]}>

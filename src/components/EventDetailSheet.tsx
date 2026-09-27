@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Digits } from "@/components/launcher";
 import {
   Dimensions,
   Linking,
@@ -282,7 +283,7 @@ export function EventDetailSheet({
               </View>
               <View style={styles.headerText}>
                 <Text style={[styles.title, { color: theme.text }]} numberOfLines={3}>
-                  {event.title}
+                  <Digits>{event.title}</Digits>
                 </Text>
                 {event.subtitle ? (
                   <Text style={[styles.subtitle, { color: theme.textDim }]} numberOfLines={2}>

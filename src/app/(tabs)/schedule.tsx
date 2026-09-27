@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import Animated, {
   Extrapolation,
-  FadeInDown,
+  FadeIn,
   interpolate,
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -27,8 +27,7 @@ import {
   SectionHeader,
   categoryKey,
   categoryTag,
-  oreFor,
-} from "@/components/launcher";
+  oreFor, Digits } from "@/components/launcher";
 import { SelectionFrame, useSurface } from "@/components/mc";
 import { McGlyph, PixelIcon } from "@/components/mc/PixelIcon";
 import { Tooltip } from "@/components/mc/Tooltip";
@@ -39,7 +38,7 @@ import { getEventImage } from "@/services/EventAssets";
 import { SEED_SCHEDULE } from "@/services/offline/seed";
 import { useBlockTheme } from "@/theme/BlockThemeContext";
 import { mcTextShadow, mojang, scaleColor } from "@/theme/minecraft";
-import { timing } from "@/theme/motion";
+import { timing, EnterFromBelow } from "@/theme/motion";
 import { px, pxFont } from "@/theme/scale";
 import { fonts, space } from "@/theme/tokens";
 import { LINEUP_STORAGE_KEY, clockMinutes, daysBetween, festDaysIn, festStatus, localIso, shortDate } from "@/utils/fest";
@@ -397,7 +396,7 @@ export default function ScheduleTab() {
           </Svg>
           <View pointerEvents="none" style={[styles.bannerFoot, { backgroundColor: theme.background }]} />
 
-          <Animated.View entering={FadeInDown.duration(420)} style={styles.bannerCopy}>
+          <Animated.View entering={EnterFromBelow.duration(420)} style={styles.bannerCopy}>
             <Text style={[styles.eyebrow, { color: theme.primary }]}>
               {fest.label.toUpperCase()} · {fest.range.toUpperCase()}
             </Text>
@@ -424,7 +423,7 @@ export default function ScheduleTab() {
                   <OreSwatch color={oreFor(item.category)} />
                   <View style={styles.preFestBody}>
                     <Text style={[styles.preFestTitle, { color: theme.text }]} numberOfLines={1}>
-                      {item.title}
+                      <Digits>{item.title}</Digits>
                     </Text>
                     <Text style={[styles.preFestMeta, { color: theme.textDim }]} numberOfLines={1}>
                       {[String(item.date).replace(/,?\s*\d{4}\s*$/, ""), item.from_time !== "TBA" ? item.from_time : null, item.venue]
@@ -507,7 +506,7 @@ export default function ScheduleTab() {
             <View key={`timed-${viewKey}`}>
               <SectionHeader icon="schedule" title="On the clock" count={timed.length} />
               {timed.map((item, i) => (
-                <Animated.View key={item.id} entering={FadeInDown.duration(320).delay(i * 50)}>
+                <Animated.View key={item.id} entering={EnterFromBelow.duration(320).delay(i * 50)}>
                   <TimeRow
                     item={item}
                     event={asEvent(item, events)}
@@ -529,9 +528,11 @@ export default function ScheduleTab() {
               <Text style={[styles.sectionHint, { color: theme.textDim }]}>
                 {"Slots move up to the clock as they're confirmed. Tap any event for details."}
               </Text>
+              {/* Tiles fade in (opacity only): in a wrapping grid a slide-in could
+                  stall on Android and leave a tile offset over the row below. */}
               <View style={styles.grid}>
                 {unscheduled.map((item, i) => (
-                  <Animated.View key={item.id} entering={FadeInDown.duration(320).delay(i * 40)}>
+                  <Animated.View key={item.id} entering={FadeIn.duration(320).delay(i * 40)}>
                     <TbaTile
                       item={item}
                       event={asEvent(item, events)}
@@ -549,7 +550,7 @@ export default function ScheduleTab() {
           {!timed.length && !unscheduled.length ? (
             <Animated.View
               key={`empty-${viewKey}`}
-              entering={FadeInDown.duration(320)}
+              entering={EnterFromBelow.duration(320)}
               style={[styles.empty, { borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}
             >
               <PixelIcon name={filter === "lineup" ? "diamond" : "events"} size={px(30)} />
@@ -763,7 +764,7 @@ function DayCard({
 
   return (
     <Animated.View
-      entering={FadeInDown.duration(380)}
+      entering={EnterFromBelow.duration(380)}
       style={[styles.dayCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
     >
       {/* ── First up ─────────────────────────────────────────────────── */}
@@ -778,7 +779,7 @@ function DayCard({
               {countdown.eyebrow.toUpperCase()}
             </Text>
             <Text style={[styles.leadTitle, { color: theme.text }]} numberOfLines={2}>
-              {lead.title}
+              <Digits>{lead.title}</Digits>
             </Text>
             <Text style={[styles.leadMeta, { color: theme.textDim }]} numberOfLines={1}>
               {[`${lead.from_time}`, lead.venue].filter(Boolean).join(" · ")}
@@ -849,7 +850,7 @@ function DayCard({
               >
                 <View style={styles.laneLabel}>
                   <Text style={[styles.laneTitle, { color: theme.text }]} numberOfLines={1}>
-                    {item.title}
+                    <Digits>{item.title}</Digits>
                   </Text>
                   <Text style={[styles.laneTime, { color: live ? mojang.green4 : theme.textDim }]} numberOfLines={1}>
                     {live ? "LIVE · " : ""}
@@ -987,7 +988,7 @@ function TimeRow({
             <Text style={[styles.cardCaps, { color: theme.textDim }]}>{tag}</Text>
           </View>
           <Text style={[styles.cardTitle, { color: theme.text }]} numberOfLines={2}>
-            {item.title}
+            <Digits>{item.title}</Digits>
           </Text>
           <Text style={[styles.cardMeta, { color: theme.textDim }]} numberOfLines={1}>
             {[item.venue, length].filter(Boolean).join(" · ")}
@@ -1077,7 +1078,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: px(14),
   },
   dayEyebrow: { fontFamily: fonts.pixelBold, fontSize: pxFont(11), lineHeight: Math.round(pxFont(11) * 1.25), letterSpacing: px(1) },
-  dayDate: { fontFamily: fonts.display, fontSize: pxFont(18), lineHeight: Math.round(pxFont(18) * 1.25), marginTop: px(4), letterSpacing: 0 },
+  // "Thu 8 Oct" carries a date number, so it takes the sans too.
+  dayDate: { fontFamily: fonts.bodyBold, fontSize: px(18), lineHeight: px(23), marginTop: px(4), letterSpacing: -0.2 },
   dayMeta: { fontFamily: fonts.body, fontSize: px(12), marginTop: px(2) },
   daySelector: { position: "absolute", top: 0, bottom: 0, left: 0 },
 
@@ -1162,7 +1164,9 @@ const styles = StyleSheet.create({
 
   row: { flexDirection: "row", alignItems: "stretch" },
   rowTime: { width: px(52), alignItems: "flex-end", paddingTop: px(12) },
-  rowClock: { fontFamily: fonts.display, fontSize: pxFont(15), lineHeight: Math.round(pxFont(15) * 1.25), fontVariant: ["tabular-nums"] },
+  // Times in the sans, not the pixel face: at this size Pixelify's "2" reads
+  // as an "8", which turned 2:00 PM into 8:00 PM on a phone.
+  rowClock: { fontFamily: fonts.bodyBold, fontSize: px(16), lineHeight: px(20), fontVariant: ["tabular-nums"] },
   rowMeridiem: { fontFamily: fonts.pixelBold, fontSize: pxFont(10), lineHeight: Math.round(pxFont(10) * 1.25), letterSpacing: px(1), marginTop: px(1) },
   rail: { width: px(26), alignItems: "center" },
   railStop: { marginTop: px(16) },

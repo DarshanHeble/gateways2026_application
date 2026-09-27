@@ -4,12 +4,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import Animated, {
   Extrapolation,
-  FadeInDown,
   interpolate,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
+import { EnterFromBelow } from "@/theme/motion";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useFocusEffect } from "expo-router";
@@ -155,7 +155,7 @@ export function NotificationsScreen() {
   ];
 
   const renderCard = ({ n, event }: { n: AppNotification; event: EventItem | null }, i: number) => (
-    <Animated.View key={n.id} entering={FadeInDown.duration(320).delay(Math.min(i, 8) * 40)}>
+    <Animated.View key={n.id} entering={EnterFromBelow.duration(320).delay(Math.min(i, 8) * 40)}>
       <AlertCard n={n} event={event} onPress={() => onOpen(n, event)} />
     </Animated.View>
   );
@@ -206,7 +206,7 @@ export function NotificationsScreen() {
           </Svg>
           <View pointerEvents="none" style={[styles.bannerFoot, { backgroundColor: theme.background }]} />
 
-          <Animated.View entering={FadeInDown.duration(420)} style={styles.bannerCopy}>
+          <Animated.View entering={EnterFromBelow.duration(420)} style={styles.bannerCopy}>
             <Text style={[styles.eyebrow, { color: theme.primary }]}>FROM THE ORGANISERS</Text>
             <View style={styles.titleRow}>
               <Text style={[styles.title, { color: theme.text }, mcTextShadow(theme.text, 40)]}>Alerts</Text>
@@ -286,7 +286,7 @@ export function NotificationsScreen() {
           {!visible.length ? (
             <Animated.View
               key={`empty-${filter}`}
-              entering={FadeInDown.duration(320)}
+              entering={EnterFromBelow.duration(320)}
               style={[styles.empty, { borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}
             >
               <PixelIcon name="alerts" size={px(36)} />

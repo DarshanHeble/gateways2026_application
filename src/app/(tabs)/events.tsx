@@ -15,12 +15,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import Animated, {
   Extrapolation,
-  FadeInDown,
+  FadeIn,
   interpolate,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
+import { EnterFromBelow } from "@/theme/motion";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "expo-router";
@@ -37,8 +38,7 @@ import {
   SectionHeader,
   categoryKey,
   categoryTag,
-  oreFor,
-} from "@/components/launcher";
+  oreFor, Digits } from "@/components/launcher";
 import { useSurface } from "@/components/mc";
 import { McGlyph, PixelIcon } from "@/components/mc/PixelIcon";
 import { useAssetSource, useAssetsVersion } from "@/modules/assets";
@@ -232,7 +232,7 @@ export default function EventsTab() {
           </Svg>
           <View pointerEvents="none" style={[styles.bannerFoot, { backgroundColor: theme.background }]} />
 
-          <Animated.View entering={FadeInDown.duration(420)} style={styles.bannerCopy}>
+          <Animated.View entering={EnterFromBelow.duration(420)} style={styles.bannerCopy}>
             <Text style={[styles.eyebrow, { color: theme.primary }]}>COMPETE · WIN · CRAFT</Text>
             <Text style={[styles.title, { color: theme.text }, mcTextShadow(theme.text, 40)]}>Events</Text>
             <View style={styles.bannerStats}>
@@ -310,7 +310,7 @@ export default function EventsTab() {
 
           {/* ── Spotlight: the biggest prize pool ────────────────────── */}
           {showSpotlight && spotlight ? (
-            <Animated.View entering={FadeInDown.duration(380)}>
+            <Animated.View entering={EnterFromBelow.duration(380)}>
               <SectionHeader icon="diamond" title="Biggest prize" />
               <Spotlight
                 event={spotlight}
@@ -329,9 +329,11 @@ export default function EventsTab() {
                 title={q ? "Results" : filter === "lineup" ? "Your lineup" : showSpotlight ? "All events" : "Events"}
                 count={grid.length}
               />
+              {/* Tiles fade in (opacity only): in a wrapping grid a slide-in could
+                  stall on Android and leave a tile offset over the row below. */}
               <View style={styles.grid}>
                 {grid.map((e, i) => (
-                  <Animated.View key={e.id} entering={FadeInDown.duration(320).delay(Math.min(i, 8) * 40)}>
+                  <Animated.View key={e.id} entering={FadeIn.duration(320).delay(Math.min(i, 8) * 40)}>
                     <EventTile
                       event={e}
                       tracked={lineup.includes(e.id)}
@@ -345,7 +347,7 @@ export default function EventsTab() {
           ) : !showSpotlight ? (
             <Animated.View
               key={`empty-${viewKey}`}
-              entering={FadeInDown.duration(320)}
+              entering={EnterFromBelow.duration(320)}
               style={[styles.empty, { borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}
             >
               <PixelIcon name={filter === "lineup" && !q ? "diamond" : "compass"} size={px(30)} />
@@ -497,7 +499,7 @@ function Spotlight({
           <Text style={[styles.spotTag, !isDark && { color: theme.textDim }]}>{categoryTag(event.type)}</Text>
         </View>
         <Text style={[styles.spotTitle, !isDark && { color: theme.text }]} numberOfLines={2}>
-          {event.title}
+          <Digits>{event.title}</Digits>
         </Text>
         {event.subtitle ? (
           <Text style={[styles.spotSub, !isDark && { color: theme.textDim }]} numberOfLines={1}>
@@ -551,7 +553,7 @@ function EventTile({
       </View>
       <View style={styles.tileBody}>
         <Text style={[styles.tileTitle, { color: theme.text }]} numberOfLines={1}>
-          {event.title}
+          <Digits>{event.title}</Digits>
         </Text>
         <Text style={[styles.tileSub, { color: theme.textDim }]} numberOfLines={1}>
           {event.subtitle || event.venue || " "}
@@ -587,7 +589,8 @@ const styles = StyleSheet.create({
   title: { fontFamily: fonts.display, fontSize: px(40), lineHeight: px(48), marginTop: px(4) },
   bannerStats: { flexDirection: "row", alignItems: "center", gap: px(16), marginTop: px(8) },
   bannerRule: { width: StyleSheet.hairlineWidth, alignSelf: "stretch" },
-  statValue: { fontFamily: fonts.display, fontSize: px(20), lineHeight: px(24) },
+  // Figures in the sans: Pixelify's 5 reads as an S and its 2 as an 8.
+  statValue: { fontFamily: fonts.bodyBold, fontSize: px(20), lineHeight: px(24), fontVariant: ["tabular-nums"] },
   statLabel: { fontFamily: fonts.body, fontSize: px(12) },
 
   body: { paddingHorizontal: GUTTER },

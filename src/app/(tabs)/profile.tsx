@@ -25,11 +25,9 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  FadeInDown,
-  FadeInUp,
   runOnJS,
 } from "react-native-reanimated";
-import { duration, stepped, timing } from "@/theme/motion";
+import { duration, stepped, timing, EnterFromBelow, EnterFromAbove } from "@/theme/motion";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useFocusEffect } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -479,7 +477,7 @@ export default function ProfileTab() {
           </Svg>
           <View pointerEvents="none" style={[styles.pBannerFoot, { backgroundColor: theme.background }]} />
 
-          <Animated.View key={activeSkin.id} entering={FadeInDown.duration(480)} style={[styles.pSkin, skinDepthStyle]} pointerEvents="none">
+          <Animated.View key={activeSkin.id} entering={EnterFromBelow.duration(480)} style={[styles.pSkin, skinDepthStyle]} pointerEvents="none">
             <Image
               source={resolveAsset(activeSkin.assetKey)}
               style={StyleSheet.absoluteFill}
@@ -620,7 +618,7 @@ export default function ProfileTab() {
         </View>
 
         {/* Success Alert Banner */}
-        {saveSuccess ? (<Animated.View entering={FadeInUp.duration(duration.screen).easing(stepped(5))} style={[styles.successBanner, { backgroundColor: theme.surfaceElevated }]}>
+        {saveSuccess ? (<Animated.View entering={EnterFromAbove.duration(duration.screen).easing(stepped(5))} style={[styles.successBanner, { backgroundColor: theme.surfaceElevated }]}>
             <Grain />
             <Frame depth={syncNotice ? "raised" : "gold"} />
             <McGlyph
@@ -965,7 +963,8 @@ const styles = StyleSheet.create({
   pass: { flexDirection: "row", alignItems: "center", borderWidth: StyleSheet.hairlineWidth, paddingVertical: px(12), marginTop: px(4) },
   passRule: { width: StyleSheet.hairlineWidth, alignSelf: "stretch" },
   passStat: { flex: 1, alignItems: "center", paddingHorizontal: px(6) },
-  passValue: { fontFamily: fonts.display, fontSize: px(22), lineHeight: px(26) },
+  // Figures in the sans: Pixelify's 5 reads as an S and its 2 as an 8.
+  passValue: { fontFamily: fonts.bodyBold, fontSize: px(22), lineHeight: px(26), fontVariant: ["tabular-nums"] },
   passLabel: { fontFamily: fonts.body, fontSize: px(11.5), marginTop: px(2) },
 
   group: { borderWidth: StyleSheet.hairlineWidth, padding: px(16) },

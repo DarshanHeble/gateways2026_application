@@ -1,7 +1,8 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { Image } from "expo-image";
-import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { EnterFromBelow } from "@/theme/motion";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
@@ -76,7 +77,12 @@ export function SectionHeader({
         {icon ? <PixelIcon name={icon} size={px(18)} /> : null}
         <Text style={[styles.sectionTitle, { color: theme.text }, mcTextShadow(theme.text, 18)]}>
         {title}
-          {count ? <Text style={{ color: theme.textDim }}>  {count}</Text> : null}
+          {count ? (
+            <Text style={{ color: theme.textDim }}>
+              {"  "}
+              <Digits>{count}</Digits>
+            </Text>
+          ) : null}
         </Text>
       </View>
       {action ? (
@@ -282,7 +288,7 @@ export function PageBanner({
         <Rect width="100%" height={h} fill="url(#pageBannerFade)" />
       </Svg>
       <View pointerEvents="none" style={[styles.bannerFoot, { backgroundColor: theme.background }]} />
-      <Animated.View entering={FadeInDown.duration(420)} style={[styles.bannerCopy, { paddingHorizontal: gutter || px(space.xl) }]}>
+      <Animated.View entering={EnterFromBelow.duration(420)} style={[styles.bannerCopy, { paddingHorizontal: gutter || px(space.xl) }]}>
         <Text style={[styles.bannerEyebrow, { color: theme.primary }]}>{eyebrow}</Text>
         <View style={styles.bannerTitleRow}>
           <Text style={[styles.bannerTitle, { color: theme.text }, mcTextShadow(theme.text, 40)]}>{title}</Text>
@@ -291,6 +297,33 @@ export function PageBanner({
         {subtitle ? <Text style={[styles.bannerSub, { color: theme.textDim }]}>{subtitle}</Text> : null}
       </Animated.View>
     </View>
+  );
+}
+
+/**
+ * Text for a Pixelify heading, with its digits set in the sans.
+ *
+ * Pixelify's "2" reads as an "8" and its "5" as an "S" at card sizes — "24°
+ * Shift" came out as "84° Shift" and a count of 12 as 18 on a phone. Nest this
+ * inside the heading's own <Text>: the letters keep the pixel face, and only
+ * the digit runs switch to the sans, inheriting size and colour.
+ */
+export function Digits({ children }: { children: string | number | null | undefined }) {
+  const text = String(children ?? "");
+  const parts = text.split(/(\d+)/);
+  if (parts.length === 1) return <>{text}</>;
+  return (
+    <>
+      {parts.map((part, i) =>
+        i % 2 === 1 ? (
+          <Text key={i} style={styles.digits}>
+            {part}
+          </Text>
+        ) : (
+          part
+        ),
+      )}
+    </>
   );
 }
 
@@ -312,6 +345,7 @@ const styles = StyleSheet.create({
   },
   sectionAction: { fontFamily: fonts.displayMedium, fontSize: px(15) },
   backdropImage: { transform: [{ scale: 1.6 }] },
+  digits: { fontFamily: fonts.bodyBold, fontVariant: ["tabular-nums"] },
   banner: { overflow: "hidden", justifyContent: "flex-end" },
   bannerFoot: { position: "absolute", left: 0, right: 0, bottom: 0, height: px(6) },
   bannerCopy: { paddingBottom: px(14) },

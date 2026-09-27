@@ -1,4 +1,5 @@
-import { Easing } from "react-native-reanimated";
+import { Platform } from "react-native";
+import { Easing, FadeIn, FadeInDown, FadeInUp } from "react-native-reanimated";
 
 /**
  * How things move in Minecraft.
@@ -63,3 +64,15 @@ export const timing = {
  */
 export const SCREEN_ANIMATION = "fade" as const;
 export const SCREEN_ANIMATION_DURATION = duration.screen;
+
+/**
+ * Entry animations for content, safe on Android.
+ *
+ * On Android the slide-in variants (FadeInDown / FadeInUp) were seen stopping
+ * part-way — on a Motorola Edge 40, a banner, a section and grid tiles were
+ * left ~25pt below where they belong, overlapping what came next, until the
+ * screen remounted. Android gets a plain fade instead; iOS keeps the slide.
+ * Same builder API (.duration, .delay, .easing) either way.
+ */
+export const EnterFromBelow = Platform.OS === "android" ? FadeIn : FadeInDown;
+export const EnterFromAbove = Platform.OS === "android" ? FadeIn : FadeInUp;
