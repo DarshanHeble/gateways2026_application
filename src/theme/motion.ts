@@ -47,10 +47,10 @@ export const linear = Easing.linear;
 export const timing = {
   press: { duration: duration.instant, easing: linear },
   select: { duration: duration.quick, easing: linear },
-  /** Screen-level movement, visibly stepped. */
-  screen: { duration: duration.screen, easing: stepped(6) },
-  /** A sheet sliding up: stepped, so it climbs in chunks like an inventory. */
-  sheet: { duration: duration.screen, easing: stepped(8) },
+  /** Screen-level movement: smooth and responsive. */
+  screen: { duration: duration.screen, easing: Easing.out(Easing.cubic) },
+  /** A sheet sliding up: fluid 60/120fps ease-out curve. */
+  sheet: { duration: 220, easing: Easing.out(Easing.cubic) },
   cover: { duration: duration.cover, easing: linear },
 } as const;
 

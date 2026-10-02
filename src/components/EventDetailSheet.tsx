@@ -277,7 +277,14 @@ export function EventDetailSheet({
                     square behind it (see EventArt). */}
                 {art ? (
                   <View style={styles.artClip}>
-                    <Image source={art} style={styles.artFill} contentFit="cover" />
+                    <Image
+                      source={art}
+                      style={styles.artFill}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                      allowDownscaling={true}
+                      priority="high"
+                    />
                   </View>
                 ) : null}
               </View>

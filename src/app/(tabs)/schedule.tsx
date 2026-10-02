@@ -1,3 +1,4 @@
+import { FadeOnFocus } from "@/components/FadeOnFocus";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Dimensions, Pressable, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -258,16 +259,20 @@ export default function ScheduleTab() {
   const [refreshing, setRefreshing] = useState(false);
 
   // Re-read on focus: Home and Events edit the same lineup.
+  const lastScheduleLineupRaw = React.useRef<string | null>(null);
   useFocusEffect(
     useCallback(() => {
       let active = true;
       AsyncStorage.getItem(LINEUP_STORAGE_KEY).then((raw) => {
         if (!active) return;
-        try {
-          const ids = raw ? JSON.parse(raw) : [];
-          setLineup(Array.isArray(ids) ? ids : []);
-        } catch {
-          setLineup([]);
+        if (raw !== lastScheduleLineupRaw.current) {
+          lastScheduleLineupRaw.current = raw;
+          try {
+            const ids = raw ? JSON.parse(raw) : [];
+            setLineup(Array.isArray(ids) ? ids : []);
+          } catch {
+            setLineup([]);
+          }
         }
       });
       return () => {
@@ -279,11 +284,13 @@ export default function ScheduleTab() {
   const toggleLineup = useCallback(
     async (id: string) => {
       Haptics.selectionAsync().catch(() => {});
-      const next = lineup.includes(id) ? lineup.filter((x) => x !== id) : [...lineup, id];
-      setLineup(next);
-      await AsyncStorage.setItem(LINEUP_STORAGE_KEY, JSON.stringify(next));
+      setLineup((prev) => {
+        const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+        AsyncStorage.setItem(LINEUP_STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+        return next;
+      });
     },
-    [lineup],
+    [],
   );
 
   const onRefresh = useCallback(async () => {
@@ -350,15 +357,18 @@ export default function ScheduleTab() {
   // A key per view, so rows replay their entrance when the day or filter changes.
   const viewKey = `${safeDay}-${filter}`;
 
+  const handleOpen = useCallback((id: string) => setOpenId(id), []);
+
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
+      <FadeOnFocus>
       <Animated.ScrollView
         onScroll={onScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: px(40) }}
+        contentContainerStyle={styles.scrollPadding}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -379,21 +389,25 @@ export default function ScheduleTab() {
                 contentFit="cover"
                 contentPosition={{ top: "64%", left: "50%" }}
                 transition={250}
+                cachePolicy="memory-disk"
+                priority="high"
               />
             ) : null}
           </Animated.View>
-          <Svg style={StyleSheet.absoluteFill} width="100%" height={BANNER_H}>
-            <Defs>
-              <LinearGradient id="scheduleFade" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0%" stopColor={theme.background} stopOpacity={0.3} />
-                <Stop offset="22%" stopColor={theme.background} stopOpacity={0.05} />
-                <Stop offset="58%" stopColor={theme.background} stopOpacity={0.82} />
-                <Stop offset="90%" stopColor={theme.background} stopOpacity={1} />
-                <Stop offset="100%" stopColor={theme.background} stopOpacity={1} />
-              </LinearGradient>
-            </Defs>
-            <Rect width="100%" height={BANNER_H} fill="url(#scheduleFade)" />
-          </Svg>
+          <View style={StyleSheet.absoluteFill} pointerEvents="none" renderToHardwareTextureAndroid={true} shouldRasterizeIOS={true}>
+            <Svg style={StyleSheet.absoluteFill} width="100%" height={BANNER_H}>
+              <Defs>
+                <LinearGradient id="scheduleFade" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0%" stopColor={theme.background} stopOpacity={0.3} />
+                  <Stop offset="22%" stopColor={theme.background} stopOpacity={0.05} />
+                  <Stop offset="58%" stopColor={theme.background} stopOpacity={0.82} />
+                  <Stop offset="90%" stopColor={theme.background} stopOpacity={1} />
+                  <Stop offset="100%" stopColor={theme.background} stopOpacity={1} />
+                </LinearGradient>
+              </Defs>
+              <Rect width="100%" height={BANNER_H} fill="url(#scheduleFade)" />
+            </Svg>
+          </View>
           <View pointerEvents="none" style={[styles.bannerFoot, { backgroundColor: theme.background }]} />
 
           <Animated.View entering={EnterFromBelow.duration(420)} style={styles.bannerCopy}>
@@ -459,7 +473,7 @@ export default function ScheduleTab() {
               countdown={leadCountdown}
               now={now}
               untimedCount={day.timeline.length - dayTimed.length}
-              onOpen={(id) => setOpenId(id)}
+              onOpen={handleOpen}
             />
           ) : null}
 
@@ -506,17 +520,16 @@ export default function ScheduleTab() {
             <View key={`timed-${viewKey}`}>
               <SectionHeader icon="schedule" title="On the clock" count={timed.length} />
               {timed.map((item, i) => (
-                <Animated.View key={item.id} entering={EnterFromBelow.duration(320).delay(i * 50)}>
                   <TimeRow
+                    key={item.id}
                     item={item}
                     event={asEvent(item, events)}
                     last={i === timed.length - 1}
                     live={isLive(day, item, now)}
                     tracked={lineup.includes(item.id)}
-                    onPress={() => setOpenId(item.id)}
-                    onToggle={() => toggleLineup(item.id)}
+                    onPress={handleOpen}
+                    onToggle={toggleLineup}
                   />
-                </Animated.View>
               ))}
             </View>
           ) : null}
@@ -532,15 +545,14 @@ export default function ScheduleTab() {
                   stall on Android and leave a tile offset over the row below. */}
               <View style={styles.grid}>
                 {unscheduled.map((item, i) => (
-                  <Animated.View key={item.id} entering={FadeIn.duration(320).delay(i * 40)}>
                     <TbaTile
+                      key={item.id}
                       item={item}
                       event={asEvent(item, events)}
                       tracked={lineup.includes(item.id)}
-                      onPress={() => setOpenId(item.id)}
-                      onToggle={() => toggleLineup(item.id)}
+                      onPress={handleOpen}
+                      onToggle={toggleLineup}
                     />
-                  </Animated.View>
                 ))}
               </View>
             </View>
@@ -576,6 +588,7 @@ export default function ScheduleTab() {
           </View>
         </View>
       </Animated.ScrollView>
+      </FadeOnFocus>
 
       {/* ── Top bar: appears once the banner scrolls away ──────────────── */}
       <Animated.View
@@ -619,7 +632,7 @@ export default function ScheduleTab() {
  * The days as tiles, with the hotbar selector sliding to the chosen one — the
  * same gesture as the tab bar, so choosing a day feels like choosing a slot.
  */
-function DayPicker({
+const DayPicker = React.memo(function DayPicker({
   days,
   selected,
   lineup,
@@ -686,20 +699,12 @@ function DayPicker({
       ) : null}
     </View>
   );
-}
+});
 
 /**
  * The day card: what's first, then the whole day on one clock.
- *
- * The first version was a dark media block with a row of unlabeled colour bars
- * under it — pretty, but you had to already know what each bar was. Now every
- * timed slot gets its own labelled row (name and times, then a bar on a shared
- * 8 AM → 8 PM scale), there is a legend for the ore colours, a "now" line on the
- * day itself, and a slot that runs past midnight says so. It follows the colour
- * mode like the rest of the page; only the countdown tooltip stays dark, because
- * it is an in-game overlay.
  */
-function DayCard({
+const DayCard = React.memo(function DayCard({
   day,
   timed,
   lead,
@@ -918,7 +923,7 @@ function DayCard({
       </View>
     </Animated.View>
   );
-}
+});
 
 /** An item sprite for rows with no artwork — the ceremonies. */
 function ArtOrSprite({ event, size }: { event: EventItem; size: number }) {
@@ -927,7 +932,7 @@ function ArtOrSprite({ event, size }: { event: EventItem; size: number }) {
 }
 
 /** One timed slot: the time, a stop on the rail, and the card. */
-function TimeRow({
+const TimeRow = React.memo(function TimeRow({
   item,
   event,
   last,
@@ -941,8 +946,8 @@ function TimeRow({
   last: boolean;
   live: boolean;
   tracked: boolean;
-  onPress: () => void;
-  onToggle: () => void;
+  onPress: (id: string) => void;
+  onToggle: (id: string) => void;
 }) {
   const { theme } = useBlockTheme();
   const surface = useSurface();
@@ -964,7 +969,7 @@ function TimeRow({
       </View>
 
       <PressScale
-        onPress={onPress}
+        onPress={() => onPress(item.id)}
         containerStyle={styles.cardTarget}
         style={[
           styles.card,
@@ -994,14 +999,14 @@ function TimeRow({
             {[item.venue, length].filter(Boolean).join(" · ")}
           </Text>
         </View>
-        <LineupToggle active={tracked} title={item.title} onPress={onToggle} />
+        <LineupToggle active={tracked} title={item.title} onPress={() => onToggle(item.id)} />
       </PressScale>
     </View>
   );
-}
+});
 
 /** An untimed event: art first, then what and where. */
-function TbaTile({
+const TbaTile = React.memo(function TbaTile({
   item,
   event,
   tracked,
@@ -1011,14 +1016,14 @@ function TbaTile({
   item: ScheduleItem;
   event: EventItem;
   tracked: boolean;
-  onPress: () => void;
-  onToggle: () => void;
+  onPress: (id: string) => void;
+  onToggle: (id: string) => void;
 }) {
   const { theme, isDark } = useBlockTheme();
   const surface = useSurface();
   return (
     <PressScale
-      onPress={onPress}
+      onPress={() => onPress(item.id)}
       style={[styles.tile, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
     >
       <View style={[styles.tileArt, { backgroundColor: surface.slot }]}>
@@ -1029,24 +1034,25 @@ function TbaTile({
           <Text style={styles.tileTagText}>{categoryTag(item.category)}</Text>
         </View>
         <View style={styles.tileToggle}>
-          <LineupToggle active={tracked} title={item.title} onPress={onToggle} onArt />
+          <LineupToggle active={tracked} title={item.title} onPress={() => onToggle(item.id)} onArt />
         </View>
       </View>
       <View style={styles.tileBody}>
         <Text style={[styles.tileTitle, { color: theme.text }]} numberOfLines={1}>
           {item.title}
         </Text>
-        <Text style={[styles.tileMeta, { color: theme.textDim }]} numberOfLines={1}>
+        <Text style={[styles.tileMeta, { color: theme.textDim }]}>
           {item.subtitle || item.venue || "Venue to be announced"}
         </Text>
       </View>
     </PressScale>
   );
-}
+});
 
 // ── Styles ──────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  scrollPadding: { paddingBottom: px(40) },
   root: { flex: 1 },
 
   banner: { overflow: "hidden", justifyContent: "flex-end" },

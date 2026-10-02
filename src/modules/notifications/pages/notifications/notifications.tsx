@@ -1,5 +1,6 @@
+import { FadeOnFocus } from "@/components/FadeOnFocus";
 import React, { useCallback, useMemo, useState } from "react";
-import { Pressable, RefreshControl, StatusBar, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, RefreshControl, StatusBar, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import Animated, {
@@ -154,31 +155,38 @@ export function NotificationsScreen() {
     { id: "mine", label: "For you", count: mineCount },
   ];
 
-  const renderCard = ({ n, event }: { n: AppNotification; event: EventItem | null }, i: number) => (
-    <Animated.View key={n.id} entering={EnterFromBelow.duration(320).delay(Math.min(i, 8) * 40)}>
-      <AlertCard n={n} event={event} onPress={() => onOpen(n, event)} />
-    </Animated.View>
+  const firstUnreadId = fresh[0]?.n.id;
+  const firstEarlierId = earlier[0]?.n.id;
+
+  const renderNotificationItem = useCallback(
+    ({ item }: { item: { n: AppNotification; event: EventItem | null } }) => {
+      const showNewHeader = item.n.id === firstUnreadId && fresh.length > 0;
+      const showEarlierHeader = item.n.id === firstEarlierId && earlier.length > 0;
+
+      return (
+        <View style={styles.itemWrapper}>
+          {showNewHeader ? (
+            <View style={styles.sectionHeaderWrap}>
+              <SectionHeader icon="alerts" title="New" count={fresh.length} />
+            </View>
+          ) : null}
+          {showEarlierHeader ? (
+            <View style={styles.sectionHeaderWrap}>
+              <SectionHeader icon="schedule" title="Earlier" count={earlier.length} />
+            </View>
+          ) : null}
+          <AlertCard n={item.n} event={item.event} onPress={() => onOpen(item.n, item.event)} />
+        </View>
+      );
+    },
+    [earlier.length, firstEarlierId, firstUnreadId, fresh.length, onOpen]
   );
 
-  return (
-    <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+  const keyExtractor = useCallback((item: { n: AppNotification; event: EventItem | null }) => item.n.id, []);
 
-      <Animated.ScrollView
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: px(40) }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.primary}
-            colors={[theme.primary]}
-            progressViewOffset={insets.top}
-          />
-        }
-      >
+  const ListHeader = useMemo(
+    () => (
+      <View>
         {/* ── Banner ──────────────────────────────────────────────────── */}
         <View style={[styles.banner, { height: BANNER_H }]}>
           <Animated.View style={[StyleSheet.absoluteFill, bannerArtStyle]}>
@@ -189,21 +197,25 @@ export function NotificationsScreen() {
                 contentFit="cover"
                 contentPosition={{ top: "92%", left: "50%" }}
                 transition={250}
+                cachePolicy="memory-disk"
+                priority="high"
               />
             ) : null}
           </Animated.View>
-          <Svg style={StyleSheet.absoluteFill} width="100%" height={BANNER_H}>
-            <Defs>
-              <LinearGradient id="alertsFade" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0%" stopColor={theme.background} stopOpacity={0.3} />
-                <Stop offset="22%" stopColor={theme.background} stopOpacity={0.05} />
-                <Stop offset="58%" stopColor={theme.background} stopOpacity={0.82} />
-                <Stop offset="90%" stopColor={theme.background} stopOpacity={1} />
-                <Stop offset="100%" stopColor={theme.background} stopOpacity={1} />
-              </LinearGradient>
-            </Defs>
-            <Rect width="100%" height={BANNER_H} fill="url(#alertsFade)" />
-          </Svg>
+          <View style={StyleSheet.absoluteFill} pointerEvents="none" renderToHardwareTextureAndroid={true} shouldRasterizeIOS={true}>
+            <Svg style={StyleSheet.absoluteFill} width="100%" height={BANNER_H}>
+              <Defs>
+                <LinearGradient id="alertsFade" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0%" stopColor={theme.background} stopOpacity={0.3} />
+                  <Stop offset="22%" stopColor={theme.background} stopOpacity={0.05} />
+                  <Stop offset="58%" stopColor={theme.background} stopOpacity={0.82} />
+                  <Stop offset="90%" stopColor={theme.background} stopOpacity={1} />
+                  <Stop offset="100%" stopColor={theme.background} stopOpacity={1} />
+                </LinearGradient>
+              </Defs>
+              <Rect width="100%" height={BANNER_H} fill="url(#alertsFade)" />
+            </Svg>
+          </View>
           <View pointerEvents="none" style={[styles.bannerFoot, { backgroundColor: theme.background }]} />
 
           <Animated.View entering={EnterFromBelow.duration(420)} style={styles.bannerCopy}>
@@ -238,8 +250,8 @@ export function NotificationsScreen() {
           </Animated.View>
         </View>
 
-        <View style={styles.body}>
-          {notifications.length ? (
+        {notifications.length ? (
+          <View style={styles.bodyHeader}>
             <View style={styles.filters}>
               {FILTERS.map((f) => {
                 const active = f.id === filter;
@@ -267,54 +279,88 @@ export function NotificationsScreen() {
                 );
               })}
             </View>
-          ) : null}
+          </View>
+        ) : null}
+      </View>
+    ),
+    [
+      BANNER_H,
+      FILTERS,
+      bannerArt,
+      bannerArtStyle,
+      filter,
+      markAllRead,
+      notifications.length,
+      theme,
+      unreadCount,
+    ]
+  );
 
-          {fresh.length ? (
-            <View key={`new-${filter}`}>
-              <SectionHeader icon="alerts" title="New" count={fresh.length} />
-              <View style={styles.list}>{fresh.map(renderCard)}</View>
-            </View>
-          ) : null}
+  const ListEmpty = useMemo(() => {
+    return (
+      <View style={styles.body}>
+        <Animated.View
+          key={`empty-${filter}`}
+          entering={EnterFromBelow.duration(320)}
+          style={[styles.empty, { borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}
+        >
+          <PixelIcon name="alerts" size={px(36)} />
+          <Text style={[styles.emptyTitle, { color: theme.text }]}>
+            {filter === "unread"
+              ? "Nothing unread"
+              : filter === "mine"
+                ? "Nothing about your lineup yet"
+                : "All quiet for now"}
+          </Text>
+          <Text style={[styles.emptyBody, { color: theme.textDim }]}>
+            {filter === "mine"
+              ? "Announcements about events in your lineup will show up here."
+              : "Venue changes, reporting times and results land here the moment organisers post them. Pull down to check."}
+          </Text>
+          <Pressable
+            onPress={() => (filter === "all" ? router.navigate("/(tabs)/events" as never) : setFilter("all"))}
+            hitSlop={px(10)}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.emptyAction, { color: theme.primary }]}>
+              {filter === "all" ? "Browse events" : "Show all alerts"}
+            </Text>
+          </Pressable>
+        </Animated.View>
+      </View>
+    );
+  }, [filter, theme]);
 
-          {earlier.length ? (
-            <View key={`earlier-${filter}`}>
-              <SectionHeader icon="schedule" title="Earlier" count={earlier.length} />
-              <View style={styles.list}>{earlier.map(renderCard)}</View>
-            </View>
-          ) : null}
+  return (
+    <View style={[styles.root, { backgroundColor: theme.background }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
-          {!visible.length ? (
-            <Animated.View
-              key={`empty-${filter}`}
-              entering={EnterFromBelow.duration(320)}
-              style={[styles.empty, { borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}
-            >
-              <PixelIcon name="alerts" size={px(36)} />
-              <Text style={[styles.emptyTitle, { color: theme.text }]}>
-                {filter === "unread"
-                  ? "Nothing unread"
-                  : filter === "mine"
-                    ? "Nothing about your lineup yet"
-                    : "All quiet for now"}
-              </Text>
-              <Text style={[styles.emptyBody, { color: theme.textDim }]}>
-                {filter === "mine"
-                  ? "Announcements about events in your lineup will show up here."
-                  : "Venue changes, reporting times and results land here the moment organisers post them. Pull down to check."}
-              </Text>
-              <Pressable
-                onPress={() => (filter === "all" ? router.navigate("/(tabs)/events" as never) : setFilter("all"))}
-                hitSlop={px(10)}
-                accessibilityRole="button"
-              >
-                <Text style={[styles.emptyAction, { color: theme.primary }]}>
-                  {filter === "all" ? "Browse events" : "Show all alerts"}
-                </Text>
-              </Pressable>
-            </Animated.View>
-          ) : null}
-        </View>
-      </Animated.ScrollView>
+      <FadeOnFocus>
+      <Animated.FlatList
+        data={visible}
+        keyExtractor={keyExtractor}
+        renderItem={renderNotificationItem}
+        initialNumToRender={6}
+        maxToRenderPerBatch={8}
+        windowSize={5}
+        removeClippedSubviews={Platform.OS === "android"}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: px(40) }}
+        ListHeaderComponent={ListHeader}
+        ListEmptyComponent={ListEmpty}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.primary}
+            colors={[theme.primary]}
+            progressViewOffset={insets.top}
+          />
+        }
+      />
+      </FadeOnFocus>
 
       {/* ── Top bar: appears once the banner scrolls away ──────────────── */}
       <Animated.View
@@ -338,7 +384,15 @@ export function NotificationsScreen() {
 }
 
 /** One announcement: who it's for, the message, and when. */
-function AlertCard({ n, event, onPress }: { n: AppNotification; event: EventItem | null; onPress: () => void }) {
+const AlertCard = React.memo(function AlertCard({
+  n,
+  event,
+  onPress,
+}: {
+  n: AppNotification;
+  event: EventItem | null;
+  onPress: () => void;
+}) {
   const { theme } = useBlockTheme();
   const surface = useSurface();
   const hasArt = !!event && !!(getEventImage(event.title) || event.image_url);
@@ -377,7 +431,7 @@ function AlertCard({ n, event, onPress }: { n: AppNotification; event: EventItem
       </View>
     </PressScale>
   );
-}
+});
 
 // ── Styles ──────────────────────────────────────────────────────────────────
 
@@ -409,6 +463,9 @@ const styles = StyleSheet.create({
   markAllText: { fontFamily: fonts.displayMedium, fontSize: px(13) },
 
   body: { paddingHorizontal: GUTTER },
+  bodyHeader: { paddingHorizontal: GUTTER, marginBottom: px(12) },
+  itemWrapper: { paddingHorizontal: GUTTER, marginBottom: px(10) },
+  sectionHeaderWrap: { marginBottom: px(8) },
 
   filters: { flexDirection: "row", gap: px(8), marginTop: px(4) },
   chip: {

@@ -1,7 +1,8 @@
-import React from "react";
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import React, { useCallback } from "react";
+import { Platform, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { Image } from "expo-image";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
 import { EnterFromBelow } from "@/theme/motion";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
@@ -22,34 +23,43 @@ import { fonts, space } from "@/theme/tokens";
  * Home introduced them; Schedule uses the same ones so the two read as one app.
  */
 
-/** Gentle scale-down on press. Timed, not sprung — it settles, it doesn't bounce. */
+/** Gentle snappy scale-down and tactile haptic feedback on press. */
 export function PressScale({
   children,
   onPress,
   style,
   containerStyle,
+  haptic = true,
 }: {
   children: React.ReactNode;
-  onPress: () => void;
+  onPress?: () => void;
   style?: StyleProp<ViewStyle>;
   /** For the touch target itself, e.g. `flex: 1` to fill a row. */
   containerStyle?: StyleProp<ViewStyle>;
+  /** Whether to trigger tactile light feedback on touch down. Defaults to true. */
+  haptic?: boolean;
 }) {
   const scale = useSharedValue(1);
   const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  const handlePressIn = useCallback(() => {
+    // eslint-disable-next-line react-hooks/immutability
+    scale.value = withTiming(0.965, { duration: 80 });
+    if (haptic) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+  }, [haptic, scale]);
+
+  const handlePressOut = useCallback(() => {
+    // eslint-disable-next-line react-hooks/immutability
+    scale.value = withTiming(1, { duration: 120 });
+  }, [scale]);
+
   return (
     <Pressable
       onPress={onPress}
-      // Shared values are mutable by design; the compiler lint rule doesn't
-      // recognise that yet (same exception as PixelButton).
-      onPressIn={() => {
-        // eslint-disable-next-line react-hooks/immutability
-        scale.value = withTiming(0.975, { duration: 90 });
-      }}
-      onPressOut={() => {
-        // eslint-disable-next-line react-hooks/immutability
-        scale.value = withTiming(1, { duration: 140 });
-      }}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       accessibilityRole="button"
       style={containerStyle}
     >
@@ -121,7 +131,10 @@ export function ArtBackdrop({
         source={source}
         style={[StyleSheet.absoluteFill, styles.backdropImage]}
         contentFit="cover"
-        blurRadius={36}
+        blurRadius={Platform.OS === "android" ? 10 : 16}
+        cachePolicy="memory-disk"
+        allowDownscaling={true}
+        priority="low"
       />
       <View
         style={[StyleSheet.absoluteFill, { backgroundColor: tint ?? theme.surfaceElevated, opacity: strength }]}
@@ -156,7 +169,14 @@ export function EventArt({ event, size }: { event: EventItem; size: number }) {
   if (!source) return null;
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, overflow: "hidden" }}>
-      <Image source={source} style={{ width: size, height: size }} contentFit="cover" />
+      <Image
+        source={source}
+        style={{ width: size, height: size }}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        allowDownscaling={true}
+        priority="normal"
+      />
     </View>
   );
 }
@@ -214,9 +234,15 @@ export function LineupToggle({
 }) {
   const { theme } = useBlockTheme();
   const surface = useSurface();
+
+  const handlePress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    onPress();
+  }, [onPress]);
+
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
       hitSlop={px(8)}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
@@ -273,20 +299,24 @@ export function PageBanner({
           contentFit="cover"
           contentPosition={{ top: "92%", left: "50%" }}
           transition={250}
+          cachePolicy="memory-disk"
+          priority="high"
         />
       ) : null}
-      <Svg style={StyleSheet.absoluteFill} width="100%" height={h}>
-        <Defs>
-          <LinearGradient id="pageBannerFade" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor={theme.background} stopOpacity={0.3} />
-            <Stop offset="22%" stopColor={theme.background} stopOpacity={0.05} />
-            <Stop offset="58%" stopColor={theme.background} stopOpacity={0.82} />
-            <Stop offset="90%" stopColor={theme.background} stopOpacity={1} />
-            <Stop offset="100%" stopColor={theme.background} stopOpacity={1} />
-          </LinearGradient>
-        </Defs>
-        <Rect width="100%" height={h} fill="url(#pageBannerFade)" />
-      </Svg>
+      <View style={StyleSheet.absoluteFill} pointerEvents="none" renderToHardwareTextureAndroid={true} shouldRasterizeIOS={true}>
+        <Svg style={StyleSheet.absoluteFill} width="100%" height={h}>
+          <Defs>
+            <LinearGradient id="pageBannerFade" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0%" stopColor={theme.background} stopOpacity={0.3} />
+              <Stop offset="22%" stopColor={theme.background} stopOpacity={0.05} />
+              <Stop offset="58%" stopColor={theme.background} stopOpacity={0.82} />
+              <Stop offset="90%" stopColor={theme.background} stopOpacity={1} />
+              <Stop offset="100%" stopColor={theme.background} stopOpacity={1} />
+            </LinearGradient>
+          </Defs>
+          <Rect width="100%" height={h} fill="url(#pageBannerFade)" />
+        </Svg>
+      </View>
       <View pointerEvents="none" style={[styles.bannerFoot, { backgroundColor: theme.background }]} />
       <Animated.View entering={EnterFromBelow.duration(420)} style={[styles.bannerCopy, { paddingHorizontal: gutter || px(space.xl) }]}>
         <Text style={[styles.bannerEyebrow, { color: theme.primary }]}>{eyebrow}</Text>

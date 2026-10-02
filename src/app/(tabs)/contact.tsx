@@ -1,3 +1,4 @@
+import { FadeOnFocus } from "@/components/FadeOnFocus";
 import { View, Text, StyleSheet, Linking, Alert, ScrollView, StatusBar } from "react-native";
 import Animated from "react-native-reanimated";
 import { EnterFromBelow } from "@/theme/motion";
@@ -43,6 +44,7 @@ export default function ContactTab() {
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <FadeOnFocus>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <PageBanner
           eyebrow="CREW ONLY"
@@ -63,8 +65,8 @@ export default function ContactTab() {
         <SectionHeader icon="crew" title="On call" count={TEAM_CONTACTS.length} />
         <View style={styles.list}>
           {TEAM_CONTACTS.map((contact, i) => (
-            <Animated.View key={contact.id} entering={EnterFromBelow.duration(320).delay(i * 50)}>
               <PressScale
+                key={contact.id}
                 onPress={() => handleCall(contact.phone)}
                 style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
               >
@@ -82,10 +84,10 @@ export default function ContactTab() {
                   <McGlyph name="phone" size={px(16)} color={theme.primary} />
                 </View>
               </PressScale>
-            </Animated.View>
           ))}
         </View>
       </ScrollView>
+      </FadeOnFocus>
     </View>
   );
 }

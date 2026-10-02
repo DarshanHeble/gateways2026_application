@@ -19,8 +19,6 @@ import { NotificationsProvider } from "@/modules/notifications";
 import { DataProvider } from "@/modules/core/DataProvider";
 import { NetworkProvider } from "@/modules/core/NetworkProvider";
 import { BlockThemeProvider } from "@/theme/BlockThemeContext";
-import { PaperProvider } from 'react-native-paper';
-import { minecraftTheme } from '@/theme/minecraftTheme';
 import { ServerStatus } from '@/components/ServerStatus';
 
 SplashScreen.preventAutoHideAsync();
@@ -80,28 +78,26 @@ export default function RootLayout() {
   if (!loaded && !error) return null;
 
   return (
-    <PaperProvider theme={minecraftTheme}>
-      <SafeAreaProvider>
-        <StatusBar style="light" />
-        <BlockThemeProvider>
-          <NetworkProvider>
-            {/*
-              Above the router so `resolveAsset` is primed before any screen
-              renders, and outside AuthProvider because artwork has nothing to do
-              with who is signed in.
-            */}
-            <AssetsProvider>
-              <AuthProvider>
-                <NotificationsProvider>
-                  <DataProvider>
-                    <RootLayoutNav />
-                  </DataProvider>
-                </NotificationsProvider>
-              </AuthProvider>
-            </AssetsProvider>
-          </NetworkProvider>
-        </BlockThemeProvider>
-      </SafeAreaProvider>
-    </PaperProvider>
+    <SafeAreaProvider>
+      <StatusBar style="light" />
+      <BlockThemeProvider>
+        <NetworkProvider>
+          {/*
+            Above the router so `resolveAsset` is primed before any screen
+            renders, and outside AuthProvider because artwork has nothing to do
+            with who is signed in.
+          */}
+          <AssetsProvider>
+            <AuthProvider>
+              <NotificationsProvider>
+                <DataProvider>
+                  <RootLayoutNav />
+                </DataProvider>
+              </NotificationsProvider>
+            </AuthProvider>
+          </AssetsProvider>
+        </NetworkProvider>
+      </BlockThemeProvider>
+    </SafeAreaProvider>
   );
 }

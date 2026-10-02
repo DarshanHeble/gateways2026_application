@@ -1,3 +1,4 @@
+import { FadeOnFocus } from "@/components/FadeOnFocus";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
@@ -205,16 +206,20 @@ export default function ProfileTab() {
   }, [schedule]);
 
   const [lineupCount, setLineupCount] = useState(0);
+  const lastProfileLineupRaw = React.useRef<string | null>(null);
   useFocusEffect(
     useCallback(() => {
       let active = true;
       AsyncStorage.getItem(LINEUP_STORAGE_KEY).then((raw) => {
         if (!active) return;
-        try {
-          const ids = raw ? JSON.parse(raw) : [];
-          setLineupCount(Array.isArray(ids) ? ids.length : 0);
-        } catch {
-          setLineupCount(0);
+        if (raw !== lastProfileLineupRaw.current) {
+          lastProfileLineupRaw.current = raw;
+          try {
+            const ids = raw ? JSON.parse(raw) : [];
+            setLineupCount(Array.isArray(ids) ? ids.length : 0);
+          } catch {
+            setLineupCount(0);
+          }
         }
       });
       return () => {
@@ -443,6 +448,7 @@ export default function ProfileTab() {
     >
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.background} />
 
+      <FadeOnFocus>
       <Animated.ScrollView
         onScroll={onScroll}
         scrollEventThrottle={16}
@@ -460,30 +466,38 @@ export default function ProfileTab() {
                 contentFit="cover"
                 contentPosition={{ top: "92%", left: "50%" }}
                 transition={250}
+                cachePolicy="memory-disk"
+                priority="high"
               />
             ) : null}
           </Animated.View>
-          <Svg style={StyleSheet.absoluteFill} width="100%" height={BANNER_H}>
-            <Defs>
-              <LinearGradient id="settingsFade" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0%" stopColor={theme.background} stopOpacity={0.3} />
-                <Stop offset="25%" stopColor={theme.background} stopOpacity={0.05} />
-                <Stop offset="62%" stopColor={theme.background} stopOpacity={0.8} />
-                <Stop offset="90%" stopColor={theme.background} stopOpacity={1} />
-                <Stop offset="100%" stopColor={theme.background} stopOpacity={1} />
-              </LinearGradient>
-            </Defs>
-            <Rect width="100%" height={BANNER_H} fill="url(#settingsFade)" />
-          </Svg>
+          <View style={StyleSheet.absoluteFill} pointerEvents="none" renderToHardwareTextureAndroid={true} shouldRasterizeIOS={true}>
+            <Svg style={StyleSheet.absoluteFill} width="100%" height={BANNER_H}>
+              <Defs>
+                <LinearGradient id="settingsFade" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0%" stopColor={theme.background} stopOpacity={0.3} />
+                  <Stop offset="25%" stopColor={theme.background} stopOpacity={0.05} />
+                  <Stop offset="62%" stopColor={theme.background} stopOpacity={0.8} />
+                  <Stop offset="90%" stopColor={theme.background} stopOpacity={1} />
+                  <Stop offset="100%" stopColor={theme.background} stopOpacity={1} />
+                </LinearGradient>
+              </Defs>
+              <Rect width="100%" height={BANNER_H} fill="url(#settingsFade)" />
+            </Svg>
+          </View>
           <View pointerEvents="none" style={[styles.pBannerFoot, { backgroundColor: theme.background }]} />
 
-          <Animated.View key={activeSkin.id} entering={EnterFromBelow.duration(480)} style={[styles.pSkin, skinDepthStyle]} pointerEvents="none">
-            <Image
-              source={resolveAsset(activeSkin.assetKey)}
-              style={StyleSheet.absoluteFill}
-              contentFit="contain"
-              contentPosition="bottom"
-            />
+          <Animated.View key={activeSkin.id} entering={EnterFromBelow.duration(480)} style={styles.pSkin} pointerEvents="none">
+            <Animated.View style={[StyleSheet.absoluteFill, skinDepthStyle]}>
+              <Image
+                source={resolveAsset(activeSkin.assetKey)}
+                style={StyleSheet.absoluteFill}
+                contentFit="contain"
+                contentPosition="bottom"
+                cachePolicy="memory-disk"
+                priority="high"
+              />
+            </Animated.View>
           </Animated.View>
 
           <View style={styles.pCopy}>
@@ -847,6 +861,7 @@ export default function ProfileTab() {
         {/* Bottom padding to clear floating navigation bar */}
         <View style={{ height: px(24) }} />
       </Animated.ScrollView>
+      </FadeOnFocus>
 
       {/* Skin Selection Modal with Slide-Down Gesture */}
       <Modal
@@ -909,6 +924,9 @@ export default function ProfileTab() {
                         source={resolveAsset(skin.assetKey)}
                         style={styles.skinCardImage}
                         contentFit="contain"
+                        cachePolicy="memory-disk"
+                        allowDownscaling={true}
+                        priority="low"
                       />
                     </View>
 

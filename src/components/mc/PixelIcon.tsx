@@ -293,6 +293,32 @@ export const ICON_COMPASS: PixelArt = {
   ],
 };
 
+/** An Ender Chest: obsidian shell with turquoise eye of ender latch */
+export const ICON_ENDER_CHEST: PixelArt = {
+  palette: {
+    O: "#1a162b",
+    o: "#0d0b17",
+    T: "#188e7b",
+    t: "#3cf4d2",
+    w: "#ffffff",
+    g: "#28343f",
+  },
+  rows: [
+    ".oooooooooo.",
+    "oOOOOOOOOOOo",
+    "oOggOOOOggOo",
+    "oOggOwwOggOo",
+    "oOOOOttOOOOo",
+    "oOOOOttOOOOo",
+    "oooooooooooo",
+    "oOOOOttOOOOo",
+    "oOOOOttOOOOo",
+    "oOggOOOOggOo",
+    "oOOOOOOOOOOo",
+    ".oooooooooo.",
+  ],
+};
+
 export const PIXEL_ICONS = {
   compass: ICON_COMPASS,
   gold: ICON_GOLD_INGOT,
@@ -306,6 +332,7 @@ export const PIXEL_ICONS = {
   crew: ICON_CREW,
   shout: ICON_SHOUT,
   diamond: ICON_DIAMOND,
+  enderChest: ICON_ENDER_CHEST,
 } as const;
 
 export type PixelIconName = keyof typeof PIXEL_ICONS;

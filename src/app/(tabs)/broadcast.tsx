@@ -1,3 +1,4 @@
+import { FadeOnFocus } from "@/components/FadeOnFocus";
 import React, { Suspense, lazy } from "react";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { colors } from "@/theme/tokens";
@@ -10,15 +11,19 @@ const BroadcastScreen = lazy(() =>
 
 export default function BroadcastTab() {
   return (
-    <Suspense
-      fallback={
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.gold.bright} />
-        </View>
-      }
-    >
-      <BroadcastScreen />
-    </Suspense>
+    <View style={{ flex: 1, backgroundColor: "#0d1018" }}>
+      <FadeOnFocus>
+        <Suspense
+          fallback={
+            <View style={styles.center}>
+              <ActivityIndicator size="large" color={colors.gold.bright} />
+            </View>
+          }
+        >
+          <BroadcastScreen />
+        </Suspense>
+      </FadeOnFocus>
+    </View>
   );
 }
 

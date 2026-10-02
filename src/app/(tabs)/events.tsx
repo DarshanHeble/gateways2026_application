@@ -1,7 +1,9 @@
+import { FadeOnFocus } from "@/components/FadeOnFocus";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -92,18 +94,22 @@ export default function EventsTab() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Re-read on every focus: Home and Schedule edit the same lineup, and reading
-  // it once on mount left this screen showing a stale one.
+  // Re-read on every focus: Home and Schedule edit the same lineup.
+  // Compare raw string before triggering state update to keep 60/120fps tab switches.
+  const lastLineupRaw = React.useRef<string | null>(null);
   useFocusEffect(
     useCallback(() => {
       let active = true;
       AsyncStorage.getItem(LINEUP_STORAGE_KEY).then((raw) => {
         if (!active) return;
-        try {
-          const ids = raw ? JSON.parse(raw) : [];
-          setLineup(Array.isArray(ids) ? ids : []);
-        } catch {
-          setLineup([]);
+        if (raw !== lastLineupRaw.current) {
+          lastLineupRaw.current = raw;
+          try {
+            const ids = raw ? JSON.parse(raw) : [];
+            setLineup(Array.isArray(ids) ? ids : []);
+          } catch {
+            setLineup([]);
+          }
         }
       });
       return () => {
@@ -115,11 +121,13 @@ export default function EventsTab() {
   const toggleLineup = useCallback(
     async (id: string) => {
       Haptics.selectionAsync().catch(() => {});
-      const next = lineup.includes(id) ? lineup.filter((x) => x !== id) : [...lineup, id];
-      setLineup(next);
-      await AsyncStorage.setItem(LINEUP_STORAGE_KEY, JSON.stringify(next));
+      setLineup((prev) => {
+        const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+        AsyncStorage.setItem(LINEUP_STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+        return next;
+      });
     },
-    [lineup],
+    [],
   );
 
   const onRefresh = useCallback(async () => {
@@ -183,28 +191,26 @@ export default function EventsTab() {
   }
 
   const viewKey = `${filter}-${q}`;
+  
+  const handleOpen = useCallback((id: string) => setOpenId(id), []);
 
-  return (
-    <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+  const renderTile = useCallback(
+    ({ item }: { item: EventItem }) => (
+      <EventTile
+        event={item}
+        tracked={lineup.includes(item.id)}
+        onPress={handleOpen}
+        onToggle={toggleLineup}
+      />
+    ),
+    [lineup, handleOpen, toggleLineup]
+  );
 
-      <Animated.ScrollView
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        contentContainerStyle={{ paddingBottom: px(40) }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.primary}
-            colors={[theme.primary]}
-            progressViewOffset={insets.top}
-          />
-        }
-      >
+  const keyExtractor = useCallback((item: EventItem) => item.id, []);
+
+  const ListHeader = useMemo(
+    () => (
+      <View>
         {/* ── Banner ──────────────────────────────────────────────────── */}
         <View style={[styles.banner, { height: BANNER_H }]}>
           <Animated.View style={[StyleSheet.absoluteFill, bannerArtStyle]}>
@@ -215,21 +221,25 @@ export default function EventsTab() {
                 contentFit="cover"
                 contentPosition={{ top: "92%", left: "50%" }}
                 transition={250}
+                cachePolicy="memory-disk"
+                priority="high"
               />
             ) : null}
           </Animated.View>
-          <Svg style={StyleSheet.absoluteFill} width="100%" height={BANNER_H}>
-            <Defs>
-              <LinearGradient id="eventsFade" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0%" stopColor={theme.background} stopOpacity={0.3} />
-                <Stop offset="22%" stopColor={theme.background} stopOpacity={0.05} />
-                <Stop offset="58%" stopColor={theme.background} stopOpacity={0.82} />
-                <Stop offset="90%" stopColor={theme.background} stopOpacity={1} />
-                <Stop offset="100%" stopColor={theme.background} stopOpacity={1} />
-              </LinearGradient>
-            </Defs>
-            <Rect width="100%" height={BANNER_H} fill="url(#eventsFade)" />
-          </Svg>
+          <View style={StyleSheet.absoluteFill} pointerEvents="none" renderToHardwareTextureAndroid={true} shouldRasterizeIOS={true}>
+            <Svg style={StyleSheet.absoluteFill} width="100%" height={BANNER_H}>
+              <Defs>
+                <LinearGradient id="eventsFade" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0%" stopColor={theme.background} stopOpacity={0.3} />
+                  <Stop offset="22%" stopColor={theme.background} stopOpacity={0.05} />
+                  <Stop offset="58%" stopColor={theme.background} stopOpacity={0.82} />
+                  <Stop offset="90%" stopColor={theme.background} stopOpacity={1} />
+                  <Stop offset="100%" stopColor={theme.background} stopOpacity={1} />
+                </LinearGradient>
+              </Defs>
+              <Rect width="100%" height={BANNER_H} fill="url(#eventsFade)" />
+            </Svg>
+          </View>
           <View pointerEvents="none" style={[styles.bannerFoot, { backgroundColor: theme.background }]} />
 
           <Animated.View entering={EnterFromBelow.duration(420)} style={styles.bannerCopy}>
@@ -315,71 +325,121 @@ export default function EventsTab() {
               <Spotlight
                 event={spotlight}
                 tracked={lineup.includes(spotlight.id)}
-                onPress={() => setOpenId(spotlight.id)}
-                onToggle={() => toggleLineup(spotlight.id)}
+                onPress={handleOpen}
+                onToggle={toggleLineup}
               />
             </Animated.View>
           ) : null}
 
-          {/* ── Grid ─────────────────────────────────────────────────── */}
           {grid.length ? (
-            <View key={`grid-${viewKey}`}>
-              <SectionHeader
-                icon="events"
-                title={q ? "Results" : filter === "lineup" ? "Your lineup" : showSpotlight ? "All events" : "Events"}
-                count={grid.length}
-              />
-              {/* Tiles fade in (opacity only): in a wrapping grid a slide-in could
-                  stall on Android and leave a tile offset over the row below. */}
-              <View style={styles.grid}>
-                {grid.map((e, i) => (
-                  <Animated.View key={e.id} entering={FadeIn.duration(320).delay(Math.min(i, 8) * 40)}>
-                    <EventTile
-                      event={e}
-                      tracked={lineup.includes(e.id)}
-                      onPress={() => setOpenId(e.id)}
-                      onToggle={() => toggleLineup(e.id)}
-                    />
-                  </Animated.View>
-                ))}
-              </View>
-            </View>
-          ) : !showSpotlight ? (
-            <Animated.View
-              key={`empty-${viewKey}`}
-              entering={EnterFromBelow.duration(320)}
-              style={[styles.empty, { borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}
-            >
-              <PixelIcon name={filter === "lineup" && !q ? "diamond" : "compass"} size={px(30)} />
-              <Text style={[styles.emptyTitle, { color: theme.text }]}>
-                {q ? `Nothing matches "${query.trim()}"` : filter === "lineup" ? "Your lineup is empty" : "No events here yet"}
-              </Text>
-              <Text style={[styles.emptyBody, { color: theme.textDim }]}>
-                {q
-                  ? "Try a shorter word, or search all categories."
-                  : filter === "lineup"
-                    ? "Tap + on any event to add it. It'll show on Home and in your schedule."
-                    : "Pull down to refresh."}
-              </Text>
-              <Pressable
-                onPress={() => {
-                  setQuery("");
-                  setFilter("all");
-                }}
-                hitSlop={px(10)}
-                accessibilityRole="button"
-              >
-                <Text style={[styles.emptyAction, { color: theme.primary }]}>Show all events</Text>
-              </Pressable>
-            </Animated.View>
+            <SectionHeader
+              icon="events"
+              title={q ? "Results" : filter === "lineup" ? "Your lineup" : showSpotlight ? "All events" : "Events"}
+              count={grid.length}
+            />
           ) : null}
-
-          <View style={styles.footer}>
-            <PixelIcon name="events" size={px(14)} />
-            <Text style={[styles.footerText, { color: theme.textDim }]}>Prize pools per event · pull to refresh</Text>
-          </View>
         </View>
-      </Animated.ScrollView>
+      </View>
+    ),
+    [
+      BANNER_H,
+      bannerArt,
+      bannerArtStyle,
+      counts,
+      events.length,
+      filter,
+      grid.length,
+      lineup,
+      q,
+      query,
+      showSpotlight,
+      spotlight,
+      theme,
+      toggleLineup,
+      totalPool,
+    ]
+  );
+
+  const ListEmpty = useMemo(() => {
+    if (showSpotlight) return null;
+    return (
+      <View style={styles.body}>
+        <Animated.View
+          key={`empty-${viewKey}`}
+          entering={EnterFromBelow.duration(320)}
+          style={[styles.empty, { borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}
+        >
+          <PixelIcon name={filter === "lineup" && !q ? "diamond" : "compass"} size={px(30)} />
+          <Text style={[styles.emptyTitle, { color: theme.text }]}>
+            {q ? `Nothing matches "${query.trim()}"` : filter === "lineup" ? "Your lineup is empty" : "No events here yet"}
+          </Text>
+          <Text style={[styles.emptyBody, { color: theme.textDim }]}>
+            {q
+              ? "Try a shorter word, or search all categories."
+              : filter === "lineup"
+                ? "Tap + on any event to add it. It'll show on Home and in your schedule."
+                : "Pull down to refresh."}
+          </Text>
+          <Pressable
+            onPress={() => {
+              setQuery("");
+              setFilter("all");
+            }}
+            hitSlop={px(10)}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.emptyAction, { color: theme.primary }]}>Show all events</Text>
+          </Pressable>
+        </Animated.View>
+      </View>
+    );
+  }, [filter, q, query, showSpotlight, theme, viewKey]);
+
+  const ListFooter = useMemo(
+    () => (
+      <View style={styles.footer}>
+        <PixelIcon name="events" size={px(14)} />
+        <Text style={[styles.footerText, { color: theme.textDim }]}>Prize pools per event · pull to refresh</Text>
+      </View>
+    ),
+    [theme.textDim]
+  );
+
+  return (
+    <View style={[styles.root, { backgroundColor: theme.background }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+
+      <FadeOnFocus>
+      <Animated.FlatList
+        data={grid}
+        keyExtractor={keyExtractor}
+        renderItem={renderTile}
+        numColumns={2}
+        columnWrapperStyle={styles.columnWrapper}
+        initialNumToRender={6}
+        maxToRenderPerBatch={8}
+        windowSize={5}
+        removeClippedSubviews={Platform.OS === "android"}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        contentContainerStyle={styles.scrollPadding}
+        ListHeaderComponent={ListHeader}
+        ListEmptyComponent={ListEmpty}
+        ListFooterComponent={ListFooter}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.primary}
+            colors={[theme.primary]}
+            progressViewOffset={insets.top}
+          />
+        }
+      />
+      </FadeOnFocus>
 
       {/* ── Top bar: appears once the banner scrolls away ──────────────── */}
       <Animated.View
@@ -470,8 +530,7 @@ function Facts({
   );
 }
 
-/** The biggest prize pool, as a media card that follows the colour mode. */
-function Spotlight({
+const Spotlight = React.memo(function Spotlight({
   event,
   tracked,
   onPress,
@@ -479,14 +538,14 @@ function Spotlight({
 }: {
   event: EventItem;
   tracked: boolean;
-  onPress: () => void;
-  onToggle: () => void;
+  onPress: (id: string) => void;
+  onToggle: (id: string) => void;
 }) {
   const { theme, isDark } = useBlockTheme();
   const surface = useSurface();
   return (
     <PressScale
-      onPress={onPress}
+      onPress={() => onPress(event.id)}
       style={[styles.spot, !isDark && { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
     >
       <ArtBackdrop event={event} strength={isDark ? 0.5 : 0.82} tint={isDark ? "#0b0a0a" : theme.surfaceElevated} />
@@ -509,14 +568,14 @@ function Spotlight({
         <Facts event={event} onDark={isDark} />
       </View>
       <View style={styles.spotToggle}>
-        <LineupToggle active={tracked} title={event.title} onPress={onToggle} onArt={isDark} />
+        <LineupToggle active={tracked} title={event.title} onPress={() => onToggle(event.id)} onArt={isDark} />
       </View>
     </PressScale>
   );
-}
+});
 
 /** One event: art over a blurred copy of itself, then what, and the facts. */
-function EventTile({
+const EventTile = React.memo(function EventTile({
   event,
   tracked,
   onPress,
@@ -524,14 +583,14 @@ function EventTile({
 }: {
   event: EventItem;
   tracked: boolean;
-  onPress: () => void;
-  onToggle: () => void;
+  onPress: (id: string) => void;
+  onToggle: (id: string) => void;
 }) {
   const { theme, isDark } = useBlockTheme();
   const surface = useSurface();
   return (
     <PressScale
-      onPress={onPress}
+      onPress={() => onPress(event.id)}
       style={[
         styles.tile,
         {
@@ -548,7 +607,7 @@ function EventTile({
           <Text style={styles.tileTagText}>{categoryTag(event.type)}</Text>
         </View>
         <View style={styles.tileToggle}>
-          <LineupToggle active={tracked} title={event.title} onPress={onToggle} onArt />
+          <LineupToggle active={tracked} title={event.title} onPress={() => onToggle(event.id)} onArt />
         </View>
       </View>
       <View style={styles.tileBody}>
@@ -562,11 +621,12 @@ function EventTile({
       </View>
     </PressScale>
   );
-}
+});
 
 // ── Styles ──────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  scrollPadding: { paddingBottom: px(40) },
   root: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   loadingText: {
@@ -656,6 +716,7 @@ const styles = StyleSheet.create({
   factText: { fontFamily: fonts.bodyBold, fontSize: px(12.5) },
 
   grid: { flexDirection: "row", flexWrap: "wrap", gap: GRID_GAP },
+  columnWrapper: { gap: GRID_GAP, paddingHorizontal: GUTTER, marginBottom: GRID_GAP },
   tile: { width: TILE_W, borderWidth: StyleSheet.hairlineWidth },
   tileArt: {
     width: "100%",

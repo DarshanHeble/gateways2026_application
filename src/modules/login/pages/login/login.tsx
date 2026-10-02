@@ -11,6 +11,7 @@ import {
   StatusBar,
   StyleSheet,
   TextInput,
+  Keyboard,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -72,8 +73,19 @@ export function LoginScreen() {
   const passwordRef = useRef<TextInput>(null);
   const formTop = HERO_H * 0.72;
   const insets = useSafeAreaInsets();
+  
+  const [kbHeight, setKbHeight] = useState(0);
+  useEffect(() => {
+    const s1 = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow", (e) => setKbHeight(e.endCoordinates.height));
+    const s2 = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide", () => setKbHeight(0));
+    return () => {
+      s1.remove();
+      s2.remove();
+    };
+  }, []);
+
   const liftForm = () =>
-    setTimeout(() => scrollRef.current?.scrollTo({ y: Math.max(0, formTop - insets.top - px(8)), animated: true }), 60);
+    setTimeout(() => scrollRef.current?.scrollTo({ y: Math.max(0, formTop - insets.top - px(8)), animated: true }), 250);
   const { login, role, isReady } = useAuth();
   const params = useLocalSearchParams<{ handoffCode?: string }>();
   const form = useLoginForm((newRole) => {
@@ -151,10 +163,10 @@ export function LoginScreen() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardAvoid}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.keyboardAvoid}>
           <ScrollView
             ref={scrollRef}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(px(28), kbHeight) }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >

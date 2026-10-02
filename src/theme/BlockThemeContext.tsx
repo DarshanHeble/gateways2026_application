@@ -1,11 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
-import { LayoutAnimation, Platform, UIManager } from "react-native";
+import { LayoutAnimation } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { mojang, scaleColor } from "./minecraft";
 import * as Haptics from "expo-haptics";
-if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 export type BlockCategory =
   | "Gold"

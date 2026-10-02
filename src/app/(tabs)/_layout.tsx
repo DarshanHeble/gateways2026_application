@@ -20,7 +20,10 @@ export default function TabLayout() {
       // The bar is drawn wholesale by `Hotbar` — see that file for why the
       // stock one couldn't be styled into a hotbar from here.
       tabBar={(props) => <Hotbar {...props} />}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+        lazy: false,
+      }}
     >
       <Tabs.Screen
         name="index"

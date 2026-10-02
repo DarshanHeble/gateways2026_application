@@ -1,3 +1,4 @@
+import { FadeOnFocus } from "@/components/FadeOnFocus";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Dimensions,
@@ -96,25 +97,18 @@ export default function Home() {
   const [pickerVisible, setPickerVisible] = useState(false);
 
   /*
-   * The character standing in the key art is a different one of the cast each
-   * time you come back to Home — never the same one twice running — so the
-   * screen you see most does not go stale. Your own skin stays on the avatar.
-   * The first focus keeps the pick made at mount, so it doesn't swap on launch.
+   * The character standing in the key art. Stable on the home screen during
+   * tab navigation to avoid remounting 520ms entering animations and image loading.
    */
-  const [heroSkin, setHeroSkin] = useState(() => pickOtherSkin(-1));
-  const seenFocus = useRef(false);
-  useFocusEffect(
-    useCallback(() => {
-      if (seenFocus.current) setHeroSkin((prev) => pickOtherSkin(prev));
-      seenFocus.current = true;
-    }, []),
-  );
+  const [heroSkin] = useState(() => pickOtherSkin(-1));
 
   /*
    * Re-read on every focus, not just on mount. The Events tab and the profile
-   * screen write the same keys, and a lineup built over there used to stay
-   * invisible here until the app restarted.
+   * screen write the same keys. We check if raw string changed before JSON parsing
+   * to avoid re-render cascades while navigating between tabs.
    */
+  const lastIdsRaw = useRef<string | null>(null);
+  const lastProfRaw = useRef<string | null>(null);
   useFocusEffect(
     useCallback(() => {
       let active = true;
@@ -124,15 +118,21 @@ export default function Home() {
           AsyncStorage.getItem(STORAGE_PROFILE_KEY),
         ]);
         if (!active) return;
-        try {
-          setMyEventIds(ids ? JSON.parse(ids) : []);
-        } catch {
-          setMyEventIds([]);
+        if (ids !== lastIdsRaw.current) {
+          lastIdsRaw.current = ids;
+          try {
+            setMyEventIds(ids ? JSON.parse(ids) : []);
+          } catch {
+            setMyEventIds([]);
+          }
         }
-        try {
-          setProfile(prof ? JSON.parse(prof) : {});
-        } catch {
-          setProfile({});
+        if (prof !== lastProfRaw.current) {
+          lastProfRaw.current = prof;
+          try {
+            setProfile(prof ? JSON.parse(prof) : {});
+          } catch {
+            setProfile({});
+          }
         }
       })();
       return () => {
@@ -144,13 +144,13 @@ export default function Home() {
   const toggleTracked = useCallback(
     async (id: string) => {
       Haptics.selectionAsync().catch(() => {});
-      const next = myEventIds.includes(id)
-        ? myEventIds.filter((x) => x !== id)
-        : [...myEventIds, id];
-      setMyEventIds(next);
-      await AsyncStorage.setItem(STORAGE_MY_EVENTS, JSON.stringify(next));
+      setMyEventIds((prev) => {
+        const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+        AsyncStorage.setItem(STORAGE_MY_EVENTS, JSON.stringify(next)).catch(() => {});
+        return next;
+      });
     },
-    [myEventIds],
+    [],
   );
 
   // ── Derived ────────────────────────────────────────────────────────────────
@@ -252,6 +252,7 @@ export default function Home() {
     <View style={[styles.root, { backgroundColor: theme.background }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
+      <FadeOnFocus>
       <Animated.ScrollView
         onScroll={onScroll}
         scrollEventThrottle={16}
@@ -270,6 +271,8 @@ export default function Home() {
                 contentFit="cover"
                 contentPosition="top"
                 transition={250}
+                cachePolicy="memory-disk"
+                priority="high"
               />
             ) : null}
           </Animated.View>
@@ -279,21 +282,23 @@ export default function Home() {
           {/* Explicit height rather than "100%": react-native-svg resolves a
               percentage once, so a changed hero height left the fade short and a
               band of unfaded art showed beneath it. */}
-          <Svg style={StyleSheet.absoluteFill} width="100%" height={HERO_H}>
-            <Defs>
-              <LinearGradient id="heroFade" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0%" stopColor={theme.background} stopOpacity={0.25} />
-                <Stop offset="18%" stopColor={theme.background} stopOpacity={0} />
-                <Stop offset="46%" stopColor={theme.background} stopOpacity={0} />
-                <Stop offset="64%" stopColor={theme.background} stopOpacity={0.9} />
-                {/* Solid for the last stretch, so there is no hairline seam
-                    where the hero's last row of art meets the page. */}
-                <Stop offset="92%" stopColor={theme.background} stopOpacity={1} />
-                <Stop offset="100%" stopColor={theme.background} stopOpacity={1} />
-              </LinearGradient>
-            </Defs>
-            <Rect width="100%" height={HERO_H} fill="url(#heroFade)" />
-          </Svg>
+          <View style={StyleSheet.absoluteFill} pointerEvents="none" renderToHardwareTextureAndroid={true} shouldRasterizeIOS={true}>
+            <Svg style={StyleSheet.absoluteFill} width="100%" height={HERO_H}>
+              <Defs>
+                <LinearGradient id="heroFade" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0%" stopColor={theme.background} stopOpacity={0.25} />
+                  <Stop offset="18%" stopColor={theme.background} stopOpacity={0} />
+                  <Stop offset="46%" stopColor={theme.background} stopOpacity={0} />
+                  <Stop offset="64%" stopColor={theme.background} stopOpacity={0.9} />
+                  {/* Solid for the last stretch, so there is no hairline seam
+                      where the hero's last row of art meets the page. */}
+                  <Stop offset="92%" stopColor={theme.background} stopOpacity={1} />
+                  <Stop offset="100%" stopColor={theme.background} stopOpacity={1} />
+                </LinearGradient>
+              </Defs>
+              <Rect width="100%" height={HERO_H} fill="url(#heroFade)" />
+            </Svg>
+          </View>
           {/* And a solid foot under the fade, in case the art's drift scales
               it past the SVG's last row. */}
           <View pointerEvents="none" style={[styles.heroFoot, { backgroundColor: theme.background }]} />
@@ -312,6 +317,8 @@ export default function Home() {
                 style={StyleSheet.absoluteFill}
                 contentFit="contain"
                 contentPosition="bottom"
+                cachePolicy="memory-disk"
+                priority="high"
               />
             </Animated.View>
           </Animated.View>
@@ -503,6 +510,7 @@ export default function Home() {
           </View>
         </View>
       </Animated.ScrollView>
+      </FadeOnFocus>
 
       {/* ── Top bar: transparent over the art, solid once it scrolls away ── */}
       <View style={[styles.bar, { height: barHeight, paddingTop: insets.top }]} pointerEvents="box-none">
@@ -530,6 +538,9 @@ export default function Home() {
             style={styles.avatarImage}
             contentFit="cover"
             contentPosition="top"
+            cachePolicy="memory-disk"
+            allowDownscaling={true}
+            priority="normal"
           />
         </Pressable>
         {/* Left, beside the avatar. Centred, it ran into the floating server

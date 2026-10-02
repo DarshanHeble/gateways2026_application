@@ -315,6 +315,7 @@ export function McSlot({
   return (
     <Container
       onPress={onPress}
+      onPressIn={onPress ? () => Haptics.selectionAsync().catch(() => {}) : undefined}
       accessibilityRole={onPress ? "button" : undefined}
       accessibilityLabel={accessibilityLabel}
       accessibilityState={onPress ? { selected } : undefined}
