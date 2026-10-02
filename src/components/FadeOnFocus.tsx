@@ -8,7 +8,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { px } from "@/theme/scale";
 
-export function FadeOnFocus({ children, duration = 150 }: { children: React.ReactNode, duration?: number }) {
+export function FadeOnFocus({ children, duration = 350 }: { children: React.ReactNode, duration?: number }) {
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(-px(15));
 
