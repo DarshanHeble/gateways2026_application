@@ -1,130 +1,111 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
-  FadeIn,
-  FadeInDown,
-  FadeOut,
-  FadeOutDown,
+  Easing,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
+  withDelay,
   withSequence,
-  withSpring,
   withTiming,
+  type SharedValue,
 } from "react-native-reanimated";
-import { Tabs, router } from "expo-router";
+import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
+import { useBlockTheme } from "@/theme/BlockThemeContext";
+import { mojang, scaleColor } from "@/theme/minecraft";
+import { duration } from "@/theme/motion";
 import { px, pxFont } from "@/theme/scale";
 import { fonts } from "@/theme/tokens";
-import { SELECTOR_OVERHANG_RATIO, material, mcTextShadow, mojang } from "@/theme/minecraft";
 
-import { Frame, SelectionFrame, Grain, McDivider } from "./index";
-import { useBlockTheme } from "@/theme/BlockThemeContext";
-import { timing } from "@/theme/motion";
-import { McGlyph, PixelIcon, PixelIconName } from "./PixelIcon";
-import { useAuth } from "@/modules/auth";
+/**
+ * The tab bar: a panel docked to the bottom of the screen, built like the
+ * game's own GUI.
+ *
+ *  - The bar is a raised panel — a hard outline along its top and a lit bevel
+ *    under it — the same construction as every card and button in the app.
+ *  - Every tab shows its item and its name. Items are crisp pixel glyphs
+ *    (`TabGlyph`): outlines when idle, filled in when held, and on the dark
+ *    panel they carry the GUI's drop shadow, as items and text do in the game.
+ *  - The selected tab's item sits on a Minecraft button: solid accent, black
+ *    outline, lit top-left and shaded bottom-right edges, with a matching
+ *    marker in the panel's top edge. One button slides between tabs, so
+ *    switching reads as a single motion.
+ *  - Landing is the moment: the item pops, a few pixels burst off it, and an
+ *    enchantment glint sweeps across the button. All of it is skipped under
+ *    Reduce Motion.
+ *
+ * The button is the accent block's own colour in both modes (light mode's
+ * darkened accent is for gold *text* on cream, and as a fill it went olive),
+ * with dark or light ink chosen by its brightness. It follows the accent block
+ * chosen in Settings.
+ */
 
-type BottomTabBarProps = Parameters<
-  NonNullable<React.ComponentProps<typeof Tabs>["tabBar"]>
->[0];
+/** Dark ink on a bright block (gold, diamond, emerald), white on a deep one. */
+function inkFor(hex: string): string {
+  const h = hex.replace("#", "");
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.55 ? "#1d1606" : "#ffffff";
+}
+
+type BottomTabBarProps = Parameters<NonNullable<React.ComponentProps<typeof Tabs>["tabBar"]>>[0];
 type TabDescriptor = BottomTabBarProps["descriptors"][string];
 type TabRoute = BottomTabBarProps["state"]["routes"][number];
 
+const ICON = px(24);
+const BUTTON_H = px(34);
+const SWITCH_MS = duration.screen;
+const ROW_PAD = px(4);
+const GLINT_W = px(10);
+
 export function Hotbar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const { theme, isDark } = useBlockTheme();
-  const { role, logout } = useAuth();
-  const [chestOpen, setChestOpen] = useState(false);
+  const { theme, isDark, activeShape } = useBlockTheme();
+  const reduceMotion = useReducedMotion();
+  const fill = activeShape.seedColor;
 
+  // `href: null` reaches a custom bar as `tabBarItemStyle: { display: "none" }`;
+  // the crew-only tabs depend on this check.
   const routes = state.routes.filter((route: TabRoute) => {
-    const { options } = descriptors[route.key];
-    const itemStyle = StyleSheet.flatten(options.tabBarItemStyle) as
+    const itemStyle = StyleSheet.flatten(descriptors[route.key].options.tabBarItemStyle) as
       | { display?: string }
       | undefined;
     return itemStyle?.display !== "none";
   });
-
-  const [barWidth, setBarWidth] = useState(0);
   const focusedIndex = Math.max(
     0,
     routes.findIndex((route: TabRoute) => state.routes.indexOf(route) === state.index),
   );
-  const slotPitch = routes.length > 0 ? barWidth / routes.length : 0;
-  const selectorX = useSharedValue(0);
-  const nameX = useSharedValue(0);
 
-  const nameWidth = slotPitch * 2;
+  const [rowW, setRowW] = useState(0);
+  // The row's padding is inside its measured width; the tabs share what's left.
+  const slotW = routes.length ? (rowW - 2 * ROW_PAD) / routes.length : 0;
+  const buttonW = Math.min(px(54), slotW - px(8));
 
+  // The button slides to the selected tab; the first layout lands in place.
+  // Once it lands, the glint sweeps across it.
+  const x = useSharedValue(-1);
+  const glint = useSharedValue(0);
   useEffect(() => {
-    if (slotPitch <= 0) return;
-    const target = slotPitch * focusedIndex - OVERHANG;
-    const nameTarget = Math.min(
-      Math.max(0, slotPitch * (focusedIndex + 0.5) - nameWidth / 2),
-      barWidth - nameWidth,
-    );
-    if (selectorX.value === 0) {
-      selectorX.value = target;
-      nameX.value = nameTarget;
-    } else {
-      selectorX.value = withTiming(target, timing.select);
-      nameX.value = withTiming(nameTarget, timing.select);
+    if (rowW <= 0) return;
+    const target = ROW_PAD + focusedIndex * slotW + (slotW - buttonW) / 2;
+    const first = x.value < 0;
+    x.value = first || reduceMotion ? target : withTiming(target, { duration: SWITCH_MS });
+    if (!first && !reduceMotion) {
+      glint.value = 0;
+      glint.value = withDelay(SWITCH_MS, withTiming(1, { duration: 520, easing: Easing.out(Easing.quad) }));
     }
-  }, [focusedIndex, slotPitch, nameWidth, barWidth, selectorX, nameX]);
-
-  const selectorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: selectorX.value }],
+  }, [focusedIndex, slotW, buttonW, rowW, reduceMotion, x, glint]);
+  const slideStyle = useAnimatedStyle(() => ({
+    opacity: x.value < 0 ? 0 : 1,
+    transform: [{ translateX: Math.max(0, x.value) }],
   }));
-  const nameStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: nameX.value }],
+  const glintStyle = useAnimatedStyle(() => ({
+    opacity: glint.value > 0 && glint.value < 1 ? 1 : 0,
+    transform: [{ translateX: -GLINT_W * 2 + glint.value * (buttonW + GLINT_W * 3) }, { skewX: "-24deg" }],
   }));
-
-  const focusedRoute = routes[focusedIndex];
-  const focusedName = focusedRoute
-    ? (descriptors[focusedRoute.key].options.title ?? focusedRoute.name).toUpperCase()
-    : "";
-
-  const isTeam = role === "team";
-
-  const chestMenuItems = useMemo(
-    () => [
-      {
-        id: "profile",
-        label: "Settings & Profile",
-        icon: "settings" as PixelIconName,
-        desc: "Preferences, skins & audio",
-        onPress: () => {
-          setChestOpen(false);
-          router.push("/profile" as any);
-        },
-      },
-      ...(isTeam
-        ? [
-            {
-              id: "contact",
-              label: "Crew Contact",
-              icon: "crew" as PixelIconName,
-              desc: "Staff directory & channels",
-              onPress: () => {
-                setChestOpen(false);
-                router.push("/contact" as any);
-              },
-            },
-            {
-              id: "broadcast",
-              label: "Broadcast Shout",
-              icon: "shout" as PixelIconName,
-              desc: "Send festival alerts",
-              onPress: () => {
-                setChestOpen(false);
-                router.push("/broadcast" as any);
-              },
-            },
-          ]
-        : []),
-    ],
-    [isTeam],
-  );
 
   return (
     <View
@@ -132,485 +113,264 @@ export function Hotbar({ state, descriptors, navigation }: BottomTabBarProps) {
         styles.bar,
         {
           backgroundColor: theme.surfaceElevated,
-          borderTopColor: theme.border,
-          paddingBottom: Math.max(px(10), insets.bottom),
+          borderTopColor: isDark ? "#000000" : scaleColor(theme.border, 0.8),
+          paddingBottom: Math.max(px(8), insets.bottom - px(12)),
         },
       ]}
     >
-      {/* ── Durability Bar (Active Tab Indicator) ────────────────── */}
-      <View style={styles.durabilityTrack}>
-        {routes.map((route, i) => {
+      {/* Bevel: a lit inner top edge, as on every raised widget. */}
+      <View
+        pointerEvents="none"
+        style={[styles.lit, { backgroundColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.9)" }]}
+      />
+      {rowW > 0 ? (
+        // The marker in the panel's edge, riding along above the button.
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.marker, { width: buttonW, backgroundColor: fill }, slideStyle]}
+        />
+      ) : null}
+      <View style={styles.row} onLayout={(e) => setRowW(e.nativeEvent.layout.width)}>
+        {rowW > 0 ? (
+          <Animated.View pointerEvents="none" style={[styles.button, { width: buttonW }, slideStyle]}>
+            <View style={[styles.buttonFace, { backgroundColor: fill }]}>
+              <Animated.View style={[styles.glint, glintStyle]} />
+              <View style={[styles.edgeTop, { backgroundColor: "rgba(255,255,255,0.45)" }]} />
+              <View style={[styles.edgeLeft, { backgroundColor: "rgba(255,255,255,0.3)" }]} />
+              <View style={[styles.edgeBottom, { backgroundColor: scaleColor(fill, 0.6) }]} />
+              <View style={[styles.edgeRight, { backgroundColor: scaleColor(fill, 0.72) }]} />
+            </View>
+          </Animated.View>
+        ) : null}
+
+        {routes.map((route: TabRoute) => {
+          const { options } = descriptors[route.key];
           const focused = state.routes.indexOf(route) === state.index;
           return (
-            <View key={route.key} style={styles.durabilitySlot}>
-              <View
-                style={[
-                  styles.durabilityBar,
-                  {
-                    backgroundColor: focused ? mojang.green3 : "transparent",
-                    borderColor: focused ? "#1f4a16" : "transparent",
-                  },
-                ]}
-              />
-            </View>
+            <Tab
+              key={route.key}
+              label={options.title ?? route.name}
+              focused={focused}
+              slotW={buttonW}
+              badge={options.tabBarBadge}
+              icon={options.tabBarIcon}
+              reduceMotion={reduceMotion}
+              onPress={() => {
+                const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
+                if (!focused && !event.defaultPrevented) {
+                  Haptics.selectionAsync().catch(() => {});
+                  (navigation.navigate as any)(route.name, route.params);
+                }
+              }}
+              onLongPress={() => navigation.emit({ type: "tabLongPress", target: route.key })}
+            />
           );
         })}
       </View>
-
-      <View style={styles.stripWrap}>
-        {/* The Hotbar Sprite Frame */}
-        <View style={styles.outline}>
-          <View style={styles.strip} onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}>
-            {routes.map((route: TabRoute, i: number) => {
-              const { options } = descriptors[route.key];
-              const index = state.routes.indexOf(route);
-              const focused = state.index === index;
-
-              return (
-                <HotbarSlot
-                  key={route.key}
-                  focused={focused}
-                  divided={i < routes.length - 1}
-                  label={options.title ?? route.name}
-                  badge={options.tabBarBadge}
-                  icon={options.tabBarIcon}
-                  onPress={() => {
-                    const event = navigation.emit({
-                      type: "tabPress",
-                      target: route.key,
-                      canPreventDefault: true,
-                    });
-                    if (!focused && !event.defaultPrevented) {
-                      Haptics.selectionAsync().catch(() => {});
-                      (navigation.navigate as any)(route.name, route.params);
-                    }
-                  }}
-                />
-              );
-            })}
-
-            {/* Travelling Minecraft 24px Selector */}
-            {slotPitch > 0 ? (
-              <Animated.View
-                style={[styles.travellingSelector, { width: slotPitch + OVERHANG * 2 }, selectorStyle]}
-                pointerEvents="none"
-              >
-                <SelectionFrame tone="dark" />
-              </Animated.View>
-            ) : null}
-          </View>
-        </View>
-
-        {/* Floating Tooltip Label under hotbar */}
-        <View style={styles.nameRow} pointerEvents="none">
-          {slotPitch > 0 ? (
-            <Animated.View
-              style={[
-                styles.name,
-                {
-                  width: nameWidth,
-                  alignItems:
-                    focusedIndex === 0
-                      ? "flex-start"
-                      : focusedIndex === routes.length - 1
-                        ? "flex-end"
-                        : "center",
-                },
-                nameStyle,
-              ]}
-            >
-              <Animated.Text
-                key={focusedName}
-                entering={FadeIn.duration(160)}
-                numberOfLines={1}
-                style={[styles.nameText, { color: theme.primary }]}
-              >
-                {focusedName}
-              </Animated.Text>
-            </Animated.View>
-          ) : null}
-        </View>
-      </View>
-
-      {/* ── Floating Ender Chest Action Button (FAB) ─────────── */}
-      <Pressable
-        style={({ pressed }) => [
-          styles.chestFab,
-          {
-            backgroundColor: isDark ? "#171624" : "#26213b",
-            transform: [{ scale: pressed ? 0.92 : 1 }],
-          },
-        ]}
-        hitSlop={px(8)}
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-          setChestOpen(true);
-        }}
-      >
-        <Frame depth="raised" />
-        <PixelIcon name="enderChest" size={20} />
-      </Pressable>
-
-      {/* ── Ender Chest / Crafting Overlay Modal ─────────────── */}
-      <Modal
-        visible={chestOpen}
-        transparent
-        animationType="none"
-        onRequestClose={() => setChestOpen(false)}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={() => setChestOpen(false)}>
-          <Animated.View
-            entering={FadeInDown.duration(200)}
-            exiting={FadeOutDown.duration(150)}
-            style={[styles.chestGuiContainer, { backgroundColor: theme.surface }]}
-            onStartShouldSetResponder={() => true}
-          >
-            <Grain />
-            <Frame depth="raised" />
-
-            {/* Header */}
-            <View style={styles.chestHeader}>
-              <View style={styles.chestTitleRow}>
-                <PixelIcon name="enderChest" size={20} />
-                <Text style={[styles.chestTitle, { color: theme.primary }]}>ENDER CHEST</Text>
-              </View>
-              <Pressable
-                onPress={() => setChestOpen(false)}
-                hitSlop={px(8)}
-                style={styles.closeButton}
-              >
-                <McGlyph name="close" size={14} color={mojang.greyWarm} />
-              </Pressable>
-            </View>
-
-            <McDivider style={{ marginVertical: px(12) }} />
-
-            {/* Chest Inventory Slots / Quick Actions */}
-            <View style={styles.chestItemsGrid}>
-              {chestMenuItems.map((item) => (
-                <Pressable
-                  key={item.id}
-                  style={({ pressed }) => [
-                    styles.chestItemCard,
-                    {
-                      backgroundColor: pressed ? theme.surfaceTint : theme.surfaceElevated,
-                      borderColor: pressed ? mojang.green3 : theme.border,
-                    },
-                  ]}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                    item.onPress();
-                  }}
-                >
-                  <Frame depth="sunken" />
-                  <View style={styles.chestItemIconBox}>
-                    <PixelIcon name={item.icon} size={24} />
-                  </View>
-                  <View style={styles.chestItemInfo}>
-                    <Text style={[styles.chestItemTitle, { color: theme.text }]}>
-                      {item.label}
-                    </Text>
-                    <Text style={[styles.chestItemDesc, { color: theme.textDim }]}>
-                      {item.desc}
-                    </Text>
-                  </View>
-                  <McGlyph name="chevronRight" size={12} color={theme.textDim} />
-                </Pressable>
-              ))}
-            </View>
-          </Animated.View>
-        </Pressable>
-      </Modal>
     </View>
   );
 }
 
-function HotbarSlot({
+/** Directions for the landing burst: out and mostly upward, like XP sparks. */
+const SPARKS = [
+  { dx: -1, dy: -0.7 },
+  { dx: 1, dy: -0.7 },
+  { dx: -0.45, dy: -1.1 },
+  { dx: 0.45, dy: -1.1 },
+  { dx: -1.15, dy: 0.15 },
+  { dx: 1.15, dy: 0.15 },
+];
+
+function Spark({ t, dx, dy, color }: { t: SharedValue<number>; dx: number; dy: number; color: string }) {
+  const style = useAnimatedStyle(() => {
+    const d = px(26) * t.value;
+    return {
+      opacity: t.value > 0 && t.value < 1 ? 1 - t.value : 0,
+      transform: [{ translateX: dx * d }, { translateY: dy * d }],
+    };
+  });
+  return <Animated.View pointerEvents="none" style={[styles.spark, { backgroundColor: color }, style]} />;
+}
+
+function Tab({
+  label,
   focused,
-  divided,
+  slotW,
   badge,
   icon,
-  label,
+  reduceMotion,
   onPress,
+  onLongPress,
 }: {
+  label: string;
   focused: boolean;
-  divided: boolean;
+  slotW: number;
   badge: number | string | undefined;
   icon: TabDescriptor["options"]["tabBarIcon"];
-  label: string;
+  reduceMotion: boolean;
   onPress: () => void;
+  onLongPress: () => void;
 }) {
-  const renderIcon = useCallback(
-    () => icon?.({ focused, color: "#ffffff", size: px(22) }) ?? null,
-    [icon, focused],
-  );
+  const { theme, isDark, activeShape } = useBlockTheme();
+  const fill = activeShape.seedColor;
 
-  /* Item pickup pop + spring tactile response */
-  const lift = useSharedValue(1);
-  const particleY = useSharedValue(0);
-  const particleOpacity = useSharedValue(0);
-
+  // The item pops and throws its sparks as the button lands under it — but
+  // not on first render, when nothing was switched.
+  const mounted = useRef(false);
+  const pop = useSharedValue(1);
+  const burst = useSharedValue(0);
   useEffect(() => {
-    if (!focused) return;
-    lift.value = withSequence(
-      withSpring(1.24, { damping: 10, stiffness: 260 }),
-      withSpring(1, { damping: 14, stiffness: 200 }),
+    const switched = mounted.current;
+    mounted.current = true;
+    if (!focused || !switched || reduceMotion) return;
+    pop.value = withSequence(
+      withTiming(1, { duration: SWITCH_MS * 0.6 }),
+      withTiming(1.2, { duration: 80 }),
+      withTiming(1, { duration: 160 }),
     );
-    particleY.value = 0;
-    particleOpacity.value = 1;
-    particleY.value = withTiming(-px(16), { duration: 320 });
-    particleOpacity.value = withTiming(0, { duration: 320 });
-  }, [focused, lift, particleY, particleOpacity]);
+    burst.value = 0;
+    burst.value = withDelay(SWITCH_MS * 0.6, withTiming(1, { duration: 420, easing: Easing.out(Easing.cubic) }));
+  }, [focused, reduceMotion, pop, burst]);
+  const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
 
-  const liftStyle = useAnimatedStyle(() => ({ transform: [{ scale: lift.value }] }));
-  const particleStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: particleY.value }],
-    opacity: particleOpacity.value,
-  }));
+  // The badge pops when a new alert arrives.
+  const count = typeof badge === "number" ? badge : badge ? Number(badge) || 0 : 0;
+  const badgeScale = useSharedValue(1);
+  const lastCount = useRef(count);
+  useEffect(() => {
+    if (count > lastCount.current && !reduceMotion) {
+      badgeScale.value = withSequence(withTiming(1.35, { duration: 110 }), withTiming(1, { duration: 180 }));
+    }
+    lastCount.current = count;
+  }, [count, reduceMotion, badgeScale]);
+  const badgeStyle = useAnimatedStyle(() => ({ transform: [{ scale: badgeScale.value }] }));
+
+  const ink = focused ? inkFor(fill) : theme.textDim;
+  // The GUI drop shadow, one glyph-pixel down and right, on the dark panel.
+  // Not on the button: there it doubles the outline of busy glyphs like the cog.
+  const shadow = !focused && isDark ? "rgba(0,0,0,0.55)" : undefined;
 
   return (
     <Pressable
       onPress={onPress}
-      onPressIn={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-      }}
-      accessibilityRole="button"
+      onLongPress={onLongPress}
+      accessibilityRole="tab"
       accessibilityState={{ selected: focused }}
-      accessibilityLabel={label}
-      style={[styles.slot, focused && styles.slotFocused, divided && styles.slotDivided]}
+      accessibilityLabel={count ? `${label}, ${count} unread` : label}
+      style={styles.tab}
     >
       {({ pressed }) => (
         <>
-          {/* Item pickup float particle */}
-          {focused ? (
-            <Animated.View style={[styles.pickupParticle, particleStyle]} pointerEvents="none">
-              <Text style={styles.particleText}>✦</Text>
+          <View style={styles.iconSlot}>
+            {/* Pressing an idle tab lights its slot, as hovering one does in the game. */}
+            {pressed && !focused ? (
+              <View
+                style={[
+                  styles.pressSlot,
+                  { width: slotW, backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(60,40,20,0.08)" },
+                ]}
+              />
+            ) : null}
+            {focused
+              ? SPARKS.map((s, i) => (
+                  <Spark key={i} t={burst} dx={s.dx} dy={s.dy} color={i % 2 ? "#ffffff" : fill} />
+                ))
+              : null}
+            <Animated.View style={[styles.icon, popStyle, { top: pressed ? px(1) : 0 }]}>
+              {shadow ? (
+                <View style={styles.iconShadow}>{icon?.({ focused, color: shadow, size: ICON })}</View>
+              ) : null}
+              {icon?.({ focused, color: ink, size: ICON })}
+              {count > 0 ? (
+                <Animated.View
+                  style={[styles.badge, { borderColor: isDark || focused ? "#000000" : "#ffffff" }, badgeStyle]}
+                >
+                  <View style={styles.badgeLit} />
+                  <Text style={styles.badgeText}>{count > 9 ? "9+" : count}</Text>
+                  <View style={styles.badgeShade} />
+                </Animated.View>
+              ) : null}
             </Animated.View>
-          ) : null}
-
-          {/* Slot Icon */}
-          <Animated.View
+          </View>
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
             style={[
-              { opacity: focused ? 1 : 0.55, marginTop: pressed ? px(2) : 0 },
-              liftStyle,
+              styles.label,
+              // Gold text in dark; on cream the darkened gold reads olive, so ink.
+              { color: focused ? (isDark ? theme.primary : theme.text) : theme.textDim },
+              isDark ? styles.labelShadow : null,
             ]}
           >
-            {renderIcon()}
-          </Animated.View>
-
-          {/* Minecraft XP Level Number Badge (Glowing Green/White) */}
-          {badge !== undefined && badge !== null ? (
-            <View style={styles.xpBadge}>
-              <Text style={[styles.xpBadgeText, mcTextShadow(mojang.green1, 11)]}>{badge}</Text>
-            </View>
-          ) : null}
+            {label}
+          </Text>
         </>
       )}
     </Pressable>
   );
 }
 
-/** Slot height. Width is `flex: 1` so the strip always fills the bar. */
-const SLOT = px(46);
-/** 2px of overhang on a 20px slot, held as a ratio so the slot can resize. */
-const OVERHANG = SLOT * SELECTOR_OVERHANG_RATIO;
-/** One sprite pixel. */
-const U = px(2);
-
-/** `hud/hotbar.png`, measured. */
-const SPRITE = {
-  outline: "#000000",
-  rimLit: "#939393",
-  rimShade: "#5a5a5a",
-  interior: "#2a2a2a",
-  interiorFocused: "#383838",
-  divider: "#161616",
-} as const;
+const EDGE = px(2);
 
 const styles = StyleSheet.create({
-  bar: {
-    borderRadius: 0,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: px(6),
-  },
-  durabilityTrack: {
-    flexDirection: "row",
-    paddingHorizontal: px(14),
-    marginBottom: px(4),
-    height: px(3),
-  },
-  durabilitySlot: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: px(8),
-  },
-  durabilityBar: {
-    width: "100%",
-    height: px(2),
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  stripWrap: {
-    paddingHorizontal: px(14),
-  },
-  outline: {
-    backgroundColor: SPRITE.outline,
-    padding: px(1),
-  },
-  strip: {
-    flexDirection: "row",
-    height: SLOT,
-    backgroundColor: SPRITE.interior,
-    borderTopWidth: U,
-    borderLeftWidth: U,
-    borderBottomWidth: U,
-    borderRightWidth: U,
-    borderTopColor: SPRITE.rimLit,
-    borderLeftColor: SPRITE.rimLit,
-    borderBottomColor: SPRITE.rimShade,
-    borderRightColor: SPRITE.rimShade,
-  },
-  slot: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  slotFocused: { backgroundColor: SPRITE.interiorFocused },
-  slotDivided: { borderRightWidth: px(1), borderRightColor: SPRITE.divider },
+  bar: { borderTopWidth: px(2) },
+  lit: { position: "absolute", top: 0, left: 0, right: 0, height: px(2) },
+  marker: { position: "absolute", top: -px(2), left: 0, height: px(3) },
+  row: { flexDirection: "row", paddingTop: px(8), paddingHorizontal: ROW_PAD },
 
-  travellingSelector: {
-    position: "absolute",
-    top: -OVERHANG - U,
-    left: -U,
-    height: SLOT + OVERHANG * 2,
-    zIndex: 2,
+  tab: { flex: 1, alignItems: "center", paddingHorizontal: px(1) },
+  iconSlot: { height: BUTTON_H, alignItems: "center", justifyContent: "center" },
+  pressSlot: { position: "absolute", top: 0, height: BUTTON_H },
+  icon: { width: ICON, height: ICON },
+  iconShadow: { position: "absolute", left: ICON / 12, top: ICON / 12 },
+  spark: { position: "absolute", width: px(4), height: px(4) },
+  label: {
+    marginTop: px(5),
+    fontFamily: fonts.pixelBold,
+    fontSize: pxFont(9),
+    lineHeight: Math.round(pxFont(9) * 1.35),
   },
+  labelShadow: { textShadowColor: "rgba(0,0,0,0.6)", textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 0 },
 
-  nameRow: {
-    height: px(16),
-    marginTop: px(6),
-  },
-  name: {
+  // The Minecraft button: black outline, lit top-left, shaded bottom-right.
+  button: {
     position: "absolute",
-    top: 0,
+    top: px(8),
     left: 0,
-    alignItems: "center",
+    height: BUTTON_H,
+    borderWidth: px(2),
+    borderColor: "#000000",
   },
-  nameText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: pxFont(11),
-    lineHeight: Math.round(pxFont(11) * 1.25),
-    letterSpacing: px(1),
-  },
-
-  /* Minecraft Experience Level badge: classic emerald/lime green with drop shadow */
-  xpBadge: {
+  buttonFace: { flex: 1, overflow: "hidden" },
+  glint: {
     position: "absolute",
-    top: px(1),
-    right: px(2),
-    minWidth: px(15),
-    height: px(14),
-    paddingHorizontal: px(2),
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#204618",
+    top: -px(6),
+    bottom: -px(6),
+    left: 0,
+    width: GLINT_W,
+    backgroundColor: "rgba(255,255,255,0.55)",
+  },
+  edgeTop: { position: "absolute", top: 0, left: 0, right: 0, height: EDGE },
+  edgeLeft: { position: "absolute", top: EDGE, left: 0, bottom: EDGE, width: EDGE },
+  edgeBottom: { position: "absolute", bottom: 0, left: 0, right: 0, height: EDGE + px(1) },
+  edgeRight: { position: "absolute", top: EDGE, right: 0, bottom: EDGE + px(1), width: EDGE },
+
+  // A redstone block of a badge, bevelled like everything else.
+  badge: {
+    position: "absolute",
+    top: -px(6),
+    right: -px(11),
+    minWidth: px(17),
+    height: px(17),
+    paddingHorizontal: px(3),
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: mojang.warning,
+    borderWidth: px(2),
+    overflow: "hidden",
   },
-  xpBadgeText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: pxFont(10),
-    lineHeight: px(12),
-    color: mojang.green1,
-  },
-
-  pickupParticle: {
-    position: "absolute",
-    top: px(2),
-    alignSelf: "center",
-    zIndex: 5,
-  },
-  particleText: {
-    fontFamily: fonts.pixelBold,
-    fontSize: pxFont(10),
-    color: mojang.gold,
-  },
-
-  /* Floating Ender Chest button positioned at bottom right corner above hotbar */
-  chestFab: {
-    position: "absolute",
-    top: -px(16),
-    right: px(16),
-    width: px(36),
-    height: px(36),
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 4,
-    elevation: 6,
-  },
-
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.75)",
-    justifyContent: "flex-end",
-    paddingBottom: px(40),
-    paddingHorizontal: px(16),
-  },
-  chestGuiContainer: {
-    padding: px(16),
-    width: "100%",
-    maxWidth: px(480),
-    alignSelf: "center",
-  },
-  chestHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  chestTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: px(8),
-  },
-  chestTitle: {
-    fontFamily: fonts.pixelBold,
-    fontSize: pxFont(15),
-    letterSpacing: px(1),
-  },
-  closeButton: {
-    padding: px(4),
-  },
-  chestItemsGrid: {
-    gap: px(10),
-  },
-  chestItemCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: px(12),
-    borderWidth: 1,
-    gap: px(12),
-  },
-  chestItemIconBox: {
-    width: px(38),
-    height: px(38),
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.3)",
-  },
-  chestItemInfo: {
-    flex: 1,
-    gap: px(2),
-  },
-  chestItemTitle: {
-    fontFamily: fonts.pixelBold,
-    fontSize: pxFont(13),
-  },
-  chestItemDesc: {
-    fontFamily: fonts.pixel,
-    fontSize: pxFont(11),
-  },
+  badgeLit: { position: "absolute", top: 0, left: 0, right: 0, height: px(2), backgroundColor: "rgba(255,255,255,0.4)" },
+  badgeShade: { position: "absolute", bottom: 0, left: 0, right: 0, height: px(2), backgroundColor: "rgba(0,0,0,0.25)" },
+  badgeText: { fontFamily: fonts.bodyBold, fontSize: px(10), lineHeight: px(12), color: "#ffffff", fontVariant: ["tabular-nums"] },
 });
