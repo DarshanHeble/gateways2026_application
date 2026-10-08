@@ -10,12 +10,22 @@ import { cleanText } from "@/utils/fest";
 // 2. On Android with USB debugging (adb reverse) or emulator, localhost:5000 connects directly
 const rawUrl = process.env.EXPO_PUBLIC_API_URL;
 export const API_BASE_URL: string = rawUrl && rawUrl.trim().length > 0
-  ? rawUrl
+  ? normaliseApiUrl(rawUrl)
   : Platform.select({
       android: "http://localhost:5000/api/v1",
       ios: "http://localhost:5000/api/v1",
       default: "http://localhost:5000/api/v1",
     });
+
+/**
+ * Accept the backend's address in whichever form it is handed over —
+ * "https://host", "https://host/", "https://host/api/v1/" — and return the
+ * `/api/v1` base every call below is built on.
+ */
+export function normaliseApiUrl(url: string): string {
+  const base = url.trim().replace(/\/+$/, "");
+  return /\/api\/v1$/.test(base) ? base : `${base}/api/v1`;
+}
 
 // Raw host for the health check which is at the root, not /api/v1
 export const API_ROOT_URL = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
