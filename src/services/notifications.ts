@@ -194,9 +194,10 @@ export async function fetchNotifications(): Promise<AppNotification[]> {
 
     if (Array.isArray(data)) {
       // Rows with no text are placeholders in the sheet, not announcements.
-      const live = data
-        .filter((item) => String(item?.body || item?.content || "").trim())
-        .map((item, i) => toAppNotification(item, known, now - i));
+      const rows = data.filter((item) => String(item?.body || item?.content || "").trim());
+      // Organisers append to the sheet, so a later row is a newer announcement:
+      // among rows first seen in the same sync, the last row gets the latest time.
+      const live = newestFirst(rows.map((item, i) => toAppNotification(item, known, now - (rows.length - 1 - i))));
       // Persist so the next cold start has them without a network round-trip.
       await notificationStore.replaceAll(live);
       return current(live);
@@ -210,9 +211,12 @@ export async function fetchNotifications(): Promise<AppNotification[]> {
   if (stored.length > 0) return current(stored);
 
   // Nothing synced yet and no network: fall back to the bundled snapshot.
+  const seed = SEED_ANNOUNCEMENTS.filter((item) => String(item?.body || item?.content || "").trim());
   return current(
-    SEED_ANNOUNCEMENTS.filter((item) => String(item?.body || item?.content || "").trim()).map((item, i) =>
-      toAppNotification(item, known, now - i),
-    ),
+    newestFirst(seed.map((item, i) => toAppNotification(item, known, now - (seed.length - 1 - i)))),
   );
+}
+
+function newestFirst(list: AppNotification[]): AppNotification[] {
+  return [...list].sort((a, b) => b.createdAt - a.createdAt);
 }

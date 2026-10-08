@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import { AppState } from "react-native";
 import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 
@@ -21,6 +22,13 @@ interface NotificationsContextType {
   markRead: (id: string) => Promise<void>;
   sendNotification: (input: { title: string; body: string; target: NotificationTarget; route?: string }) => Promise<void>;
 }
+
+/**
+ * How often the open app re-reads the announcements sheet. The backend caches
+ * the sheet for 60s and Google republishes it every few minutes, so polling
+ * faster than this would only fetch the same answer.
+ */
+const POLL_MS = 60 * 1000;
 
 const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
 
@@ -61,6 +69,33 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // New sheet rows appear on their own: poll while the app is in the
+  // foreground, and catch up the moment it returns. Nothing runs in the
+  // background.
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (!timer) timer = setInterval(() => refresh().catch(() => {}), POLL_MS);
+    };
+    const stop = () => {
+      if (timer) clearInterval(timer);
+      timer = null;
+    };
+    if (AppState.currentState === "active") start();
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        refresh().catch(() => {});
+        start();
+      } else {
+        stop();
+      }
+    });
+    return () => {
+      stop();
+      sub.remove();
+    };
+  }, [refresh]);
 
   const notifications = useMemo(() => {
     const activeRole = role || "participant";
