@@ -4,16 +4,16 @@
     "slug": "gateways2026_application",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo-glow.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "gateways2026application",
     "userInterfaceStyle": "dark",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.darshanheble.gateways2026-application"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0d1018",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -31,7 +31,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#0d1018",
-          "image": "./assets/images/logo-glow.png",
+          "image": "./assets/images/splash-logo.png",
           "imageWidth": 200
         }
       ],
@@ -42,8 +42,8 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/android-icon-monochrome.png",
-          "color": "#ffe9b8"
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#f8b921"
         }
       ]
     ],

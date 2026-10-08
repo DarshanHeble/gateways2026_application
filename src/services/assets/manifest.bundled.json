@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-27T13:49:32+00:00",
+  "generatedAt": "2026-10-08T05:01:28+00:00",
   "baseUrl": "https://cdn.jsdelivr.net/gh/vishalbg02/gateways2026-assets@main/",
   "assets": [
     {
@@ -107,9 +107,9 @@
     },
     {
       "key": "ui/login-bg",
-      "path": "images/login-parallax-bg.795b270f.webp",
-      "bytes": 233198,
-      "sha256": "795b270fdf9031f3c8c7e54293f1904f1527f4fc1b2452b02fa77ca0eabf9abd"
+      "path": "images/login-parallax-bg.df489270.webp",
+      "bytes": 263154,
+      "sha256": "df4892707bd575e4c80fe71c00536bb7fc5f3f5bb1b7be125e860848da238f64"
     },
     {
       "key": "video/splash",

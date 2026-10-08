@@ -72,7 +72,7 @@ const { height: SCREEN_H } = Dimensions.get("window");
 /*
  * Tall enough that the welcome copy sits *below* the poster's own wordmark, on
  * art that has already faded into the page. At 58% the eyebrow landed on
- * half-faded sky right under "#PARALLEX" and lost its contrast.
+ * half-faded sky right under "#PARALLAX" and lost its contrast.
  */
 // Whole points: a fractional height left the fade's raster a sub-pixel short
 // of the hero's clip, and a hairline of art showed along the bottom edge.
